@@ -192,7 +192,7 @@ function App() {
                       Edit
                       </button> */}
                       
-                      <button
+                      {/* <button
                         style={{
                           background: "#f44336",
                           color: "white",
@@ -204,7 +204,7 @@ function App() {
                         onClick={() => deleteProduct(product._id)}
                       >
                       Delete
-                      </button>
+                      </button> */}
                       
                       </div>
                   </div>
