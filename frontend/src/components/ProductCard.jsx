@@ -1,84 +1,59 @@
-import React from "react";
-
-function ProductCard({ product, deleteProduct, editProduct }) {
-
-  const email = localStorage.getItem("email");
-
-  // admin email
-  const isAdmin = email === "yashraj45858@gmail.com";
+function ProductCard({
+  product,
+  onView,
+  onEdit,
+  onDelete,
+  showAdminActions = false,
+}) {
+  const imageUrl = product?.image
+    ? product.image.startsWith("http")
+      ? product.image
+      : `http://localhost:5000${product.image.startsWith("/") ? product.image : `/${product.image}`}`
+    : "https://placehold.co/600x400?text=No+Image";
 
   return (
-    <div
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: "10px",
-        padding: "15px",
-        margin: "10px",
-        width: "250px",
-        boxShadow: "0 3px 10px rgba(0,0,0,0.1)"
-      }}
+    <article
+      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
+      <button
+        type="button"
+        onClick={() => onView?.(product)}
+        className="block w-full text-left"
+      >
+        <img
+          src={imageUrl}
+          alt={product.name}
+          className="h-52 w-full object-cover"
+        />
+        <div className="space-y-1 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{product.category}</p>
+          <h3 className="line-clamp-1 text-lg font-semibold text-slate-900">{product.name}</h3>
+          <p className="text-xl font-bold text-slate-900">₹{product.price}</p>
+          {product.description ? (
+            <p className="line-clamp-2 text-sm text-slate-600">{product.description}</p>
+          ) : null}
+        </div>
+      </button>
 
-      <img
-        src={`http://localhost:5000/uploads/${product.image}`}
-        alt={product.name}
-        style={{
-          width: "100%",
-          height: "200px",
-          objectFit: "cover",
-          borderRadius: "8px"
-        }}
-      />
-
-      <h3 style={{ marginTop: "10px" }}>
-        {product.name}
-      </h3>
-
-      <p style={{ fontWeight: "bold" }}>
-        ₹{product.price}
-      </p>
-
-      <p style={{ color: "#666" }}>
-        {product.category}
-      </p>
-
-
-      {/* ADMIN CONTROLS */}
-      {isAdmin && (
-        <div style={{ marginTop: "10px", display: "flex", gap: "10px" }}>
-
+      {showAdminActions ? (
+        <div className="flex gap-2 border-t border-slate-100 px-4 py-3">
           <button
-            onClick={() => editProduct(product._id)}
-            style={{
-              padding: "6px 12px",
-              background: "#4CAF50",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer"
-            }}
+            type="button"
+            onClick={() => onEdit?.(product)}
+            className="flex-1 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
           >
             Edit
           </button>
-
           <button
-            onClick={() => deleteProduct(product._id)}
-            style={{
-              padding: "6px 12px",
-              background: "#f44336",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer"
-            }}
+            type="button"
+            onClick={() => onDelete?.(product._id)}
+            className="flex-1 rounded-lg bg-rose-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-rose-600"
           >
             Delete
           </button>
-
         </div>
-      )}
-
-    </div>
+      ) : null}
+    </article>
   );
 }
 
