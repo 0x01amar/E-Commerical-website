@@ -4,11 +4,12 @@ import { apiUrl } from "../config/api";
 
 function Dashboard() {
   const [user, setUser] = useState(null);
-  const [form, setForm] = useState({ name: "", phone: "", address: "" });
+  const [form, setForm] = useState({ name: "", phone: "", address: "", photo: "" });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState("");
 
   const email = localStorage.getItem("email");
   const navigate = useNavigate();
@@ -35,7 +36,9 @@ function Dashboard() {
           name: data?.name || "",
           phone: data?.phone || "",
           address: data?.address || "",
+          photo: data?.photo || "",
         });
+        setPhotoPreview(data?.photo || "");
         setError("");
       } catch (loadError) {
         setError(loadError.message || "Failed to load profile");
@@ -47,6 +50,39 @@ function Dashboard() {
     loadUser();
 
   }, [email]);
+
+  const handlePhotoChange = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const encodedPhoto = String(reader.result || "");
+
+      if (!encodedPhoto) {
+        return;
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        photo: encodedPhoto,
+      }));
+      setPhotoPreview(encodedPhoto);
+      setIsEditing(true);
+      setError("");
+    };
+
+    reader.readAsDataURL(file);
+  };
 
   const updateProfile = async () => {
     try {
@@ -67,6 +103,7 @@ function Dashboard() {
           name: form.name.trim(),
           phone: form.phone.trim(),
           address: form.address.trim(),
+          photo: form.photo,
         }),
       });
 
@@ -77,6 +114,7 @@ function Dashboard() {
       }
 
       setUser(data);
+  setPhotoPreview(data?.photo || "");
       setIsEditing(false);
     } catch (updateError) {
       setError(updateError.message || "Failed to update profile");
@@ -117,6 +155,8 @@ function Dashboard() {
     return <div className="p-6 text-rose-600">{error || "User not found"}</div>;
   }
 
+  const displayPhoto = photoPreview || user.photo || "https://placehold.co/160x160?text=Photo";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -134,6 +174,24 @@ function Dashboard() {
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-slate-900">Profile</h2>
+
+        <div className="mt-5 flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center">
+          <img
+            src={displayPhoto}
+            alt={user.name || "User profile"}
+            className="h-24 w-24 rounded-full border border-slate-200 object-cover"
+          />
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-slate-700">Profile Photo</p>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
+            />
+            <p className="text-xs text-slate-500">Choose a photo and click Save Changes.</p>
+          </div>
+        </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
@@ -206,7 +264,9 @@ function Dashboard() {
                     name: user?.name || "",
                     phone: user?.phone || "",
                     address: user?.address || "",
+                    photo: user?.photo || "",
                   });
+                  setPhotoPreview(user?.photo || "");
                 }}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
               >

@@ -33,9 +33,27 @@ function Home({ search }) {
 	}, []);
 
 	const filteredProducts = useMemo(() => {
-		return products.filter((product) =>
-			product.name?.toLowerCase().includes((search || "").toLowerCase())
-		);
+		const searchTerms = (search || "")
+			.toLowerCase()
+			.trim()
+			.split(/\s+/)
+			.filter(Boolean);
+
+		if (!searchTerms.length) {
+			return products;
+		}
+
+		return products.filter((product) => {
+			const searchableText = [
+				product?.name || "",
+				product?.category || "",
+				product?.description || "",
+			]
+				.join(" ")
+				.toLowerCase();
+
+			return searchTerms.every((term) => searchableText.includes(term));
+		});
 	}, [products, search]);
 
 	return (

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { apiUrl } from "../config/api";
 
 function LoginPassword(){
@@ -11,6 +11,8 @@ function LoginPassword(){
 	const [loading, setLoading] = useState(false);
 
 	const navigate = useNavigate();
+	const location = useLocation();
+	const loginInfoMessage = location.state?.message || "";
 
 	const login = async () => {
 		try {
@@ -45,7 +47,7 @@ function LoginPassword(){
 			localStorage.setItem("email", data?.user?.email || normalizedEmail);
 			localStorage.setItem("role", data?.role || "user");
 			localStorage.removeItem("adminKey");
-			navigate("/dashboard");
+			navigate(location.state?.redirectTo || "/dashboard");
 		} catch (loginError) {
 			setError(loginError.message || "Wrong email or password");
 		} finally {
@@ -58,6 +60,10 @@ function LoginPassword(){
 			<div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
 				<h1 className="text-2xl font-bold text-slate-900">User Login</h1>
 				<p className="mt-2 text-sm text-slate-600">Login with your email and password.</p>
+
+				{loginInfoMessage ? (
+					<p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">{loginInfoMessage}</p>
+				) : null}
 
 				{error ? <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p> : null}
 

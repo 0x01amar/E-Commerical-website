@@ -9,6 +9,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import LoginPassword from "./pages/LoginPassword";
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 
 function App() {
   const [search, setSearch] = useState("");
@@ -31,6 +32,7 @@ function App() {
           <Route path="/" element={<Home search={search} />} />
           <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout/:productId" element={<Checkout />} />
           <Route path="/signup" element={<UserLogin />} />
           <Route path="/login" element={<LoginPassword />} />
           <Route path="/admin-login" element={<AdminLogin />} />

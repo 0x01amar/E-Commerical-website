@@ -5,6 +5,7 @@ import { apiUrl, mediaUrl } from "../config/api";
 function ProductPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+    const isLoggedIn = Boolean(localStorage.getItem("email"));
 
   const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -33,26 +34,39 @@ function ProductPage() {
         getProduct();
   }, [id]);
 
+    const redirectToLogin = (checkoutMode) => {
+        navigate("/login", {
+            state: {
+                message: "Please login first to continue",
+                redirectTo: `/checkout/${id}?mode=${checkoutMode}`,
+            },
+        });
+    };
+
     const handleAddToCart = () => {
         if (!product) {
             return;
         }
 
-        const existingCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
-        const existingProduct = existingCart.find((item) => item._id === product._id);
-
-        let nextCart;
-
-        if (existingProduct) {
-            nextCart = existingCart.map((item) =>
-                item._id === product._id ? { ...item, quantity: (item.quantity || 1) + 1 } : item
-            );
-        } else {
-            nextCart = [...existingCart, { ...product, quantity: 1 }];
+        if (!isLoggedIn) {
+            redirectToLogin("cart");
+            return;
         }
 
-        localStorage.setItem("cartItems", JSON.stringify(nextCart));
-        navigate("/cart");
+        navigate(`/checkout/${id}?mode=cart`);
+    };
+
+    const handleBuyNow = () => {
+        if (!product) {
+            return;
+        }
+
+        if (!isLoggedIn) {
+            redirectToLogin("buy-now");
+            return;
+        }
+
+        navigate(`/checkout/${id}?mode=buy-now`);
     };
 
     if (loading) {
@@ -109,13 +123,22 @@ function ProductPage() {
                     <p className="text-sm text-slate-500">Stock: {product.stock ?? 0}</p>
                     {product.warranty ? <p className="text-sm text-slate-500">Warranty: {product.warranty}</p> : null}
 
-                    <button
-                        type="button"
-                        onClick={handleAddToCart}
-                        className="mt-2 rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400"
-                    >
-                        Add to Cart
-                    </button>
+                    <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+                        <button
+                            type="button"
+                            onClick={handleAddToCart}
+                            className="rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400"
+                        >
+                            Add to Cart
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleBuyNow}
+                            className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        >
+                            Buy Now
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
