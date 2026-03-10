@@ -8,7 +8,7 @@ const navigate = useNavigate();
       style={{
         background: "#131921",
         color: "white",
-        padding: "10px 20px",
+        padding: "10px 10px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between"
@@ -17,7 +17,7 @@ const navigate = useNavigate();
 
       {/* Logo */}
       <h2 style={{ cursor: "pointer" }}>
-        MAA SHEELA IRON ART
+        <b>Satyam Iron Art</b>
       </h2>
 
 
@@ -30,6 +30,7 @@ const navigate = useNavigate();
           style={{
             width:"35%",
             padding:"14px"
+            
           }}
         />
             <div style={{display:"flex",gap:"10px"}}>

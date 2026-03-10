@@ -116,7 +116,7 @@ function App() {
             {/* Navbar component jisme search pass ho raha hai */}
             <Navbar search={search} setSearch={setSearch} />
 
-            <h1>Maa Sheela Iron ART</h1>
+            <h1>Satyam Iron ART</h1>
 
             {/* product add karne ka form */}
             <form
