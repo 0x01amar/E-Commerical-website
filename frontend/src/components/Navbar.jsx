@@ -5,6 +5,17 @@ function Navbar({ search, setSearch }) {
   const navigate = useNavigate();
   const location = useLocation();
   const showSearch = location.pathname === "/";
+  const isLoggedIn = Boolean(localStorage.getItem("email"));
+  const isAdminSession = localStorage.getItem("role") === "admin";
+
+  const goToProfile = () => {
+    if (isAdminSession) {
+      navigate("/admin-dashboard");
+      return;
+    }
+
+    navigate("/dashboard");
+  };
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -34,20 +45,39 @@ function Navbar({ search, setSearch }) {
           >
             Cart
           </button>
-          <button
-            type="button"
-            onClick={() => navigate("/login")}
-            className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-amber-400"
-          >
-            User Login
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/admin-login")}
-            className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-          >
-            Admin Login
-          </button>
+          {isLoggedIn ? (
+            <button
+              type="button"
+              onClick={goToProfile}
+              className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+            >
+              Profile
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => navigate("/signup")}
+                className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-amber-400"
+              >
+                Sign Up
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+              >
+                User Login
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/admin-login")}
+                className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+              >
+                Admin Login
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

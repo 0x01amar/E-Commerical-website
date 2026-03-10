@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema({
     select: false,
   },
 
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+
   phone:{
     type:String
   },
@@ -26,23 +31,13 @@ const userSchema = new mongoose.Schema({
   address:{
     type:String
   },
-  otp:{
+  signupOtp:{
     type:String,
     select: false,
   },
 
-  otpExpire:{
+  signupOtpExpire:{
     type:Date,
-    select: false,
-  },
-
-  pendingPassword: {
-    type: String,
-    select: false,
-  },
-
-  pendingPasswordExpire: {
-    type: Date,
     select: false,
   },
 

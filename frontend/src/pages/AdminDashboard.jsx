@@ -20,6 +20,7 @@ function AdminDashboard() {
 
   const navigate = useNavigate();
   const isAdmin = localStorage.getItem("role") === "admin";
+  const adminKey = localStorage.getItem("adminKey") || "";
 
   useEffect(() => {
     if (!isAdmin) {
@@ -94,6 +95,9 @@ function AdminDashboard() {
 
       const response = await fetch(url, {
         method,
+        headers: {
+          "x-admin-key": adminKey,
+        },
         body: formData,
       });
 
@@ -126,6 +130,9 @@ function AdminDashboard() {
 
       const response = await fetch(`http://localhost:5000/api/products/${id}`, {
         method: "DELETE",
+        headers: {
+          "x-admin-key": adminKey,
+        },
       });
 
       const data = await response.json();
@@ -155,7 +162,9 @@ function AdminDashboard() {
   };
 
   const logout = () => {
+    localStorage.removeItem("email");
     localStorage.removeItem("role");
+    localStorage.removeItem("adminKey");
     navigate("/admin-login");
   };
 
@@ -183,7 +192,7 @@ function AdminDashboard() {
         <button
           type="button"
           onClick={logout}
-          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600"
         >
           Logout
         </button>

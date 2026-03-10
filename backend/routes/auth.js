@@ -4,6 +4,9 @@ const User = require("../models/User");
 const nodemailer = require("nodemailer");
 const bcrypt = require("bcryptjs");
 
+const OTP_EXPIRY_MS = 5 * 60 * 1000;
+const passwordPolicyRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
 
 // -------- EMAIL TRANSPORTER --------
 const transporter = nodemailer.createTransport({
@@ -18,16 +21,23 @@ const transporter = nodemailer.createTransport({
 
 const normalizeEmail = (email = "") => email.trim().toLowerCase();
 
-const passwordPolicyRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-
 const isStrongPassword = (password = "") => passwordPolicyRegex.test(password);
+
+const isBcryptHash = (value = "") => value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$");
+
+const isAdminKeyValid = (adminKey = "") => {
+  const configuredAdminKey = process.env.ADMIN_KEY || "";
+  return Boolean(configuredAdminKey) && adminKey === configuredAdminKey;
+};
+
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const comparePassword = async (plainPassword, storedPassword) => {
   if (!storedPassword) {
     return false;
   }
 
-  if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$")) {
+  if (isBcryptHash(storedPassword)) {
     return bcrypt.compare(plainPassword, storedPassword);
   }
 
@@ -46,67 +56,76 @@ const safeUser = (user) => ({
   updatedAt: user.updatedAt,
 });
 
-// -------- SEND OTP --------
-router.post("/send-otp", async (req, res) => {
+// -------- SIGNUP: REQUEST OTP --------
+router.post("/signup/request-otp", async (req, res) => {
 
   try {
 
+    const name = req.body?.name?.trim();
     const email = normalizeEmail(req.body?.email);
-    const rawPassword = req.body?.password || "";
+    const password = req.body?.password || "";
+    const confirmPassword = req.body?.confirmPassword || "";
+
+    if (!name) {
+      return res.status(400).json({ message: "Full name is required" });
+    }
 
     if (!email) {
       return res.status(400).json({ message: "Email required" });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    if (!password || !confirmPassword) {
+      return res.status(400).json({ message: "Password and confirm password are required" });
+    }
 
-    let user = await User.findOne({ email }).select("+password +pendingPassword +pendingPasswordExpire");
-    const hasExistingPassword = Boolean(user?.password);
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Password and confirm password must match" });
+    }
+
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({
+        message:
+          "Password must be at least 8 characters and include one uppercase letter, one number, and one special character",
+      });
+    }
+
+    const existingVerifiedUser = await User.findOne({ email, isVerified: true });
+
+    if (existingVerifiedUser) {
+      return res.status(409).json({ message: "Email is already registered. Please login." });
+    }
+
+    const otp = generateOtp();
+
+    let user = await User.findOne({ email }).select("+password +signupOtp +signupOtpExpire");
 
     if (!user) {
       user = new User({ email });
     }
 
-    if (!hasExistingPassword) {
-      if (!rawPassword) {
-        return res.status(400).json({
-          message: "Password required for first login",
-        });
-      }
-
-      if (!isStrongPassword(rawPassword)) {
-        return res.status(400).json({
-          message:
-            "Password must be at least 8 characters and include one uppercase letter, one number, and one special character",
-        });
-      }
-
-      user.pendingPassword = await bcrypt.hash(rawPassword, 10);
-      user.pendingPasswordExpire = Date.now() + 5 * 60 * 1000;
-    }
-
-    user.otp = otp;
-    user.otpExpire = Date.now() + 5 * 60 * 1000;
+    user.name = name;
+    user.password = await bcrypt.hash(password, 10);
+    user.isVerified = false;
+    user.signupOtp = otp;
+    user.signupOtpExpire = Date.now() + OTP_EXPIRY_MS;
+    user.role = "user";
 
     await user.save();
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "Your OTP and Login Details",
-      text: hasExistingPassword
-        ? `Your OTP is ${otp}`
-        : `Your OTP is ${otp}.\nYour selected login password is: ${rawPassword}`,
+      subject: "Your Signup OTP",
+      text: `Hi ${name},\n\nYour OTP for signup is: ${otp}\nIt will expire in 5 minutes.\n\nIf you did not request this, please ignore this email.`,
     });
 
     res.json({
-      message: "OTP sent successfully",
-      login: hasExistingPassword,
+      message: "OTP sent to your email",
     });
 
   } catch (err) {
 
-    console.log("SEND OTP ERROR:", err);
+    console.log("SIGNUP OTP ERROR:", err);
 
     res.status(500).json({
       message: "OTP sending failed",
@@ -116,63 +135,116 @@ router.post("/send-otp", async (req, res) => {
 
 });
 
-// -------- VERIFY OTP --------
-router.post("/verify-otp", async (req,res)=>{
+// -------- SIGNUP: VERIFY OTP --------
+router.post("/signup/verify-otp", async (req, res) => {
 
-try{
+  try {
 
-const email = normalizeEmail(req.body?.email);
-const { otp } = req.body;
+    const email = normalizeEmail(req.body?.email);
+    const otp = String(req.body?.otp || "").trim();
 
-if(!email || !otp){
-return res.status(400).json({message:"Email and OTP are required"});
-}
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
+    }
 
-const user = await User.findOne({email}).select("+otp +otpExpire +password +pendingPassword +pendingPasswordExpire");
+    const user = await User.findOne({ email }).select("+signupOtp +signupOtpExpire +password");
 
-if(!user){
-return res.status(404).json({message:"User not found"});
-}
+    if (!user) {
+      return res.status(404).json({ message: "Signup request not found. Please sign up again." });
+    }
 
-if(user.otp !== otp){
-return res.status(400).json({message:"Invalid OTP"});
-}
+    if (user.isVerified) {
+      return res.status(400).json({ message: "User is already verified. Please login." });
+    }
 
-if(user.otpExpire < Date.now()){
-return res.status(400).json({message:"OTP expired"});
-}
+    if (!user.signupOtp || user.signupOtp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
 
-if(!user.password && user.pendingPassword){
-if(user.pendingPasswordExpire && user.pendingPasswordExpire < Date.now()){
-user.pendingPassword = null;
-user.pendingPasswordExpire = null;
-await user.save();
-return res.status(400).json({message:"Password setup expired. Please request OTP again"});
-}
+    if (!user.signupOtpExpire || user.signupOtpExpire < Date.now()) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
 
-user.password = user.pendingPassword;
-}
+    user.isVerified = true;
+    user.signupOtp = null;
+    user.signupOtpExpire = null;
+    await user.save();
 
-user.otp = null;
-user.otpExpire = null;
-user.pendingPassword = null;
-user.pendingPasswordExpire = null;
-await user.save();
+    res.json({
+      message: "Signup successful",
+      user: safeUser(user),
+    });
 
-res.json({
-message:"OTP verified",
-userExists: !!user.password,
-needsProfile: !user.name || !user.phone || !user.address,
-});
+  } catch (err) {
 
-}catch(err){
+    console.log(err);
+    res.status(500).json({ message: "Server error" });
 
-console.log(err);
-res.status(500).json({message:"Server error"});
-
-}
+  }
 
 });
+
+
+const loginHandler = async (req, res) => {
+
+  try {
+
+    const email = normalizeEmail(req.body?.email);
+    const { password } = req.body;
+    const adminKey = String(req.body?.adminKey || "");
+    const asAdmin = Boolean(req.body?.asAdmin);
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ message: "Please verify signup OTP first" });
+    }
+
+    const passwordMatched = await comparePassword(password, user.password || "");
+
+    if (!passwordMatched) {
+      return res.status(401).json({ message: "Wrong password" });
+    }
+
+    if (passwordMatched && user.password && !isBcryptHash(user.password)) {
+      user.password = await bcrypt.hash(password, 10);
+      await user.save();
+    }
+
+    const isAdmin = isAdminKeyValid(adminKey);
+
+    if (asAdmin && !isAdmin) {
+      return res.status(403).json({ message: "Invalid admin key" });
+    }
+
+    res.json({
+      message: "Login successful",
+      user: safeUser(user),
+      role: isAdmin ? "admin" : "user",
+      isAdmin,
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+
+};
+
+
+// -------- LOGIN --------
+router.post("/login", loginHandler);
+
+
+// -------- LOGIN (BACKWARD COMPAT) --------
+router.post("/login-password", loginHandler);
 
 
 // -------- COMPLETE PROFILE --------
@@ -195,7 +267,7 @@ router.post("/complete-profile", async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email }).select("+password");
+    const user = await User.findOne({ email, isVerified: true }).select("+password");
 
     if (!user) {
       return res.status(404).json({
@@ -222,103 +294,13 @@ router.post("/complete-profile", async (req, res) => {
 });
 
 
-// -------- LOGIN WITH PASSWORD --------
-router.post("/login-password", async (req, res) => {
-
-  try {
-
-    const email = normalizeEmail(req.body?.email);
-    const { password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Email and password are required",
-      });
-    }
-
-    const user = await User.findOne({ email }).select("+password");
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    const passwordMatched = await comparePassword(password, user.password || "");
-
-    if (!passwordMatched) {
-      return res.status(401).json({
-        message: "Wrong password",
-      });
-    }
-
-    if (passwordMatched && user.password && !(user.password.startsWith("$2a$") || user.password.startsWith("$2b$") || user.password.startsWith("$2y$"))) {
-      user.password = await bcrypt.hash(password, 10);
-      await user.save();
-    }
-
-    res.json({
-      message: "Login successful",
-      user: safeUser(user),
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-
-});
-
-// Admin login
-router.post("/login", async (req, res) => {
-
-  try {
-
-    const email = normalizeEmail(req.body?.email);
-    const { password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
-
-    const user = await User.findOne({ email }).select("+password");
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const passwordMatched = await comparePassword(password, user.password || "");
-
-    if (!passwordMatched) {
-      return res.status(401).json({ message: "Wrong password" });
-    }
-
-    if (passwordMatched && user.password && !(user.password.startsWith("$2a$") || user.password.startsWith("$2b$") || user.password.startsWith("$2y$"))) {
-      user.password = await bcrypt.hash(password, 10);
-      await user.save();
-    }
-
-    if (user.role !== "admin") {
-      return res.status(403).json({ message: "Only admin can login here" });
-    }
-
-    res.json({
-      message: "Login successful",
-      user: safeUser(user),
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
 // -------- GET USER PROFILE --------
 router.get("/profile/:email", async (req, res) => {
 
   try {
 
     const email = normalizeEmail(req.params.email);
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email, isVerified: true });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -357,7 +339,7 @@ router.put("/profile/:email", async (req, res) => {
     }
 
     const updatedUser = await User.findOneAndUpdate(
-      { email },
+      { email, isVerified: true },
       updates,
       { new: true, runValidators: true }
     );

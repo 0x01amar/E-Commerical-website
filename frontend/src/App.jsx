@@ -6,7 +6,6 @@ import UserLogin from "./pages/UserLogin";
 import AdminLogin from "./pages/AdminLogin";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-import CompleteProfile from "./pages/CompleteProfile";
 import LoginPassword from "./pages/LoginPassword";
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
@@ -16,10 +15,9 @@ function App() {
   const location = useLocation();
 
   const hideNavbarRoutes = [
+    "/signup",
     "/login",
     "/admin-login",
-    "/login-password",
-    "/complete-profile",
   ];
 
   const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname);
@@ -33,12 +31,13 @@ function App() {
           <Route path="/" element={<Home search={search} />} />
           <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/cart" element={<Cart />} />
-          <Route path="/login" element={<UserLogin />} />
+          <Route path="/signup" element={<UserLogin />} />
+          <Route path="/login" element={<LoginPassword />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route path="/complete-profile" element={<CompleteProfile />} />
-          <Route path="/login-password" element={<LoginPassword />} />
+          <Route path="/complete-profile" element={<Navigate replace to="/signup" />} />
+          <Route path="/login-password" element={<Navigate replace to="/login" />} />
           <Route path="*" element={<Navigate replace to="/" />} />
         </Routes>
       </main>

@@ -26,10 +26,25 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(converted) ? converted : fallback;
 };
 
+const isAdminKeyValid = (adminKey = "") => {
+  const configuredAdminKey = process.env.ADMIN_KEY || "";
+  return Boolean(configuredAdminKey) && adminKey === configuredAdminKey;
+};
+
+const requireAdminKey = (req, res, next) => {
+  const adminKey = String(req.headers["x-admin-key"] || "");
+
+  if (!isAdminKeyValid(adminKey)) {
+    return res.status(403).json({ message: "Admin access denied" });
+  }
+
+  next();
+};
+
 
 /* CREATE PRODUCT + IMAGE */
 
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", requireAdminKey, upload.single("image"), async (req, res) => {
   try {
 
     if (!req.body.name || !req.body.category) {
@@ -94,7 +109,7 @@ router.get("/:id", async (req, res) => {
 
 /* UPDATE PRODUCT */
 
-router.put("/:id", upload.single("image"), async (req, res) => {
+router.put("/:id", requireAdminKey, upload.single("image"), async (req, res) => {
   try {
 
     const updateData = {};
@@ -131,7 +146,7 @@ router.put("/:id", upload.single("image"), async (req, res) => {
 
 /* DELETE PRODUCT */
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireAdminKey, async (req, res) => {
   try {
 
     const deletedProduct = await Product.findByIdAndDelete(req.params.id);

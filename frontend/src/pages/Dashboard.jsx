@@ -86,6 +86,8 @@ function Dashboard() {
 
   const logout = () => {
     localStorage.removeItem("email");
+    localStorage.removeItem("role");
+    localStorage.removeItem("adminKey");
     navigate("/login");
   };
 
@@ -121,7 +123,7 @@ function Dashboard() {
         <button
           type="button"
           onClick={logout}
-          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600"
         >
           Logout
         </button>
