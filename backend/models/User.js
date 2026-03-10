@@ -8,11 +8,15 @@ const userSchema = new mongoose.Schema({
 
   email:{
     type:String,
-    required:true
+    required:true,
+    unique: true,
+    lowercase: true,
+    trim: true
   },
 
   password:{
     type:String,
+    select: false,
   },
 
   phone:{
@@ -23,12 +27,25 @@ const userSchema = new mongoose.Schema({
     type:String
   },
   otp:{
-    type:String
+    type:String,
+    select: false,
   },
 
   otpExpire:{
-    type:Date
+    type:Date,
+    select: false,
   },
+
+  pendingPassword: {
+    type: String,
+    select: false,
+  },
+
+  pendingPasswordExpire: {
+    type: Date,
+    select: false,
+  },
+
   photo:{
     type:String
   },
@@ -39,6 +56,8 @@ const userSchema = new mongoose.Schema({
     default:"user"
   }
 
+},{
+  timestamps: true,
 });
 
 module.exports = mongoose.model("User",userSchema);
