@@ -126,7 +126,7 @@ function UserLogin() {
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-100 via-amber-50 to-slate-200 px-4 py-10">
-            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
+            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
                 <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
                 <p className="mt-2 text-sm text-slate-600">Sign up with your details, then verify OTP sent to your email.</p>
 

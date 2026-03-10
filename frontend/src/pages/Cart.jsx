@@ -1,14 +1,34 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { mediaUrl } from "../config/api";
 
 function Cart() {
 	const navigate = useNavigate();
+	const location = useLocation();
+	const email = localStorage.getItem("email");
 	const [items, setItems] = useState(() => JSON.parse(localStorage.getItem("cartItems") || "[]"));
+
+	useEffect(() => {
+		if (email) {
+			return;
+		}
+
+		navigate("/login", {
+			replace: true,
+			state: {
+				message: "Please login first to view cart",
+				redirectTo: location.pathname,
+			},
+		});
+	}, [email, location.pathname, navigate]);
 
 	const persist = (nextItems) => {
 		setItems(nextItems);
 		localStorage.setItem("cartItems", JSON.stringify(nextItems));
+	};
+
+	const checkoutItem = (itemId) => {
+		navigate(`/checkout/${itemId}?mode=cart`);
 	};
 
 	const removeItem = (id) => {
@@ -34,8 +54,8 @@ function Cart() {
 
 	return (
 		<section className="space-y-6">
-			<div className="flex items-center justify-between">
-				<h1 className="text-3xl font-bold text-slate-900">Your Cart</h1>
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Your Cart</h1>
 				<button
 					type="button"
 					onClick={() => navigate("/")}
@@ -66,6 +86,9 @@ function Cart() {
 									<div className="flex-1">
 										<h2 className="text-lg font-semibold text-slate-900">{item.name}</h2>
 										<p className="text-sm text-slate-500">₹{item.price} each</p>
+										<p className="mt-1 text-sm font-semibold text-slate-700">
+											Item total: ₹{(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)}
+										</p>
 									</div>
 
 									<div className="flex items-center gap-2">
@@ -92,6 +115,14 @@ function Cart() {
 										className="rounded-lg bg-rose-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-rose-600"
 									>
 										Remove
+									</button>
+
+									<button
+										type="button"
+										onClick={() => checkoutItem(item._id)}
+										className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500"
+									>
+										Checkout
 									</button>
 								</div>
 							);

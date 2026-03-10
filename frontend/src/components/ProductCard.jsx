@@ -23,9 +23,9 @@ function ProductCard({
         <img
           src={imageUrl}
           alt={product.name}
-          className="h-52 w-full object-cover"
+          className="h-44 w-full object-cover sm:h-52"
         />
-        <div className="space-y-1 p-4">
+        <div className="space-y-1 p-3.5 sm:p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{product.category}</p>
           <h3 className="line-clamp-1 text-lg font-semibold text-slate-900">{product.name}</h3>
           <p className="text-xl font-bold text-slate-900">₹{product.price}</p>

@@ -21,6 +21,54 @@ const transporter = nodemailer.createTransport({
 
 const normalizeEmail = (email = "") => email.trim().toLowerCase();
 
+const trimString = (value = "") => String(value || "").trim();
+
+const normalizeAddress = (address = {}) => {
+  if (typeof address === "string") {
+    const fullAddress = trimString(address);
+
+    return {
+      line1: fullAddress,
+      landmark: "",
+      villageTown: "",
+      wardNo: "",
+      district: "",
+      state: "",
+      pincode: "",
+      fullAddress,
+    };
+  }
+
+  const normalized = {
+    line1: trimString(address?.line1),
+    landmark: trimString(address?.landmark),
+    villageTown: trimString(address?.villageTown),
+    wardNo: trimString(address?.wardNo),
+    district: trimString(address?.district),
+    state: trimString(address?.state),
+    pincode: trimString(address?.pincode),
+    fullAddress: trimString(address?.fullAddress),
+  };
+
+  const composedAddress = [
+    normalized.line1,
+    normalized.landmark,
+    normalized.villageTown,
+    normalized.wardNo ? `Ward No ${normalized.wardNo}` : "",
+    normalized.district,
+    normalized.state,
+    normalized.pincode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  normalized.fullAddress = normalized.fullAddress || composedAddress;
+
+  return normalized;
+};
+
+const isPincodeValid = (pincode = "") => !pincode || /^\d{6}$/.test(trimString(pincode));
+
 const isStrongPassword = (password = "") => passwordPolicyRegex.test(password);
 
 const isBcryptHash = (value = "") => value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$");
@@ -44,17 +92,22 @@ const comparePassword = async (plainPassword, storedPassword) => {
   return plainPassword === storedPassword;
 };
 
-const safeUser = (user) => ({
-  _id: user._id,
-  name: user.name,
-  email: user.email,
-  phone: user.phone,
-  address: user.address,
-  photo: user.photo,
-  role: user.role,
-  createdAt: user.createdAt,
-  updatedAt: user.updatedAt,
-});
+const safeUser = (user) => {
+  const normalizedAddress = normalizeAddress(user.address || {});
+
+  return {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    address: normalizedAddress,
+    addressText: normalizedAddress.fullAddress,
+    photo: user.photo,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+};
 
 // -------- SIGNUP: REQUEST OTP --------
 router.post("/signup/request-otp", async (req, res) => {
@@ -267,6 +320,14 @@ router.post("/complete-profile", async (req, res) => {
       });
     }
 
+    const normalizedAddress = normalizeAddress(address);
+
+    if (!isPincodeValid(normalizedAddress.pincode)) {
+      return res.status(400).json({
+        message: "Pincode must be exactly 6 digits",
+      });
+    }
+
     const user = await User.findOne({ email, isVerified: true }).select("+password");
 
     if (!user) {
@@ -277,7 +338,7 @@ router.post("/complete-profile", async (req, res) => {
 
     user.name = name;
     user.phone = phone;
-    user.address = address;
+    user.address = normalizedAddress;
 
     await user.save();
 
@@ -327,6 +388,14 @@ router.put("/profile/:email", async (req, res) => {
       address: req.body?.address,
       photo: req.body?.photo,
     };
+
+    if (updates.address !== undefined) {
+      updates.address = normalizeAddress(updates.address);
+
+      if (!isPincodeValid(updates.address.pincode)) {
+        return res.status(400).json({ message: "Pincode must be exactly 6 digits" });
+      }
+    }
 
     Object.keys(updates).forEach((key) => {
       if (updates[key] === undefined) {

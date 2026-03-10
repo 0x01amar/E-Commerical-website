@@ -29,7 +29,17 @@ const userSchema = new mongoose.Schema({
   },
 
   address:{
-    type:String
+    type: mongoose.Schema.Types.Mixed,
+    default: () => ({
+      line1: "",
+      landmark: "",
+      villageTown: "",
+      wardNo: "",
+      district: "",
+      state: "",
+      pincode: "",
+      fullAddress: "",
+    }),
   },
   signupOtp:{
     type:String,

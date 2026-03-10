@@ -7,7 +7,7 @@ function ProductPage() {
   const navigate = useNavigate();
     const isLoggedIn = Boolean(localStorage.getItem("email"));
 
-  const [product, setProduct] = useState(null);
+    const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -34,11 +34,11 @@ function ProductPage() {
         getProduct();
   }, [id]);
 
-    const redirectToLogin = (checkoutMode) => {
+    const redirectToLogin = (redirectTo) => {
         navigate("/login", {
             state: {
                 message: "Please login first to continue",
-                redirectTo: `/checkout/${id}?mode=${checkoutMode}`,
+                redirectTo,
             },
         });
     };
@@ -49,11 +49,26 @@ function ProductPage() {
         }
 
         if (!isLoggedIn) {
-            redirectToLogin("cart");
+            redirectToLogin(`/product/${id}`);
             return;
         }
 
-        navigate(`/checkout/${id}?mode=cart`);
+        const existingCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
+        const existingItem = existingCart.find((item) => item._id === product._id);
+
+        const nextCart = existingItem
+            ? existingCart.map((item) =>
+                    item._id === product._id
+                        ? {
+                                ...item,
+                                quantity: Number(item.quantity || 1) + 1,
+                            }
+                        : item
+                )
+            : [...existingCart, { ...product, quantity: 1 }];
+
+        localStorage.setItem("cartItems", JSON.stringify(nextCart));
+        navigate("/cart");
     };
 
     const handleBuyNow = () => {
@@ -62,7 +77,7 @@ function ProductPage() {
         }
 
         if (!isLoggedIn) {
-            redirectToLogin("buy-now");
+            redirectToLogin(`/checkout/${id}?mode=buy-now`);
             return;
         }
 
@@ -143,7 +158,6 @@ function ProductPage() {
             </div>
         </section>
     );
-
 }
 
 export default ProductPage;

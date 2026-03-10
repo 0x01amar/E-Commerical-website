@@ -5,6 +5,70 @@ import { apiUrl, mediaUrl } from "../config/api";
 const TAX_RATE = 0.08;
 const SHIPPING_CHARGE = 79;
 
+const EMPTY_ADDRESS = {
+  line1: "",
+  landmark: "",
+  villageTown: "",
+  wardNo: "",
+  district: "",
+  state: "",
+  pincode: "",
+  fullAddress: "",
+};
+
+const normalizeAddress = (address = {}) => {
+  if (typeof address === "string") {
+    const fullAddress = address.trim();
+
+    return {
+      ...EMPTY_ADDRESS,
+      line1: fullAddress,
+      fullAddress,
+    };
+  }
+
+  return {
+    line1: String(address?.line1 || "").trim(),
+    landmark: String(address?.landmark || "").trim(),
+    villageTown: String(address?.villageTown || "").trim(),
+    wardNo: String(address?.wardNo || "").trim(),
+    district: String(address?.district || "").trim(),
+    state: String(address?.state || "").trim(),
+    pincode: String(address?.pincode || "").trim(),
+    fullAddress: String(address?.fullAddress || "").trim(),
+  };
+};
+
+const formatAddress = (address = EMPTY_ADDRESS) => {
+  return [
+    address.line1,
+    address.landmark,
+    address.villageTown,
+    address.wardNo ? `Ward No ${address.wardNo}` : "",
+    address.district,
+    address.state,
+    address.pincode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+};
+
+const validateAddress = (address = EMPTY_ADDRESS) => {
+  const requiredFields = ["line1", "villageTown", "wardNo", "district", "state", "pincode"];
+
+  for (const field of requiredFields) {
+    if (!String(address[field] || "").trim()) {
+      return "Please fill all required delivery address fields";
+    }
+  }
+
+  if (!/^\d{6}$/.test(address.pincode)) {
+    return "Pincode must be exactly 6 digits";
+  }
+
+  return "";
+};
+
 function Checkout() {
   const { productId } = useParams();
   const location = useLocation();
@@ -17,12 +81,16 @@ function Checkout() {
   const [loadingProduct, setLoadingProduct] = useState(true);
   const [step, setStep] = useState(1);
   const [quantity, setQuantity] = useState(1);
-  const [address, setAddress] = useState("");
-  const [savedAddress, setSavedAddress] = useState("");
+  const [addressForm, setAddressForm] = useState(EMPTY_ADDRESS);
+  const [savedAddress, setSavedAddress] = useState(EMPTY_ADDRESS);
+  const [savedAddressText, setSavedAddressText] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [paymentOption, setPaymentOption] = useState("cod");
+  const [paidNowAmountInput, setPaidNowAmountInput] = useState("");
   const [processingPayment, setProcessingPayment] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [cartSynced, setCartSynced] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -78,14 +146,22 @@ function Checkout() {
           return;
         }
 
-        const profileAddress = data?.address || "";
-        setSavedAddress(profileAddress);
+        const profileAddress = normalizeAddress(data?.address || data?.addressText || {});
+        const formatted = profileAddress.fullAddress || formatAddress(profileAddress);
 
-        if (profileAddress) {
-          setAddress(profileAddress);
+        setSavedAddress(profileAddress);
+        setSavedAddressText(formatted);
+
+        if (formatted) {
+          setAddressForm(profileAddress);
+        }
+
+        if (data?.phone) {
+          setContactPhone(String(data.phone));
         }
       } catch {
-        setSavedAddress("");
+        setSavedAddress(EMPTY_ADDRESS);
+        setSavedAddressText("");
       }
     };
 
@@ -100,20 +176,10 @@ function Checkout() {
     const existingCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
     const existingItem = existingCart.find((item) => item._id === product._id);
 
-    let nextQuantity = 1;
-    let nextCart;
-
     if (existingItem) {
-      nextQuantity = Number(existingItem.quantity || 1) + 1;
-      nextCart = existingCart.map((item) =>
-        item._id === product._id ? { ...item, quantity: nextQuantity } : item
-      );
-    } else {
-      nextCart = [...existingCart, { ...product, quantity: 1 }];
+      setQuantity(Math.max(1, Number(existingItem.quantity || 1)));
     }
 
-    localStorage.setItem("cartItems", JSON.stringify(nextCart));
-    setQuantity(nextQuantity);
     setCartSynced(true);
   }, [cartSynced, mode, product]);
 
@@ -124,6 +190,10 @@ function Checkout() {
   const taxAmount = useMemo(() => subtotal * TAX_RATE, [subtotal]);
   const shippingCharge = useMemo(() => (subtotal > 0 ? SHIPPING_CHARGE : 0), [subtotal]);
   const totalPrice = useMemo(() => subtotal + taxAmount + shippingCharge, [shippingCharge, subtotal, taxAmount]);
+  const expectedHalfAmount = useMemo(() => Number((totalPrice / 2).toFixed(2)), [totalPrice]);
+  const deliveryAddressText = useMemo(() => {
+    return formatAddress(addressForm);
+  }, [addressForm]);
 
   const moveToAddressStep = () => {
     if (quantity < 1) {
@@ -132,21 +202,40 @@ function Checkout() {
     }
 
     setError("");
+    setNotice("");
     setStep(2);
   };
 
+  const setAddressField = (field, value) => {
+    setAddressForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   const saveAddressAndNext = async () => {
-    const trimmedAddress = address.trim();
-
-    if (!trimmedAddress) {
-      setError("Please enter delivery address");
-      return;
-    }
-
     if (!email) {
       setError("Please login first");
       return;
     }
+
+    const normalizedAddress = normalizeAddress(addressForm);
+    const addressError = validateAddress(normalizedAddress);
+
+    if (addressError) {
+      setError(addressError);
+      return;
+    }
+
+    if (!/^\d{10}$/.test(contactPhone.trim())) {
+      setError("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    const finalAddress = {
+      ...normalizedAddress,
+      fullAddress: formatAddress(normalizedAddress),
+    };
 
     try {
       setSavingAddress(true);
@@ -158,7 +247,8 @@ function Checkout() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          address: trimmedAddress,
+          phone: contactPhone.trim(),
+          address: finalAddress,
         }),
       });
 
@@ -168,8 +258,12 @@ function Checkout() {
         throw new Error(data?.message || "Failed to save address");
       }
 
-      setSavedAddress(data?.address || trimmedAddress);
-      setAddress(data?.address || trimmedAddress);
+      const updatedAddress = normalizeAddress(data?.address || finalAddress);
+      const updatedAddressText = updatedAddress.fullAddress || formatAddress(updatedAddress);
+
+      setSavedAddress(updatedAddress);
+      setSavedAddressText(updatedAddressText);
+      setAddressForm(updatedAddress);
       setStep(3);
     } catch (saveError) {
       setError(saveError.message || "Failed to save address");
@@ -179,21 +273,129 @@ function Checkout() {
   };
 
   const continueToPayment = () => {
+    if (!deliveryAddressText) {
+      setError("Please add delivery address first");
+      return;
+    }
+
     setError("");
+    setNotice("");
     setStep(4);
   };
 
-  const handlePayNow = async () => {
-    try {
-      setProcessingPayment(true);
-      setError("");
+  const syncCartAfterOrder = () => {
+    if (mode !== "cart" || !product) {
+      return;
+    }
 
-      if (paymentOption === "cod") {
-        setNotice("Cash on delivery selected. Order flow is ready.");
+    const existingCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    const nextCart = existingCart
+      .map((item) => {
+        if (item._id !== product._id) {
+          return item;
+        }
+
+        const currentQuantity = Number(item.quantity || 1);
+        const nextQuantity = currentQuantity - quantity;
+
+        if (nextQuantity <= 0) {
+          return null;
+        }
+
+        return {
+          ...item,
+          quantity: nextQuantity,
+        };
+      })
+      .filter(Boolean);
+
+    localStorage.setItem("cartItems", JSON.stringify(nextCart));
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!email || !product) {
+      setError("Please login first");
+      return;
+    }
+
+    const normalizedAddress = normalizeAddress(addressForm);
+    const addressError = validateAddress(normalizedAddress);
+
+    if (addressError) {
+      setError(addressError);
+      setStep(2);
+      return;
+    }
+
+    if (!/^\d{10}$/.test(contactPhone.trim())) {
+      setError("Please enter a valid 10-digit phone number");
+      setStep(2);
+      return;
+    }
+
+    const finalAddress = {
+      ...normalizedAddress,
+      fullAddress: formatAddress(normalizedAddress),
+    };
+
+    let paidNowAmount = 0;
+
+    if (paymentOption === "half") {
+      const parsed = Number(paidNowAmountInput);
+
+      if (!Number.isFinite(parsed)) {
+        setError("Please enter the half payment amount");
         return;
       }
 
-      setNotice("Payment gateway is not created yet. This button will redirect to the gateway once integrated.");
+      if (Math.abs(parsed - expectedHalfAmount) > 0.01) {
+        setError(`Half payment must be exactly ₹${expectedHalfAmount.toFixed(2)}`);
+        return;
+      }
+
+      paidNowAmount = Number(parsed.toFixed(2));
+    }
+
+    try {
+      setProcessingPayment(true);
+      setError("");
+      setNotice("");
+
+      const response = await fetch(apiUrl("/orders"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          productId: product._id,
+          quantity,
+          address: finalAddress,
+          phone: contactPhone.trim(),
+          paymentOption,
+          paidNowAmount,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (typeof data?.expectedHalfAmount === "number") {
+          setPaidNowAmountInput(String(data.expectedHalfAmount));
+        }
+
+        throw new Error(data?.message || "Failed to place order");
+      }
+
+      setOrderPlaced(data?.order || null);
+      syncCartAfterOrder();
+      setNotice(
+        paymentOption === "cod"
+          ? "Order placed successfully. Confirmation has been sent by email."
+          : "Half payment order placed successfully. Confirmation has been sent by email."
+      );
+    } catch (placeOrderError) {
+      setError(placeOrderError.message || "Failed to place order");
     } finally {
       setProcessingPayment(false);
     }
@@ -293,13 +495,13 @@ function Checkout() {
 
         {step === 2 ? (
           <div className="space-y-4">
-            {savedAddress ? (
+            {savedAddressText ? (
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Saved Address</p>
-                <p className="mt-1 text-sm text-slate-700">{savedAddress}</p>
+                <p className="mt-1 text-sm text-slate-700">{savedAddressText}</p>
                 <button
                   type="button"
-                  onClick={() => setAddress(savedAddress)}
+                  onClick={() => setAddressForm(savedAddress)}
                   className="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
                 >
                   Use Saved Address
@@ -307,14 +509,84 @@ function Checkout() {
               </div>
             ) : null}
 
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Delivery Address</label>
-              <textarea
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                placeholder="Enter full delivery address"
-                className="min-h-28 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
-              />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-slate-700">Address Line *</label>
+                <input
+                  value={addressForm.line1}
+                  onChange={(event) => setAddressField("line1", event.target.value)}
+                  placeholder="House no, street, locality"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Village/Town *</label>
+                <input
+                  value={addressForm.villageTown}
+                  onChange={(event) => setAddressField("villageTown", event.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Ward No *</label>
+                <input
+                  value={addressForm.wardNo}
+                  onChange={(event) => setAddressField("wardNo", event.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">District *</label>
+                <input
+                  value={addressForm.district}
+                  onChange={(event) => setAddressField("district", event.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">State *</label>
+                <input
+                  value={addressForm.state}
+                  onChange={(event) => setAddressField("state", event.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Pincode *</label>
+                <input
+                  value={addressForm.pincode}
+                  maxLength={6}
+                  onChange={(event) =>
+                    setAddressField("pincode", event.target.value.replace(/[^0-9]/g, ""))
+                  }
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Landmark</label>
+                <input
+                  value={addressForm.landmark}
+                  onChange={(event) => setAddressField("landmark", event.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-slate-700">Phone Number *</label>
+                <input
+                  value={contactPhone}
+                  maxLength={10}
+                  onChange={(event) => setContactPhone(event.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder="10-digit mobile number"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                />
+              </div>
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -341,7 +613,8 @@ function Checkout() {
           <div className="space-y-4">
             <div className="rounded-xl border border-slate-200 p-4">
               <p className="text-sm text-slate-500">Delivery Address</p>
-              <p className="mt-1 text-sm font-medium text-slate-800">{address}</p>
+              <p className="mt-1 text-sm font-medium text-slate-800">{deliveryAddressText || "-"}</p>
+              <p className="mt-2 text-sm text-slate-500">Phone: {contactPhone || "-"}</p>
             </div>
 
             <div className="rounded-xl border border-slate-200 p-4">
@@ -409,14 +682,62 @@ function Checkout() {
               </label>
             </div>
 
+            {paymentOption === "half" ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-medium text-amber-800">
+                  Pay exactly ₹{expectedHalfAmount.toFixed(2)} now (half of total amount)
+                </p>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={paidNowAmountInput}
+                  onChange={(event) => setPaidNowAmountInput(event.target.value)}
+                  placeholder={`Enter ₹${expectedHalfAmount.toFixed(2)}`}
+                  className="mt-3 w-full rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                />
+              </div>
+            ) : null}
+
+            {orderPlaced ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                <p className="font-semibold">Order placed: {orderPlaced.orderCode}</p>
+                <p className="mt-1">Status: {orderPlaced.status}</p>
+                <p className="mt-1">Expected delivery: {orderPlaced.expectedDelivery}</p>
+              </div>
+            ) : null}
+
             <button
               type="button"
-              onClick={handlePayNow}
-              disabled={processingPayment}
+              onClick={handlePlaceOrder}
+              disabled={processingPayment || Boolean(orderPlaced)}
               className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {processingPayment ? "Processing..." : "Pay Now"}
+              {processingPayment
+                ? "Processing..."
+                : paymentOption === "half"
+                  ? "Pay Now & Place Order"
+                  : "Place Order"}
             </button>
+
+            {orderPlaced ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => navigate("/")}
+                  className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  Back to Home
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/dashboard")}
+                  className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Track in Profile
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
