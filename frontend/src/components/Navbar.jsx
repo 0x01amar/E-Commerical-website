@@ -1,59 +1,57 @@
-import { useNavigate } from "react-router-dom";
-function Navbar({search,setSearch}) {
+import { useLocation, useNavigate } from "react-router-dom";
+import SearchBar from "./SearchBar";
 
-const navigate = useNavigate();
+function Navbar({ search, setSearch }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const showSearch = location.pathname === "/";
+
   return (
-
-    <div
-      style={{
-        background: "#131921",
-        color: "white",
-        padding: "10px 10px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between"
-      }}
-    >
-
-      {/* Logo */}
-      <h2 style={{ cursor: "pointer" }}>
-        <b>Satyam Iron Art</b>
-      </h2>
-
-
-      {/* Search Bar */}
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e)=>setSearch(e.target.value)}
-          style={{
-            width:"35%",
-            padding:"14px"
-            
-          }}
-        />
-            <div style={{display:"flex",gap:"10px"}}>
-
+    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <button
-            onClick={()=>navigate("/login")}
-            style={{padding:"14px 12px",cursor:"pointer"}}
-            >
-            User Login
+          type="button"
+          onClick={() => navigate("/")}
+          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          Satyam Iron Art
         </button>
 
-        <button
-            onClick={()=>navigate("/admin-login")}
-            style={{padding:"14px 12px",cursor:"pointer"}}
-            >
-            Admin Login
-        </button>
-
+        <div className="order-3 w-full md:order-2 md:flex-1">
+          {showSearch ? (
+            <SearchBar
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          ) : null}
         </div>
-    </div>
 
+        <div className="order-2 ml-auto flex items-center gap-2 md:order-3">
+          <button
+            type="button"
+            onClick={() => navigate("/cart")}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+          >
+            Cart
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/login")}
+            className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-amber-400"
+          >
+            User Login
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/admin-login")}
+            className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+          >
+            Admin Login
+          </button>
+        </div>
+      </div>
+    </header>
   );
-
 }
 
 export default Navbar;
