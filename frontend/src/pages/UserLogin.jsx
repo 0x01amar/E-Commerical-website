@@ -2,193 +2,173 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function UserLogin() {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [otp, setOtp] = useState("");
+    const [step, setStep] = useState(1);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-const [email,setEmail] = useState("");
-const [otp,setOtp] = useState("");
-const [step,setStep] = useState(1);
+    const navigate = useNavigate();
 
-const navigate = useNavigate();
+    const passwordPolicyRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
+    const sendOtp = async () => {
+        try {
+            const normalizedEmail = email.trim().toLowerCase();
 
-// -------- SEND OTP --------
-const sendOtp = () => {
+            if (!normalizedEmail) {
+                setError("Please enter your email");
+                return;
+            }
 
-fetch("http://localhost:5000/api/auth/send-otp",{
-    method:"POST",
-    headers:{
-    "Content-Type":"application/json"
- },
-body:JSON.stringify({email})
-})
-.then(res=>res.json())
-.then(data=>{
+            if (!passwordPolicyRegex.test(password)) {
+                setError(
+                    "Password must be at least 8 characters and include uppercase, number, and special character"
+                );
+                return;
+            }
 
-// Agar user pehle se registered hai
-if(data.login){
-    navigate("/login-password");
-}else{
-    alert("OTP sent to your email");
-    setStep(2);
-    }
+            setLoading(true);
+            setError("");
 
-  });
+            const response = await fetch("http://localhost:5000/api/auth/send-otp", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ email: normalizedEmail, password }),
+            });
 
-};
+            const data = await response.json();
 
+            if (!response.ok) {
+                throw new Error(data?.message || "Failed to send OTP");
+            }
 
-// -------- VERIFY OTP --------
-const verifyOtp = () => {
+            setEmail(normalizedEmail);
+            setStep(2);
+        } catch (sendOtpError) {
+            setError(sendOtpError.message || "Failed to send OTP");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-fetch("http://localhost:5000/api/auth/verify-otp",{
-    method:"POST",
-    headers:{
-    "Content-Type":"application/json"
-},
-    body:JSON.stringify({
-    email,
-    otp
-    })
-})
-.then(res=>res.json())
-.then(data=>{
+    const verifyOtp = async () => {
+        try {
+            if (!otp.trim()) {
+                setError("Please enter OTP");
+                return;
+            }
 
-    if(data.message ==="Invalid OTP"||
-        data.message ==="OTP expired"
-    ){
-        alert(data.message);
-        return
-    }
+            setLoading(true);
+            setError("");
 
-if(data.userExists){
+            const response = await fetch("http://localhost:5000/api/auth/verify-otp", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email,
+                    otp: otp.trim(),
+                }),
+            });
 
-    localStorage.setItem("email",email);
+            const data = await response.json();
 
-    navigate("/dashboard");
+            if (!response.ok) {
+                throw new Error(data?.message || "OTP verification failed");
+            }
 
-}else{
+            localStorage.setItem("email", email);
 
-    navigate("/complete-profile");
+            if (data.userExists && !data.needsProfile) {
+                navigate("/login-password");
+                return;
+            }
 
-}
+            navigate("/complete-profile");
+        } catch (verifyError) {
+            setError(verifyError.message || "OTP verification failed");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-});
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-100 via-amber-50 to-slate-200 px-4 py-10">
+            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
+                <h1 className="text-2xl font-bold text-slate-900">User Login</h1>
+                <p className="mt-2 text-sm text-slate-600">We will send a one-time OTP to your email.</p>
 
-};
+                {error ? <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p> : null}
 
-
-return(
-    
-    <div
-        style={{
-        display:"flex",
-        justifyContent:"center",
-        alignItems:"center",
-        height:"100vh",
-        background:"#f4f6fb"
-    }}
-    >
-    
-    <div
-        style={{
-        background:"white",
-        padding:"40px",
-        borderRadius:"10px",
-        boxShadow:"0 5px 20px rgba(0,0,0,0.1)",
-        width:"350px"
-    }}
-    >
-    
-    <h2 style={{textAlign:"center",color:"#333"}}>
-        User Login
-    </h2>
-    
-    
-    {/* STEP 1 EMAIL */}
-    
-    {step===1 && (
-    
-    <>
-    
-    <input
-        placeholder="Enter your email"
-        value={email}
-        onChange={(e)=>setEmail(e.target.value)}
-        style={{
-        width:"100%",
-        padding:"10px",
-        marginTop:"20px",
-        borderRadius:"5px",
-        border:"1px solid #ccc"
-    }}
-    />
-    
-    <button
-        onClick={sendOtp}
-        style={{
-        width:"100%",
-        padding:"10px",
-        marginTop:"20px",
-        background:"#4CAF50",
-        color:"white",
-        border:"none",
-        borderRadius:"5px",
-        cursor:"pointer"
-    }}
-    >
-    Send OTP
-    </button>
-    
-    </>
-    
-)}
-    
-    
-    
-{/* STEP 2 OTP */}
-    
-    {step===2 && (
-    
-    <>
-    
-    <input
-        placeholder="Enter OTP"
-        value={otp}
-        onChange={(e)=>setOtp(e.target.value)}
-        style={{
-        width:"100%",
-        padding:"10px",
-        marginTop:"20px",
-        borderRadius:"5px",
-        border:"1px solid #ccc"
-    }}
-    />
-
-    <button
-        onClick={verifyOtp}
-        style={{
-        width:"100%",
-        padding:"10px",
-        marginTop:"20px",
-        background:"#2196F3",
-        color:"white",
-        border:"none",
-        borderRadius:"5px",
-        cursor:"pointer"
-    }}
-    >
-      Verify OTP
-    </button>
-
-</>
-
-    )}
-
+                {step === 1 ? (
+                    <div className="mt-5 space-y-4">
+                        <input
+                            type="email"
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(event) => setEmail(event.target.value)}
+                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                        />
+                        <input
+                            type="password"
+                            placeholder="Create password"
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                        />
+                        <p className="text-xs text-slate-500">
+                            Use at least 8 characters with 1 uppercase letter, 1 number, and 1 special character.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={sendOtp}
+                            disabled={loading}
+                            className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {loading ? "Sending OTP..." : "Send OTP"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate("/login-password")}
+                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                        >
+                            Already have password? Login with Email & Password
+                        </button>
+                    </div>
+                ) : (
+                    <div className="mt-5 space-y-4">
+                        <input
+                            type="text"
+                            placeholder="Enter 6-digit OTP"
+                            value={otp}
+                            onChange={(event) => setOtp(event.target.value)}
+                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                        />
+                        <button
+                            type="button"
+                            onClick={verifyOtp}
+                            disabled={loading}
+                            className="w-full rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {loading ? "Verifying..." : "Verify OTP"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setStep(1)}
+                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                        >
+                            Change Email
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
-
-        </div>
-
     );
-
-    }
+}
 
 export default UserLogin;
