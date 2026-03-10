@@ -178,7 +178,7 @@ function App() {
                     {/* edit aur delete buttons */}
                       <div style={{display:"flex", gap:"10px", marginTop:"10px"}}>
 
-                      <button
+                      {/* <button
                         style={{
                           background: "#4CAF50",
                           color: "white",
@@ -190,7 +190,7 @@ function App() {
                         onClick={() => editProduct(product)}
                       >
                       Edit
-                      </button>
+                      </button> */}
                       
                       <button
                         style={{
