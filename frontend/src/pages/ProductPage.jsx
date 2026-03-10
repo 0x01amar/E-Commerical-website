@@ -1,98 +1,124 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 function ProductPage() {
-
-  // URL se product id milega
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [product, setProduct] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
   useEffect(() => {
+        const getProduct = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`http://localhost:5000/api/products/${id}`);
+                const data = await response.json();
 
-    fetch(`http://localhost:5000/api/products/${id}`)
-      .then(res => res.json())
-      .then(data => setProduct(data));
+                if (!response.ok) {
+                    throw new Error(data?.message || "Product not found");
+                }
 
+                setProduct(data);
+                setError("");
+            } catch (fetchError) {
+                setError(fetchError.message || "Product not found");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        getProduct();
   }, [id]);
 
-  // jab tak product load nahi hota
-  if (!product) {
-    return <h2>Loading...</h2>;
-  }
+    const handleAddToCart = () => {
+        if (!product) {
+            return;
+        }
 
+        const existingCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
+        const existingProduct = existingCart.find((item) => item._id === product._id);
+
+        let nextCart;
+
+        if (existingProduct) {
+            nextCart = existingCart.map((item) =>
+                item._id === product._id ? { ...item, quantity: (item.quantity || 1) + 1 } : item
+            );
+        } else {
+            nextCart = [...existingCart, { ...product, quantity: 1 }];
+        }
+
+        localStorage.setItem("cartItems", JSON.stringify(nextCart));
+        navigate("/cart");
+    };
+
+    if (loading) {
+        return <p className="p-8 text-slate-600">Loading product...</p>;
+    }
+
+    if (error) {
         return (
-            
-
-            <div style={{padding:"40px"}}>
+            <div className="space-y-4 p-8">
+                <p className="rounded-xl bg-rose-50 px-4 py-3 text-rose-600">{error}</p>
                 <button
+                    type="button"
                     onClick={() => navigate("/")}
-                    style={{
-                    marginBottom:"20px",
-                    padding:"8px 15px",
-                    cursor:"pointer",
-                    background:"#ff9900",
-                    color:"#black",
-                    borderRadius:"5px",
-                    boxShadow:"0 2px 5px rgba(0,0,0,0.2)"
-                    }}
-                    >
-                    ⬅ Back
+                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                >
+                    Back to Home
                 </button>
-            
-            <div
-                style={{
-                display:"flex",
-                gap:"40px",
-                alignItems:"flex-start"
-                }}
-            >
-            
-            {/* LEFT SIDE IMAGE */}
-
-            <img
-                src={`http://localhost:5000${product.image}`}
-                style={{
-                width:"400px",
-                height:"400px",
-                objectFit:"cover",
-                borderRadius:"5px"
-                }}
-            />
-
-            {/* RIGHT SIDE DETAILS */}
-
-            <div>
-
-                <h1>{product.name}</h1>
-
-                <h2 style={{color:"green"}}>₹{product.price}</h2>
-
-                <p>Category: {product.category}</p>
-
-            <button
-                style={{
-                background:"#ff9900",
-                border:"none",
-                padding:"10px 20px",
-                fontSize:"40px",
-                cursor:"pointer",
-                borderRadius:"5px",
-                marginTop:"10px"
-            }}
-            >
-            Buy Now
-            </button>
-            
-
             </div>
+        );
+    }
 
-        </div>
+    if (!product) {
+        return null;
+    }
 
-    </div>
-  );
+    const imageUrl = product.image
+        ? `http://localhost:5000${product.image.startsWith("/") ? product.image : `/${product.image}`}`
+        : "https://placehold.co/700x500?text=No+Image";
+
+    return (
+        <section className="space-y-6">
+            <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+                ← Back to products
+            </button>
+
+            <div className="grid gap-8 overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:grid-cols-2 lg:p-8">
+                <img
+                    src={imageUrl}
+                    alt={product.name}
+                    className="h-80 w-full rounded-2xl object-cover sm:h-105"
+                />
+
+                <div className="space-y-4">
+                    <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                        {product.category}
+                    </span>
+                    <h1 className="text-3xl font-bold text-slate-900">{product.name}</h1>
+                    <p className="text-3xl font-extrabold text-slate-900">₹{product.price}</p>
+                    <p className="text-slate-600">{product.description || "No description available."}</p>
+                    <p className="text-sm text-slate-500">Stock: {product.stock ?? 0}</p>
+                    {product.warranty ? <p className="text-sm text-slate-500">Warranty: {product.warranty}</p> : null}
+
+                    <button
+                        type="button"
+                        onClick={handleAddToCart}
+                        className="mt-2 rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400"
+                    >
+                        Add to Cart
+                    </button>
+                </div>
+            </div>
+        </section>
+    );
 
 }
 
