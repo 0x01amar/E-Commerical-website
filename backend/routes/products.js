@@ -21,16 +21,28 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+const toNumber = (value, fallback = 0) => {
+  const converted = Number(value);
+  return Number.isFinite(converted) ? converted : fallback;
+};
+
 
 /* CREATE PRODUCT + IMAGE */
 
 router.post("/", upload.single("image"), async (req, res) => {
   try {
 
+    if (!req.body.name || !req.body.category) {
+      return res.status(400).json({ message: "Name and category are required" });
+    }
+
     const newProduct = new Product({
       name: req.body.name,
-      price: req.body.price,
+      price: toNumber(req.body.price),
       category: req.body.category,
+      description: req.body.description || "",
+      warranty: req.body.warranty || "",
+      stock: toNumber(req.body.stock),
 
       // image path MongoDB mein save hoga
       image: req.file ? `/uploads/${req.file.filename}` : ""
@@ -68,6 +80,10 @@ router.get("/:id", async (req, res) => {
 
     const product = await Product.findById(req.params.id);
 
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
     res.json(product);
 
   } catch (error) {
@@ -81,11 +97,14 @@ router.get("/:id", async (req, res) => {
 router.put("/:id", upload.single("image"), async (req, res) => {
   try {
 
-    const updateData = {
-      name: req.body.name,
-      price: req.body.price,
-      category: req.body.category
-    };
+    const updateData = {};
+
+    if (req.body.name !== undefined) updateData.name = req.body.name;
+    if (req.body.price !== undefined) updateData.price = toNumber(req.body.price);
+    if (req.body.category !== undefined) updateData.category = req.body.category;
+    if (req.body.description !== undefined) updateData.description = req.body.description;
+    if (req.body.warranty !== undefined) updateData.warranty = req.body.warranty;
+    if (req.body.stock !== undefined) updateData.stock = toNumber(req.body.stock);
 
     // Agar new image upload hu hai toh path update karega 
     if (req.file) {
@@ -95,8 +114,12 @@ router.put("/:id", upload.single("image"), async (req, res) => {
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
       updateData,
-      { new: true }
+      { new: true, runValidators: true }
     );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
 
     res.json(updatedProduct);
 
@@ -112,6 +135,10 @@ router.delete("/:id", async (req, res) => {
   try {
 
     const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+
+    if (!deletedProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
 
     res.json({
       message: "Product deleted successfully",
