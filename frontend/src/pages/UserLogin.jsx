@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiUrl } from "../config/api";
 
 function UserLogin() {
     const [name, setName] = useState("");
@@ -54,7 +55,7 @@ function UserLogin() {
             setError("");
             setSuccessMessage("");
 
-            const response = await fetch("http://localhost:5000/api/auth/signup/request-otp", {
+            const response = await fetch(apiUrl("/auth/signup/request-otp"), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -94,7 +95,7 @@ function UserLogin() {
             setError("");
             setSuccessMessage("");
 
-            const response = await fetch("http://localhost:5000/api/auth/signup/verify-otp", {
+            const response = await fetch(apiUrl("/auth/signup/verify-otp"), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

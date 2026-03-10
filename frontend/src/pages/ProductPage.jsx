@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { apiUrl, mediaUrl } from "../config/api";
 
 function ProductPage() {
   const { id } = useParams();
@@ -13,7 +14,7 @@ function ProductPage() {
         const getProduct = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`http://localhost:5000/api/products/${id}`);
+                const response = await fetch(apiUrl(`/products/${id}`));
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -78,7 +79,7 @@ function ProductPage() {
     }
 
     const imageUrl = product.image
-        ? `http://localhost:5000${product.image.startsWith("/") ? product.image : `/${product.image}`}`
+        ? mediaUrl(product.image)
         : "https://placehold.co/700x500?text=No+Image";
 
     return (

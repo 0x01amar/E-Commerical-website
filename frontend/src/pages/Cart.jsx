@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { mediaUrl } from "../config/api";
 
 function Cart() {
 	const navigate = useNavigate();
@@ -53,7 +54,7 @@ function Cart() {
 					<div className="space-y-4">
 						{items.map((item) => {
 							const imageUrl = item.image
-								? `http://localhost:5000${item.image.startsWith("/") ? item.image : `/${item.image}`}`
+								? mediaUrl(item.image)
 								: "https://placehold.co/200x150?text=No+Image";
 
 							return (

@@ -1,3 +1,5 @@
+import { mediaUrl } from "../config/api";
+
 function ProductCard({
   product,
   onView,
@@ -6,9 +8,7 @@ function ProductCard({
   showAdminActions = false,
 }) {
   const imageUrl = product?.image
-    ? product.image.startsWith("http")
-      ? product.image
-      : `http://localhost:5000${product.image.startsWith("/") ? product.image : `/${product.image}`}`
+    ? mediaUrl(product.image)
     : "https://placehold.co/600x400?text=No+Image";
 
   return (

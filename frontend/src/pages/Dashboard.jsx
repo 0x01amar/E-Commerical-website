@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiUrl } from "../config/api";
 
 function Dashboard() {
   const [user, setUser] = useState(null);
@@ -22,7 +23,7 @@ function Dashboard() {
     const loadUser = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:5000/api/auth/profile/${email}`);
+        const response = await fetch(apiUrl(`/auth/profile/${encodeURIComponent(email)}`));
         const data = await response.json();
 
         if (!response.ok) {
@@ -57,7 +58,7 @@ function Dashboard() {
       setSaving(true);
       setError("");
 
-      const response = await fetch(`http://localhost:5000/api/auth/profile/${email}`, {
+      const response = await fetch(apiUrl(`/auth/profile/${encodeURIComponent(email)}`), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

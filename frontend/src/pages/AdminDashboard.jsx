@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
+import { apiUrl } from "../config/api";
 
 function AdminDashboard() {
   const [products, setProducts] = useState([]);
@@ -31,7 +32,7 @@ function AdminDashboard() {
     const loadProducts = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://localhost:5000/api/products");
+        const response = await fetch(apiUrl("/products"));
         const data = await response.json();
 
         if (!response.ok) {
@@ -76,8 +77,8 @@ function AdminDashboard() {
       setError("");
 
       const url = editingId
-        ? `http://localhost:5000/api/products/${editingId}`
-        : "http://localhost:5000/api/products";
+        ? apiUrl(`/products/${editingId}`)
+        : apiUrl("/products");
 
       const method = editingId ? "PUT" : "POST";
 
@@ -128,7 +129,7 @@ function AdminDashboard() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/products/${id}`, {
+      const response = await fetch(apiUrl(`/products/${id}`), {
         method: "DELETE",
         headers: {
           "x-admin-key": adminKey,

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
+import { apiUrl } from "../config/api";
 
 function Home({ search }) {
 	const navigate = useNavigate();
@@ -12,7 +13,7 @@ function Home({ search }) {
 		const getProducts = async () => {
 			try {
 				setLoading(true);
-				const response = await fetch("http://localhost:5000/api/products");
+				const response = await fetch(apiUrl("/products"));
 				const data = await response.json();
 
 				if (!response.ok) {

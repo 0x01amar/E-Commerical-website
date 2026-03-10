@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiUrl } from "../config/api";
 
 function CompleteProfile(){
 
@@ -36,7 +37,7 @@ function CompleteProfile(){
 			setError("");
 			setSuccessMessage("");
 
-			const response = await fetch("http://localhost:5000/api/auth/complete-profile", {
+			const response = await fetch(apiUrl("/auth/complete-profile"), {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
