@@ -4,7 +4,14 @@ const rawBackendUrl =
 	"https://e-commerical-website.onrender.com";
 
 export const BACKEND_URL = rawBackendUrl.replace(/\/+$/, "");
-export const API_BASE_URL = `/api`;
+
+const isLocalDevelopment =
+	typeof window !== "undefined" &&
+	["localhost", "127.0.0.1"].includes(window.location.hostname);
+
+export const API_BASE_URL = isLocalDevelopment
+	? "/api"
+	: `${BACKEND_URL}/api`;
 
 export const apiUrl = (path = "") => {
 	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -23,8 +30,8 @@ export const mediaUrl = (path = "") => {
 	// Normalize path
 	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
-	// If it's an uploads path, use relative URL (Vite proxy handles it)
-	if (normalizedPath.startsWith("/uploads")) {
+	// In local development, let Vite proxy handle uploaded assets.
+	if (isLocalDevelopment && normalizedPath.startsWith("/uploads")) {
 		return normalizedPath;
 	}
 
