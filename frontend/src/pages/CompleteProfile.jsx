@@ -73,10 +73,10 @@ function CompleteProfile(){
 	};
 
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-100 via-amber-50 to-slate-200 px-4 py-10">
-			<div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
-				<h1 className="text-2xl font-bold text-slate-900">Complete Profile</h1>
-				<p className="mt-2 text-sm text-slate-600">Add your details to activate your account.</p>
+		<div className="flex min-h-screen items-center justify-center px-4 py-10" style={{ background: "radial-gradient(circle at top, rgba(124,58,237,0.08), transparent 35%), radial-gradient(circle at bottom right, rgba(2,132,199,0.10), transparent 30%), #e8f0f9" }}>
+			<div className="w-full max-w-lg rounded-3xl p-8 shadow-xl" style={{ background: "rgba(255,255,255,0.88)", border: "1px solid rgba(100,160,220,0.24)" }}>
+				<h1 className="text-2xl font-bold" style={{ color: "#1a2f48" }}>Complete Profile</h1>
+				<p className="mt-2 text-sm" style={{ color: "#3a5470" }}>Add your details to activate your account.</p>
 
 				{error ? <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p> : null}
 				{successMessage ? (
@@ -88,7 +88,8 @@ function CompleteProfile(){
 						placeholder="Full Name"
 						value={name}
 						onChange={(event) => setName(event.target.value)}
-						className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+						className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition"
+						style={{ borderColor: "rgba(100,160,220,0.28)", background: "rgba(255,255,255,0.84)", color: "#1a2f48" }}
 					/>
 
 					<input
@@ -96,21 +97,24 @@ function CompleteProfile(){
 						value={phone}
 						maxLength="10"
 						onChange={(event) => setPhone(event.target.value.replace(/[^0-9]/g, ""))}
-						className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+						className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition"
+						style={{ borderColor: "rgba(100,160,220,0.28)", background: "rgba(255,255,255,0.84)", color: "#1a2f48" }}
 					/>
 
 					<textarea
 						placeholder="Address"
 						value={address}
 						onChange={(event) => setAddress(event.target.value)}
-						className="min-h-28 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+						className="min-h-28 w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition"
+						style={{ borderColor: "rgba(100,160,220,0.28)", background: "rgba(255,255,255,0.84)", color: "#1a2f48" }}
 					/>
 
 					<button
 						type="button"
 						onClick={saveProfile}
 						disabled={loading}
-						className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+						className="w-full rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+						style={{ background: "linear-gradient(135deg, #0284c7, #7c3aed)", boxShadow: "0 12px 24px rgba(2,132,199,0.18)" }}
 					>
 						{loading ? "Saving..." : "Save Profile"}
 					</button>

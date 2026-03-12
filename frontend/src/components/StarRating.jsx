@@ -29,7 +29,7 @@ function StarRating({
             return (
               <span
                 key={starNumber}
-                className={`${starSizeClass} leading-none ${isFilled ? "text-amber-400" : "text-slate-600"}`}
+                className={`${starSizeClass} leading-none ${isFilled ? "text-amber-500" : "text-slate-300"}`}
                 aria-hidden="true"
               >
                 ★
@@ -42,7 +42,7 @@ function StarRating({
               key={starNumber}
               type="button"
               onClick={() => onChange?.(starNumber)}
-              className={`${starSizeClass} leading-none transition ${isFilled ? "text-amber-400" : "text-slate-600 hover:text-amber-300"}`}
+              className={`${starSizeClass} leading-none transition ${isFilled ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
               aria-label={`Rate ${starNumber} star${starNumber > 1 ? "s" : ""}`}
             >
               ★
@@ -52,7 +52,7 @@ function StarRating({
       </div>
 
       {showValue ? (
-        <span className="text-sm font-medium text-slate-300">
+        <span className="text-sm font-medium text-[#6080a0]">
           {clampedValue.toFixed(1)}{count ? ` (${count})` : ""}
         </span>
       ) : null}

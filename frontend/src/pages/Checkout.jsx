@@ -406,13 +406,13 @@ function Checkout() {
   };
 
   if (loadingProduct) {
-    return <p className="p-6" style={{ color: "#00d4ff" }}>Loading checkout...</p>;
+    return <p className="p-6" style={{ color: "#0284c7" }}>Loading checkout...</p>;
   }
 
   if (!product) {
     return (
       <div className="space-y-4 p-6">
-        <p className="rounded-xl bg-rose-900/40 border border-rose-500/30 px-4 py-3 text-rose-400">{error || "Product not found"}</p>
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-600">{error || "Product not found"}</p>
         <button
           type="button"
           onClick={() => navigate("/")}
@@ -444,8 +444,8 @@ function Checkout() {
             return (
               <span
                 key={label}
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${active ? "text-white" : "text-slate-400"}`}
-                style={active ? { background: "linear-gradient(135deg,#00d4ff,#a855f7)" } : { background: "rgba(255,255,255,0.06)" }}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${active ? "text-white" : "text-[#6080a0]"}`}
+                style={active ? { background: "linear-gradient(135deg,#0284c7,#7c3aed)", boxShadow: "0 10px 20px rgba(2,132,199,0.16)" } : { background: "rgba(255,255,255,0.82)", border: "1px solid rgba(100,160,220,0.22)" }}
               >
                 {index + 1}. {label}
               </span>
@@ -453,37 +453,37 @@ function Checkout() {
           })}
         </div>
 
-        {error ? <p className="mb-4 rounded-lg bg-rose-900/40 border border-rose-500/30 px-3 py-2 text-sm text-rose-400">{error}</p> : null}
-        {notice ? <p className="mb-4 rounded-lg bg-cyan-900/40 border border-cyan-500/30 px-3 py-2 text-sm text-cyan-400">{notice}</p> : null}
+        {error ? <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p> : null}
+        {notice ? <p className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700">{notice}</p> : null}
 
         {step === 1 ? (
           <div className="space-y-5">
-            <div className="flex flex-col gap-4 rounded-xl p-4 sm:flex-row" style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(0,212,255,0.1)" }}>
+            <div className="flex flex-col gap-4 rounded-xl p-4 sm:flex-row" style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.20)" }}>
               <img src={imageUrl} alt={product.name} className="h-36 w-full rounded-xl object-cover sm:h-28 sm:w-36" onError={e => { e.currentTarget.src = "https://placehold.co/200x150?text=No+Image"; }} />
               <div className="flex-1 space-y-1">
-                <h2 className="text-lg font-semibold text-white">{product.name}</h2>
-                <p className="text-sm text-slate-400">{product.category}</p>
-                <p className="text-xl font-bold" style={{ color: "#00d4ff" }}>₹{Number(product.price || 0).toFixed(2)}</p>
+                <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>{product.name}</h2>
+                <p className="text-sm" style={{ color: "#6080a0" }}>{product.category}</p>
+                <p className="text-xl font-bold" style={{ color: "#0284c7" }}>₹{Number(product.price || 0).toFixed(2)}</p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <p className="text-sm font-medium text-slate-200">Choose Quantity</p>
-              <div className="inline-flex items-center gap-2 rounded-xl p-2" style={{ border: "1px solid rgba(0,212,255,0.2)" }}>
+              <p className="text-sm font-medium" style={{ color: "#1a2f48" }}>Choose Quantity</p>
+              <div className="inline-flex items-center gap-2 rounded-xl p-2" style={{ border: "1px solid rgba(100,160,220,0.22)", background: "rgba(255,255,255,0.82)" }}>
                 <button
                   type="button"
                   onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                  className="h-9 w-9 rounded-lg text-lg text-slate-200 transition hover:text-cyan-400"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(0,212,255,0.15)" }}
+                  className="h-9 w-9 rounded-lg text-lg transition"
+                  style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(100,160,220,0.24)", color: "#2d5a8e" }}
                 >
                   -
                 </button>
-                <span className="w-10 text-center text-base font-semibold text-white">{quantity}</span>
+                <span className="w-10 text-center text-base font-semibold" style={{ color: "#1a2f48" }}>{quantity}</span>
                 <button
                   type="button"
                   onClick={() => setQuantity((prev) => prev + 1)}
-                  className="h-9 w-9 rounded-lg text-lg text-slate-200 transition hover:text-cyan-400"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(0,212,255,0.15)" }}
+                  className="h-9 w-9 rounded-lg text-lg transition"
+                  style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(100,160,220,0.24)", color: "#2d5a8e" }}
                 >
                   +
                 </button>
@@ -503,7 +503,7 @@ function Checkout() {
         {step === 2 ? (
           <div className="space-y-4">
             {savedAddressText ? (
-              <div className="rounded-2xl p-4" style={{ background: "rgba(0,212,255,0.05)", border: "2px solid rgba(0,212,255,0.2)" }}>
+              <div className="rounded-2xl p-4" style={{ background: "rgba(240,248,255,0.82)", border: "2px solid rgba(2,132,199,0.18)" }}>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
                     <input
@@ -519,15 +519,15 @@ function Checkout() {
                       className="mt-1"
                     />
                     <label htmlFor="use-saved">
-                      <p className="text-sm font-semibold text-white">Use Saved Address</p>
-                      <p className="mt-1 text-sm text-slate-300 rounded-lg px-3 py-2" style={{ background: "rgba(0,0,0,0.3)" }}>📍 {savedAddressText}</p>
+                      <p className="text-sm font-semibold" style={{ color: "#1a2f48" }}>Use Saved Address</p>
+                      <p className="mt-1 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.85)", color: "#3a5470" }}>📍 {savedAddressText}</p>
                     </label>
                   </div>
                 </div>
               </div>
             ) : null}
 
-              <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.10)", border: "2px solid rgba(255,255,255,0.18)" }}>
+              <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.80)", border: "2px solid rgba(100,160,220,0.22)" }}>
               <div className="flex items-center gap-3">
                 <input
                   type="radio"
@@ -541,7 +541,7 @@ function Checkout() {
                   }}
                   className="mt-1"
                 />
-                <label htmlFor="use-new" className="text-sm font-semibold text-slate-200">
+                <label htmlFor="use-new" className="text-sm font-semibold text-[#1a2f48]">
                   Enter New Address
                 </label>
               </div>
@@ -550,7 +550,7 @@ function Checkout() {
             {addressMode === "new" && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-slate-300">Address Line *</label>
+                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Address Line *</label>
                   <input
                     value={addressForm.line1}
                     onChange={(event) => setAddressField("line1", event.target.value)}
@@ -560,7 +560,7 @@ function Checkout() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-300">Village/Town *</label>
+                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Village/Town *</label>
                   <input
                     value={addressForm.villageTown}
                     onChange={(event) => setAddressField("villageTown", event.target.value)}
@@ -569,7 +569,7 @@ function Checkout() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-300">Ward No *</label>
+                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Ward No *</label>
                   <input
                     value={addressForm.wardNo}
                     onChange={(event) => setAddressField("wardNo", event.target.value)}
@@ -578,7 +578,7 @@ function Checkout() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-300">District *</label>
+                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">District *</label>
                   <input
                     value={addressForm.district}
                     onChange={(event) => setAddressField("district", event.target.value)}
@@ -587,7 +587,7 @@ function Checkout() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-300">State *</label>
+                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">State *</label>
                   <input
                     value={addressForm.state}
                     onChange={(event) => setAddressField("state", event.target.value)}
@@ -596,7 +596,7 @@ function Checkout() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-300">Pincode *</label>
+                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Pincode *</label>
                   <input
                     value={addressForm.pincode}
                     maxLength={6}
@@ -608,7 +608,7 @@ function Checkout() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-300">Landmark</label>
+                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Landmark</label>
                   <input
                     value={addressForm.landmark}
                     onChange={(event) => setAddressField("landmark", event.target.value)}
@@ -617,7 +617,7 @@ function Checkout() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-slate-300">Phone Number *</label>
+                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Phone Number *</label>
                   <input
                     value={contactPhone}
                     maxLength={10}
@@ -630,9 +630,9 @@ function Checkout() {
             )}
 
             {addressMode === "saved" && savedAddressText && (
-              <div className="rounded-lg p-4" style={{ background: "rgba(0,212,255,0.08)", border: "2px solid rgba(0,212,255,0.2)" }}>
-                <p className="text-sm font-medium text-cyan-400">✓ Using saved address</p>
-                <p className="mt-2 text-sm text-slate-300">{contactPhone}</p>
+              <div className="rounded-lg p-4" style={{ background: "rgba(2,132,199,0.08)", border: "2px solid rgba(2,132,199,0.18)" }}>
+                <p className="text-sm font-medium text-sky-700">✓ Using saved address</p>
+                <p className="mt-2 text-sm" style={{ color: "#3a5470" }}>{contactPhone}</p>
               </div>
             )}
 
@@ -658,28 +658,28 @@ function Checkout() {
 
         {step === 3 ? (
           <div className="space-y-4">
-            <div className="rounded-xl p-4" style={{ border: "1px solid rgba(0,212,255,0.12)", background: "rgba(0,0,0,0.3)" }}>
-              <p className="text-sm text-slate-400">Delivery Address</p>
-              <p className="mt-1 text-sm font-medium text-slate-200">{deliveryAddressText || "-"}</p>
-              <p className="mt-2 text-sm text-slate-400">Phone: {contactPhone || "-"}</p>
+            <div className="rounded-xl p-4" style={{ border: "1px solid rgba(100,160,220,0.20)", background: "rgba(255,255,255,0.78)" }}>
+              <p className="text-sm" style={{ color: "#6080a0" }}>Delivery Address</p>
+              <p className="mt-1 text-sm font-medium" style={{ color: "#1a2f48" }}>{deliveryAddressText || "-"}</p>
+              <p className="mt-2 text-sm" style={{ color: "#6080a0" }}>Phone: {contactPhone || "-"}</p>
             </div>
 
-            <div className="rounded-xl p-4" style={{ border: "1px solid rgba(0,212,255,0.12)", background: "rgba(0,0,0,0.3)" }}>
-              <div className="flex items-center justify-between text-sm text-slate-300">
+            <div className="rounded-xl p-4" style={{ border: "1px solid rgba(100,160,220,0.20)", background: "rgba(255,255,255,0.78)" }}>
+              <div className="flex items-center justify-between text-sm" style={{ color: "#3a5470" }}>
                 <span>Price ({quantity} × ₹{Number(product.price || 0).toFixed(2)})</span>
                 <span>₹{subtotal.toFixed(2)}</span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-sm text-slate-300">
+              <div className="mt-2 flex items-center justify-between text-sm" style={{ color: "#3a5470" }}>
                 <span>Tax ({Math.round(TAX_RATE * 100)}%)</span>
                 <span>₹{taxAmount.toFixed(2)}</span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-sm text-slate-300">
+              <div className="mt-2 flex items-center justify-between text-sm" style={{ color: "#3a5470" }}>
                 <span>Shipping</span>
                 <span>₹{shippingCharge.toFixed(2)}</span>
               </div>
-              <div className="mt-3 flex items-center justify-between pt-3 text-base font-semibold text-white" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+              <div className="mt-3 flex items-center justify-between pt-3 text-base font-semibold" style={{ borderTop: "1px solid rgba(100,160,220,0.18)", color: "#1a2f48" }}>
                 <span>Total</span>
-                <span style={{ color: "#00d4ff" }}>₹{totalPrice.toFixed(2)}</span>
+                <span style={{ color: "#0284c7" }}>₹{totalPrice.toFixed(2)}</span>
               </div>
             </div>
 
@@ -704,34 +704,34 @@ function Checkout() {
 
         {step === 4 ? (
           <div className="space-y-4">
-            <div className="space-y-2 rounded-xl p-4" style={{ border: "1px solid rgba(0,212,255,0.12)", background: "rgba(0,0,0,0.3)" }}>
-              <label className="flex items-start gap-2 text-sm text-slate-200">
+            <div className="space-y-2 rounded-xl p-4" style={{ border: "1px solid rgba(100,160,220,0.20)", background: "rgba(255,255,255,0.78)" }}>
+              <label className="flex items-start gap-2 text-sm text-[#1a2f48]">
                 <input
                   type="radio"
                   name="paymentOption"
                   value="cod"
                   checked={paymentOption === "cod"}
                   onChange={(event) => setPaymentOption(event.target.value)}
-                  className="mt-0.5 accent-cyan-400"
+                  className="mt-0.5 accent-sky-600"
                 />
                 <span>Cash on Delivery</span>
               </label>
-              <label className="flex items-start gap-2 text-sm text-slate-200">
+              <label className="flex items-start gap-2 text-sm text-[#1a2f48]">
                 <input
                   type="radio"
                   name="paymentOption"
                   value="half"
                   checked={paymentOption === "half"}
                   onChange={(event) => setPaymentOption(event.target.value)}
-                  className="mt-0.5 accent-cyan-400"
+                  className="mt-0.5 accent-sky-600"
                 />
                 <span>Half payment now and half after delivery</span>
               </label>
             </div>
 
             {paymentOption === "half" ? (
-              <div className="rounded-xl p-4" style={{ border: "1px solid rgba(250,173,20,0.3)", background: "rgba(250,173,20,0.08)" }}>
-                <p className="text-sm font-medium text-amber-300">
+              <div className="rounded-xl p-4" style={{ border: "1px solid rgba(245,158,11,0.24)", background: "rgba(245,158,11,0.08)" }}>
+                <p className="text-sm font-medium text-amber-700">
                   Pay exactly ₹{expectedHalfAmount.toFixed(2)} now (half of total amount)
                 </p>
                 <input
@@ -747,10 +747,10 @@ function Checkout() {
             ) : null}
 
             {orderPlaced ? (
-              <div className="rounded-xl p-4 text-sm" style={{ border: "1px solid rgba(0,212,255,0.2)", background: "rgba(0,212,255,0.08)" }}>
-                <p className="font-semibold text-cyan-400">Order placed: {orderPlaced.orderCode}</p>
-                <p className="mt-1 text-slate-300">Status: {orderPlaced.status}</p>
-                <p className="mt-1 text-slate-300">Expected delivery: {orderPlaced.expectedDelivery}</p>
+              <div className="rounded-xl p-4 text-sm" style={{ border: "1px solid rgba(2,132,199,0.20)", background: "rgba(2,132,199,0.08)" }}>
+                <p className="font-semibold text-sky-700">Order placed: {orderPlaced.orderCode}</p>
+                <p className="mt-1" style={{ color: "#3a5470" }}>Status: {orderPlaced.status}</p>
+                <p className="mt-1" style={{ color: "#3a5470" }}>Expected delivery: {orderPlaced.expectedDelivery}</p>
               </div>
             ) : null}
 

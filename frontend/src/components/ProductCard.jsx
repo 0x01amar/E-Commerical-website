@@ -12,7 +12,7 @@ function ProductCard({
 
   const imageUrl = mainImage
     ? mediaUrl(mainImage)
-    : "https://placehold.co/600x400/0d0e1a/00d4ff?text=No+Image";
+    : "https://placehold.co/600x400/dce8f5/0284c7?text=No+Image";
 
   const sectionLabel = product?.section || product?.category || "General";
 
@@ -20,9 +20,9 @@ function ProductCard({
     <article
       className="glass-hover overflow-hidden rounded-2xl flex flex-col"
       style={{
-        background: "rgba(255,255,255,0.11)",
-        border: "1px solid rgba(125,211,252,0.18)",
-        boxShadow: "0 6px 24px rgba(2,6,23,0.22)",
+        background: "rgba(255,255,255,0.80)",
+        border: "1px solid rgba(100,160,220,0.26)",
+        boxShadow: "0 4px 18px rgba(30,60,110,0.10)",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
@@ -38,23 +38,23 @@ function ProductCard({
             alt={product.name}
             className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
             onError={(e) => {
-              e.target.src = "https://placehold.co/600x400/0d0e1a/00d4ff?text=No+Image";
+              e.target.src = "https://placehold.co/600x400/dce8f5/0284c7?text=No+Image";
             }}
           />
           {/* Overlay gradient on image */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: "linear-gradient(to top, rgba(5,10,30,0.45) 0%, transparent 55%)",
+              background: "linear-gradient(to top, rgba(15,40,80,0.30) 0%, transparent 55%)",
             }}
           />
           {/* Section badge on image */}
           <span
             className="absolute top-2 left-2 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
             style={{
-              background: "rgba(0,212,255,0.15)",
-              border: "1px solid rgba(0,212,255,0.3)",
-              color: "#00d4ff",
+              background: "rgba(2,132,199,0.12)",
+              border: "1px solid rgba(2,132,199,0.28)",
+              color: "#0284c7",
               backdropFilter: "blur(8px)",
             }}
           >
@@ -63,14 +63,14 @@ function ProductCard({
         </div>
 
         {/* Product Info */}
-        <div className="p-3.5 space-y-2" style={{ background: "rgba(15,23,42,0.45)" }}>
+        <div className="p-3.5 space-y-2" style={{ background: "rgba(240,248,255,0.60)" }}>
           {product.category && product.category !== sectionLabel ? (
             <span
               className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
               style={{
-                background: "rgba(168,85,247,0.12)",
-                border: "1px solid rgba(168,85,247,0.25)",
-                color: "#c084fc",
+                background: "rgba(124,58,237,0.09)",
+                border: "1px solid rgba(124,58,237,0.22)",
+                color: "#7c3aed",
               }}
             >
               {product.category}
@@ -79,7 +79,7 @@ function ProductCard({
 
           <h3
             className="line-clamp-1 text-base font-semibold"
-            style={{ color: "#f8fafc" }}
+            style={{ color: "#1a2f48" }}
           >
             {product.name}
           </h3>
@@ -87,7 +87,7 @@ function ProductCard({
           <p
             className="text-xl font-bold"
             style={{
-              background: "linear-gradient(135deg, #00d4ff, #a855f7)",
+              background: "linear-gradient(135deg, #0284c7, #7c3aed)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
             }}
@@ -102,7 +102,7 @@ function ProductCard({
           />
 
           {product.description ? (
-            <p className="line-clamp-2 text-xs" style={{ color: "#94a3b8" }}>
+            <p className="line-clamp-2 text-xs" style={{ color: "#4a6080" }}>
               {product.description}
             </p>
           ) : null}
@@ -112,23 +112,23 @@ function ProductCard({
       {showAdminActions ? (
         <div
           className="flex gap-2 px-3.5 py-3"
-          style={{ borderTop: "1px solid rgba(0,212,255,0.08)" }}
+          style={{ borderTop: "1px solid rgba(100,160,220,0.20)" }}
         >
           <button
             type="button"
             onClick={() => onEdit?.(product)}
             className="flex-1 rounded-lg py-2 text-xs font-semibold transition-all duration-250 hover:scale-105"
             style={{
-              background: "linear-gradient(135deg, #00d4ff22, #06b6d422)",
-              border: "1px solid rgba(0,212,255,0.3)",
-              color: "#00d4ff",
+              background: "rgba(2,132,199,0.10)",
+              border: "1px solid rgba(2,132,199,0.28)",
+              color: "#0284c7",
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = "rgba(0,212,255,0.15)";
-              e.currentTarget.style.boxShadow = "0 0 15px rgba(0,212,255,0.2)";
+              e.currentTarget.style.background = "rgba(2,132,199,0.18)";
+              e.currentTarget.style.boxShadow = "0 0 12px rgba(2,132,199,0.18)";
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = "rgba(0,212,255,0.08)";
+              e.currentTarget.style.background = "rgba(2,132,199,0.10)";
               e.currentTarget.style.boxShadow = "none";
             }}
           >
@@ -141,11 +141,11 @@ function ProductCard({
             style={{
               background: "rgba(239,68,68,0.08)",
               border: "1px solid rgba(239,68,68,0.25)",
-              color: "#f87171",
+              color: "#dc2626",
             }}
             onMouseEnter={e => {
               e.currentTarget.style.background = "rgba(239,68,68,0.15)";
-              e.currentTarget.style.boxShadow = "0 0 15px rgba(239,68,68,0.15)";
+              e.currentTarget.style.boxShadow = "0 0 12px rgba(239,68,68,0.12)";
             }}
             onMouseLeave={e => {
               e.currentTarget.style.background = "rgba(239,68,68,0.08)";

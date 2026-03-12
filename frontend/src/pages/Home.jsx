@@ -127,18 +127,18 @@ function Home({ search }) {
 			>
 				<p
 					className="text-xs uppercase tracking-[0.3em] font-semibold sm:text-sm"
-					style={{ color: "#00d4ff" }}
+					style={{ color: "#0284c7" }}
 				>
           ✦ Premium Collection
 				</p>
 				<h1
 					className="mt-3 text-2xl font-bold sm:text-4xl lg:text-5xl"
-					style={{ color: "#f1f5f9", lineHeight: 1.15 }}
+					style={{ color: "#1a2f48", lineHeight: 1.15 }}
 				>
 					Beautiful Furniture<br />
 					<span
 						style={{
-							background: "linear-gradient(135deg, #00d4ff, #a855f7)",
+								background: "linear-gradient(135deg, #0284c7, #7c3aed)",
 							WebkitBackgroundClip: "text",
 							WebkitTextFillColor: "transparent",
 						}}
@@ -146,7 +146,7 @@ function Home({ search }) {
 						for Modern Homes
 					</span>
 				</h1>
-				<p className="mt-4 max-w-2xl text-sm sm:text-base" style={{ color: "#94a3b8" }}>
+				<p className="mt-4 max-w-2xl text-sm sm:text-base" style={{ color: "#3a5470" }}>
 					Explore premium wooden and iron furniture. Crafted for elegance, built to last.
 				</p>
 
@@ -158,19 +158,19 @@ function Home({ search }) {
 							onClick={() => jumpToSection(section.name)}
 							className="rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-250 hover:scale-105"
 							style={{
-								background: "rgba(0,212,255,0.08)",
-								border: "1px solid rgba(0,212,255,0.2)",
-								color: "#94a3b8",
+								background: "rgba(2,132,199,0.08)",
+								border: "1px solid rgba(2,132,199,0.25)",
+								color: "#2d5a8e",
 							}}
 							onMouseEnter={e => {
-								e.currentTarget.style.background = "rgba(0,212,255,0.15)";
-								e.currentTarget.style.color = "#00d4ff";
-								e.currentTarget.style.borderColor = "rgba(0,212,255,0.4)";
-							}}
-							onMouseLeave={e => {
-								e.currentTarget.style.background = "rgba(0,212,255,0.08)";
-								e.currentTarget.style.color = "#94a3b8";
-								e.currentTarget.style.borderColor = "rgba(0,212,255,0.2)";
+							e.currentTarget.style.background = "rgba(2,132,199,0.15)";
+							e.currentTarget.style.color = "#0284c7";
+							e.currentTarget.style.borderColor = "rgba(2,132,199,0.45)";
+						}}
+						onMouseLeave={e => {
+							e.currentTarget.style.background = "rgba(2,132,199,0.08)";
+							e.currentTarget.style.color = "#2d5a8e";
+							e.currentTarget.style.borderColor = "rgba(2,132,199,0.25)";
 							}}
 						>
 							{section.name}
@@ -181,15 +181,15 @@ function Home({ search }) {
 
 			{/* Section Header */}
 			<div className="flex items-center justify-between">
-				<h2 className="text-xl font-semibold sm:text-2xl" style={{ color: "#e2e8f0" }}>
+				<h2 className="text-xl font-semibold sm:text-2xl" style={{ color: "#1a2f48" }}>
 					All Product Sections
 				</h2>
 				<span
 					className="rounded-full px-3 py-1 text-sm font-medium"
 					style={{
-						background: "rgba(0,212,255,0.08)",
-						border: "1px solid rgba(0,212,255,0.2)",
-						color: "#00d4ff",
+						background: "rgba(2,132,199,0.08)",
+						border: "1px solid rgba(2,132,199,0.22)",
+						color: "#0284c7",
 					}}
 				>
 					{filteredProducts.length} items
@@ -200,18 +200,18 @@ function Home({ search }) {
 				<div className="flex items-center gap-3 py-8">
 					<div
 						className="h-5 w-5 rounded-full animate-spin"
-						style={{ border: "2px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff" }}
+						style={{ border: "2px solid rgba(2,132,199,0.2)", borderTopColor: "#0284c7" }}
 					/>
-					<p style={{ color: "#94a3b8" }}>Loading products...</p>
+					<p style={{ color: "#3a5470" }}>Loading products...</p>
 				</div>
 			) : null}
 			{error ? (
 				<p
 					className="rounded-xl px-4 py-3 text-sm"
 					style={{
-						background: "rgba(239,68,68,0.08)",
+						background: "rgba(239,68,68,0.07)",
 						border: "1px solid rgba(239,68,68,0.2)",
-						color: "#f87171",
+						color: "#dc2626",
 					}}
 				>
 					{error}
@@ -231,18 +231,18 @@ function Home({ search }) {
 										<div className="flex items-center gap-3">
 											<div
 												className="h-6 w-1 rounded-full"
-												style={{ background: "linear-gradient(180deg, #00d4ff, #a855f7)" }}
+												style={{ background: "linear-gradient(180deg, #0284c7, #7c3aed)" }}
 											/>
-											<h3 className="text-xl font-bold sm:text-2xl" style={{ color: "#f1f5f9" }}>
+											<h3 className="text-xl font-bold sm:text-2xl" style={{ color: "#1a2f48" }}>
 												{section.name}
 											</h3>
 										</div>
 										<span
 											className="rounded-full px-3 py-1 text-xs font-semibold"
 											style={{
-												background: "rgba(168,85,247,0.1)",
-												border: "1px solid rgba(168,85,247,0.2)",
-												color: "#c084fc",
+												background: "rgba(124,58,237,0.10)",
+												border: "1px solid rgba(124,58,237,0.22)",
+												color: "#7c3aed",
 											}}
 										>
 											{section.products.length} products
@@ -266,9 +266,9 @@ function Home({ search }) {
 										<div
 											className="rounded-xl p-5 text-sm"
 											style={{
-												background: "rgba(255,255,255,0.02)",
-												border: "1px dashed rgba(255,255,255,0.08)",
-												color: "#475569",
+												background: "rgba(255,255,255,0.62)",
+												border: "1px dashed rgba(100,160,220,0.26)",
+												color: "#6080a0",
 											}}
 										>
 											No products currently available in this section.
@@ -282,7 +282,7 @@ function Home({ search }) {
 					<div
 						className="glass rounded-2xl p-10 text-center"
 					>
-						<p style={{ color: "#94a3b8" }}>No products found for your search.</p>
+						<p style={{ color: "#6080a0" }}>No products found for your search.</p>
 					</div>
 				)
 			) : null}

@@ -61,25 +61,25 @@ function AdminLogin() {
     <div
       className="flex min-h-screen items-center justify-center px-4 py-10"
       style={{
-        background: "radial-gradient(ellipse at 70% 20%, rgba(168,85,247,0.08) 0%, transparent 50%), radial-gradient(ellipse at 30% 80%, rgba(0,212,255,0.06) 0%, transparent 50%)",
+        background: "radial-gradient(ellipse at 70% 20%, rgba(124,58,237,0.10) 0%, transparent 50%), radial-gradient(ellipse at 30% 80%, rgba(56,162,235,0.08) 0%, transparent 50%)",
       }}
     >
       <div
         className="w-full max-w-md rounded-3xl p-6 sm:p-8"
         style={{
-          background: "rgba(255,255,255,0.11)",
+          background: "rgba(255,255,255,0.88)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
-          border: "1px solid rgba(168,85,247,0.3)",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.35), 0 0 60px rgba(168,85,247,0.07)",
+          border: "1px solid rgba(124,58,237,0.28)",
+          boxShadow: "0 8px 32px rgba(30,60,110,0.12)",
         }}
       >
-        <div className="mb-1 text-xs uppercase tracking-widest font-semibold" style={{ color: "#c084fc" }}>Admin Portal</div>
-        <h1 className="text-2xl font-bold" style={{ color: "#f1f5f9" }}>Admin Login</h1>
-        <p className="mt-1 text-sm" style={{ color: "#94a3b8" }}>Login with email, password and admin key.</p>
+        <div className="mb-1 text-xs uppercase tracking-widest font-semibold" style={{ color: "#7c3aed" }}>Admin Portal</div>
+        <h1 className="text-2xl font-bold" style={{ color: "#1a2f48" }}>Admin Login</h1>
+        <p className="mt-1 text-sm" style={{ color: "#6080a0" }}>Login with email, password and admin key.</p>
 
         {error ? (
-          <p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+          <p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626" }}>
             {error}
           </p>
         ) : null}
@@ -105,9 +105,9 @@ function AdminLogin() {
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               className="absolute inset-y-0 right-3 text-xs font-semibold transition-colors"
-              style={{ color: "#c084fc" }}
-              onMouseEnter={e => e.currentTarget.style.color = "#e879f9"}
-              onMouseLeave={e => e.currentTarget.style.color = "#c084fc"}
+              style={{ color: "#7c3aed" }}
+              onMouseEnter={e => e.currentTarget.style.color = "#6d28d9"}
+              onMouseLeave={e => e.currentTarget.style.color = "#7c3aed"}
             >
               {showPassword ? "Hide" : "Show"}
             </button>
@@ -126,12 +126,12 @@ function AdminLogin() {
             disabled={loading}
             className="w-full rounded-xl py-2.5 text-sm font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              background: "linear-gradient(135deg, #a855f7, #00d4ff)",
+              background: "linear-gradient(135deg, #7c3aed, #0284c7)",
               color: "#fff",
-              boxShadow: "0 4px 15px rgba(168,85,247,0.3)",
+              boxShadow: "0 4px 14px rgba(124,58,237,0.28)",
             }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 0 25px rgba(168,85,247,0.5), 0 0 50px rgba(0,212,255,0.15)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 15px rgba(168,85,247,0.3)"; e.currentTarget.style.transform = "none"; }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 22px rgba(124,58,237,0.40)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 14px rgba(124,58,237,0.28)"; e.currentTarget.style.transform = "none"; }}
           >
             {loading ? "Logging in..." : "Login as Admin"}
           </button>

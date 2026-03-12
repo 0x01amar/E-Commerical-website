@@ -19,11 +19,11 @@ function Navbar({ search, setSearch }) {
   return (
     <header
       style={{
-        background: "rgba(5, 6, 15, 0.85)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(0,212,255,0.12)",
-        boxShadow: "0 4px 30px rgba(0,0,0,0.35), 0 0 60px rgba(0,212,255,0.06)",
+        background: "rgba(240,248,255,0.93)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        borderBottom: "1px solid rgba(100,160,220,0.28)",
+        boxShadow: "0 2px 16px rgba(30,60,110,0.10)",
       }}
       className="sticky top-0 z-20"
     >
@@ -33,10 +33,10 @@ function Navbar({ search, setSearch }) {
           type="button"
           onClick={() => navigate("/")}
           style={{
-            background: "linear-gradient(135deg, #00d4ff, #a855f7)",
-            boxShadow: "0 0 20px rgba(0,212,255,0.3), 0 4px 15px rgba(0,0,0,0.3)",
+            background: "linear-gradient(135deg, #0284c7, #7c3aed)",
+            boxShadow: "0 0 16px rgba(2,132,199,0.28), 0 4px 12px rgba(0,0,0,0.12)",
           }}
-          className="rounded-xl px-3 py-2 text-xs font-bold text-white transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,212,255,0.5)] sm:px-4 sm:text-sm"
+          className="rounded-xl px-3 py-2 text-xs font-bold text-white transition-all duration-300 hover:scale-105 hover:shadow-[0_0_24px_rgba(2,132,199,0.28)] sm:px-4 sm:text-sm"
         >
           ✦ Satyam Iron Art
         </button>
@@ -58,9 +58,9 @@ function Navbar({ search, setSearch }) {
               type="button"
               onClick={() => navigate("/cart")}
               style={{
-                background: "rgba(251,191,36,0.08)",
-                border: "1px solid rgba(251,191,36,0.25)",
-                color: "#fbbf24",
+                background: "rgba(245,170,30,0.10)",
+                border: "1px solid rgba(245,158,11,0.30)",
+                color: "#b45309",
               }}
               className="rounded-lg px-2.5 py-2 text-xs font-medium transition-all duration-250 hover:bg-[rgba(251,191,36,0.15)] hover:border-[rgba(251,191,36,0.45)] hover:shadow-[0_0_15px_rgba(251,191,36,0.2)] sm:px-3 sm:text-sm"
             >
@@ -73,11 +73,11 @@ function Navbar({ search, setSearch }) {
               type="button"
               onClick={goToProfile}
               style={{
-                background: "linear-gradient(135deg, #00d4ff22, #a855f722)",
-                border: "1px solid rgba(0,212,255,0.25)",
-                color: "#00d4ff",
+                background: "linear-gradient(135deg, rgba(2,132,199,0.12), rgba(124,58,237,0.10))",
+                border: "1px solid rgba(2,132,199,0.28)",
+                color: "#0284c7",
               }}
-              className="rounded-lg px-2.5 py-2 text-xs font-semibold transition-all duration-250 hover:bg-[rgba(0,212,255,0.12)] hover:shadow-[0_0_15px_rgba(0,212,255,0.25)] sm:px-3 sm:text-sm"
+              className="rounded-lg px-2.5 py-2 text-xs font-semibold transition-all duration-250 hover:bg-[rgba(2,132,199,0.14)] hover:shadow-[0_0_15px_rgba(2,132,199,0.16)] sm:px-3 sm:text-sm"
             >
               {isAdminSession ? "⚙️ Dashboard" : "👤 Profile"}
             </button>
@@ -87,8 +87,8 @@ function Navbar({ search, setSearch }) {
                 type="button"
                 onClick={() => navigate("/signup")}
                 style={{
-                  background: "linear-gradient(135deg, #2dd4bf, #06b6d4)",
-                  boxShadow: "0 0 15px rgba(45,212,191,0.2)",
+                  background: "linear-gradient(135deg, #0891b2, #0284c7)",
+                  boxShadow: "0 0 12px rgba(14,165,233,0.22)",
                   color: "#fff",
                 }}
                 className="rounded-lg px-2.5 py-2 text-xs font-semibold transition-all duration-250 hover:shadow-[0_0_25px_rgba(45,212,191,0.4)] hover:scale-105 sm:px-3 sm:text-sm"
@@ -99,11 +99,11 @@ function Navbar({ search, setSearch }) {
                 type="button"
                 onClick={() => navigate("/login")}
                 style={{
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "#94a3b8",
+                  background: "rgba(255,255,255,0.85)",
+                  border: "1px solid rgba(100,160,220,0.32)",
+                  color: "#3a5470",
                 }}
-                className="rounded-lg px-2.5 py-2 text-xs font-medium transition-all duration-250 hover:bg-[rgba(255,255,255,0.08)] hover:text-white hover:border-[rgba(255,255,255,0.2)] sm:px-3 sm:text-sm"
+                className="rounded-lg px-2.5 py-2 text-xs font-medium transition-all duration-250 hover:bg-[rgba(255,255,255,0.96)] hover:text-[#1a2f48] hover:border-[rgba(100,160,220,0.42)] sm:px-3 sm:text-sm"
               >
                 Login
               </button>
@@ -111,9 +111,9 @@ function Navbar({ search, setSearch }) {
                 type="button"
                 onClick={() => navigate("/admin-login")}
                 style={{
-                  background: "rgba(168,85,247,0.12)",
-                  border: "1px solid rgba(168,85,247,0.25)",
-                  color: "#c084fc",
+                  background: "rgba(124,58,237,0.09)",
+                  border: "1px solid rgba(124,58,237,0.25)",
+                  color: "#7c3aed",
                 }}
                 className="rounded-lg px-2.5 py-2 text-xs font-semibold transition-all duration-250 hover:bg-[rgba(168,85,247,0.2)] hover:shadow-[0_0_15px_rgba(168,85,247,0.25)] sm:px-3 sm:text-sm"
               >

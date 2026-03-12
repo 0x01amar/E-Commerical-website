@@ -243,7 +243,7 @@ function ProductPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center p-12">
-                <div style={{ width: 40, height: 40, border: "3px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                <div style={{ width: 40, height: 40, border: "3px solid rgba(2,132,199,0.18)", borderTopColor: "#0284c7", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
             </div>
         );
     }
@@ -251,7 +251,7 @@ function ProductPage() {
     if (error) {
         return (
             <div className="space-y-4 p-8">
-                <p className="rounded-xl bg-rose-900/40 border border-rose-500/30 px-4 py-3 text-rose-400">{error}</p>
+                <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-600">{error}</p>
                 <button
                     type="button"
                     onClick={() => navigate("/")}
@@ -291,7 +291,7 @@ function ProductPage() {
 
             <div className="glass rounded-3xl p-5 lg:p-8 grid gap-8 lg:grid-cols-[1.1fr_1fr]">
                 <div className="space-y-4">
-                    <div className="overflow-hidden rounded-2xl" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(0,212,255,0.12)" }}>
+                    <div className="overflow-hidden rounded-2xl" style={{ background: "rgba(240,248,255,0.80)", border: "1px solid rgba(100,160,220,0.22)" }}>
                         <img
                             src={imageUrl}
                             alt={product.name}
@@ -310,7 +310,7 @@ function ProductPage() {
                                         key={`${imagePath}-${index}`}
                                         type="button"
                                         onClick={() => setSelectedImage(imagePath)}
-                                        className={`overflow-hidden rounded-xl border transition ${active ? "border-cyan-400 ring-2 ring-cyan-400/30" : "border-slate-700 hover:border-cyan-500/50"}`}
+                                        className={`overflow-hidden rounded-xl border transition ${active ? "border-sky-500 ring-2 ring-sky-500/25" : "border-slate-300 hover:border-sky-400/60"}`}
                                     >
                                         <img
                                             src={mediaUrl(imagePath)}
@@ -326,22 +326,22 @@ function ProductPage() {
 
                 <div className="space-y-4">
                     <div className="flex flex-wrap gap-2">
-                        <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide" style={{ background: "rgba(0,212,255,0.15)", color: "#00d4ff", border: "1px solid rgba(0,212,255,0.3)" }}>
+                        <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide" style={{ background: "rgba(2,132,199,0.10)", color: "#0284c7", border: "1px solid rgba(2,132,199,0.25)" }}>
                             {product.section || product.category || "General"}
                         </span>
                         {product.category && product.category !== product.section ? (
-                            <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide" style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.3)" }}>
+                            <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide" style={{ background: "rgba(124,58,237,0.10)", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.22)" }}>
                                 {product.category}
                             </span>
                         ) : null}
                     </div>
 
-                    <h1 className="text-2xl font-bold text-white sm:text-3xl">{product.name}</h1>
+                    <h1 className="text-2xl font-bold sm:text-3xl" style={{ color: "#1a2f48" }}>{product.name}</h1>
                     <StarRating value={displayedAverage} count={displayedCount} size="md" />
-                    <p className="text-3xl font-extrabold" style={{ background: "linear-gradient(135deg,#00d4ff,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>₹{Number(product.price || 0).toFixed(2)}</p>
-                    <p className="text-slate-300">{product.description || "No description available."}</p>
-                    <p className="text-sm text-slate-400">Stock: {product.stock ?? 0}</p>
-                    {product.warranty ? <p className="text-sm text-slate-400">Warranty: {product.warranty}</p> : null}
+                    <p className="text-3xl font-extrabold" style={{ background: "linear-gradient(135deg,#0284c7,#7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>₹{Number(product.price || 0).toFixed(2)}</p>
+                    <p style={{ color: "#3a5470" }}>{product.description || "No description available."}</p>
+                    <p className="text-sm" style={{ color: "#6080a0" }}>Stock: {product.stock ?? 0}</p>
+                    {product.warranty ? <p className="text-sm" style={{ color: "#6080a0" }}>Warranty: {product.warranty}</p> : null}
 
                     <div className="mt-2 flex flex-col gap-3 sm:flex-row">
                         <button
@@ -360,17 +360,17 @@ function ProductPage() {
                         </button>
                     </div>
 
-                    <div className="rounded-2xl p-4" style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(0,212,255,0.1)" }}>
-                        <h2 className="text-sm font-semibold text-white">Customer Rating</h2>
+                    <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.20)" }}>
+                        <h2 className="text-sm font-semibold" style={{ color: "#1a2f48" }}>Customer Rating</h2>
                         <StarRating value={displayedAverage} count={displayedCount} size="md" className="mt-2" />
 
-                        {ratingError ? <p className="mt-3 rounded-lg bg-rose-900/40 border border-rose-500/30 px-3 py-2 text-sm text-rose-400">{ratingError}</p> : null}
-                        {ratingMessage ? <p className="mt-3 rounded-lg bg-cyan-900/40 border border-cyan-500/30 px-3 py-2 text-sm text-cyan-400">{ratingMessage}</p> : null}
+                        {ratingError ? <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{ratingError}</p> : null}
+                        {ratingMessage ? <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700">{ratingMessage}</p> : null}
 
                         {isLoggedIn ? (
                             ratingInfo.canRate ? (
                                 <div className="mt-3 space-y-3">
-                                    <p className="text-xs text-slate-400">
+                                    <p className="text-xs" style={{ color: "#6080a0" }}>
                                         {ratingInfo.hasRated
                                             ? "You have already rated this product. You can update your rating."
                                             : "You purchased this product. Add your rating."}
@@ -401,7 +401,7 @@ function ProductPage() {
                                     </button>
                                 </div>
                             ) : (
-                                <p className="mt-3 rounded-lg px-3 py-2 text-xs text-slate-400" style={{ background: "rgba(0,0,0,0.3)" }}>
+                                <p className="mt-3 rounded-lg px-3 py-2 text-xs" style={{ background: "rgba(240,248,255,0.78)", color: "#6080a0" }}>
                                     You can rate this product only after purchasing it.
                                 </p>
                             )
@@ -419,7 +419,7 @@ function ProductPage() {
             </div>
 
             <div className="glass rounded-2xl p-5">
-                <h2 className="text-lg font-semibold text-white">Customer Reviews & Ratings</h2>
+                <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>Customer Reviews & Ratings</h2>
 
                 {/* Review Form - Only for users who purchased */}
                 {isLoggedIn && ratingInfo.canRate && (
@@ -428,20 +428,20 @@ function ProductPage() {
                     </div>
                 )}
 
-                <h3 className="mt-6 text-base font-semibold text-slate-200">Recent Ratings</h3>
+                <h3 className="mt-6 text-base font-semibold" style={{ color: "#1a2f48" }}>Recent Ratings</h3>
 
                 {visibleRatings.length ? (
                     <div className="mt-4 space-y-3">
                         {visibleRatings.map((rating, index) => (
-                            <div key={`${rating?.userEmail || "user"}-${index}`} className="rounded-xl p-4 transition" style={{ background: "rgba(255,255,255,0.09)", border: "1px solid rgba(0,212,255,0.16)" }}>
+                            <div key={`${rating?.userEmail || "user"}-${index}`} className="rounded-xl p-4 transition" style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.22)" }}>
                                 <div className="flex items-center justify-between gap-3 mb-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-400">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
                                         ✓ {maskEmail(rating?.userEmail)}
                                     </p>
                                     <StarRating value={Number(rating?.rating || 0)} showValue={false} size="sm" />
                                 </div>
                                 {rating?.comment ? (
-                                    <p className="mt-2 text-sm text-slate-300 leading-relaxed">{rating.comment}</p>
+                                    <p className="mt-2 text-sm leading-relaxed" style={{ color: "#3a5470" }}>{rating.comment}</p>
                                 ) : null}
                                 {rating?.reviewImages && rating.reviewImages.length > 0 ? (
                                     <div className="mt-3 flex gap-2 flex-wrap">
@@ -451,12 +451,12 @@ function ProductPage() {
                                                 src={mediaUrl(imagePath)}
                                                 alt={`Review ${i + 1}`}
                                                 className="h-16 w-16 rounded-lg object-cover cursor-pointer"
-                                                style={{ border: "1px solid rgba(0,212,255,0.2)" }}
+                                                style={{ border: "1px solid rgba(100,160,220,0.22)" }}
                                                 onError={e => { e.currentTarget.src = "https://placehold.co/64x64?text=Img"; }}
                                             />
                                         ))}
                                         {rating.reviewImages.length > 4 && (
-                                            <div className="h-16 w-16 rounded-lg flex items-center justify-center text-xs font-semibold text-slate-400" style={{ background: "rgba(255,255,255,0.06)" }}>
+                                            <div className="h-16 w-16 rounded-lg flex items-center justify-center text-xs font-semibold" style={{ background: "rgba(255,255,255,0.72)", color: "#6080a0" }}>
                                                 +{rating.reviewImages.length - 4}
                                             </div>
                                         )}
@@ -466,7 +466,7 @@ function ProductPage() {
                         ))}
                     </div>
                 ) : (
-                    <p className="mt-3 text-sm text-slate-400">No ratings yet. Be the first to review this product!</p>
+                    <p className="mt-3 text-sm" style={{ color: "#6080a0" }}>No ratings yet. Be the first to review this product!</p>
                 )}
             </div>
         </section>

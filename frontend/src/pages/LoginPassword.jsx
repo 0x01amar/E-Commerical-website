@@ -59,31 +59,31 @@ function LoginPassword(){
 		<div
 			className="flex min-h-screen items-center justify-center px-4 py-10"
 			style={{
-				background: "radial-gradient(ellipse at 30% 20%, rgba(0,212,255,0.06) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(168,85,247,0.06) 0%, transparent 50%)",
+				background: "radial-gradient(ellipse at 30% 20%, rgba(56,162,235,0.12) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(124,58,237,0.08) 0%, transparent 50%)",
 			}}
 		>
 			<div
 				className="w-full max-w-md rounded-3xl p-6 sm:p-8"
 				style={{
-					background: "rgba(255,255,255,0.11)",
+					background: "rgba(255,255,255,0.88)",
 					backdropFilter: "blur(20px)",
 					WebkitBackdropFilter: "blur(20px)",
-					border: "1px solid rgba(0,212,255,0.25)",
-					boxShadow: "0 8px 32px rgba(0,0,0,0.35), 0 0 60px rgba(0,212,255,0.07)",
+					border: "1px solid rgba(100,160,220,0.32)",
+					boxShadow: "0 8px 32px rgba(30,60,110,0.12)",
 				}}
 			>
-				<div className="mb-1 text-xs uppercase tracking-widest font-semibold" style={{ color: "#00d4ff" }}>User Portal</div>
-				<h1 className="text-2xl font-bold" style={{ color: "#f1f5f9" }}>Sign In</h1>
-				<p className="mt-1 text-sm" style={{ color: "#94a3b8" }}>Login with your email and password.</p>
+				<div className="mb-1 text-xs uppercase tracking-widest font-semibold" style={{ color: "#0284c7" }}>User Portal</div>
+				<h1 className="text-2xl font-bold" style={{ color: "#1a2f48" }}>Sign In</h1>
+				<p className="mt-1 text-sm" style={{ color: "#6080a0" }}>Login with your email and password.</p>
 
 				{loginInfoMessage ? (
-					<p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }}>
+					<p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.22)", color: "#b45309" }}>
 						{loginInfoMessage}
 					</p>
 				) : null}
 
 				{error ? (
-					<p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+					<p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626" }}>
 						{error}
 					</p>
 				) : null}
@@ -109,9 +109,9 @@ function LoginPassword(){
 							type="button"
 							onClick={() => setShowPassword((prev) => !prev)}
 							className="absolute inset-y-0 right-3 text-xs font-semibold transition-colors"
-							style={{ color: "#7dd3fc" }}
-							onMouseEnter={e => e.currentTarget.style.color = "#00d4ff"}
-							onMouseLeave={e => e.currentTarget.style.color = "#7dd3fc"}
+							style={{ color: "#0284c7" }}
+							onMouseEnter={e => e.currentTarget.style.color = "#0369a1"}
+							onMouseLeave={e => e.currentTarget.style.color = "#0284c7"}
 						>
 							{showPassword ? "Hide" : "Show"}
 						</button>
@@ -138,9 +138,9 @@ function LoginPassword(){
 							type="button"
 							onClick={() => navigate("/admin-login")}
 							className="w-full rounded-lg py-2.5 text-sm font-medium transition-all duration-250"
-							style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)", color: "#c084fc" }}
-							onMouseEnter={e => { e.currentTarget.style.background = "rgba(168,85,247,0.15)"; e.currentTarget.style.boxShadow = "0 0 15px rgba(168,85,247,0.2)"; }}
-							onMouseLeave={e => { e.currentTarget.style.background = "rgba(168,85,247,0.08)"; e.currentTarget.style.boxShadow = "none"; }}
+							style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.22)", color: "#7c3aed" }}
+							onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,58,237,0.14)"; e.currentTarget.style.boxShadow = "0 0 12px rgba(124,58,237,0.18)"; }}
+							onMouseLeave={e => { e.currentTarget.style.background = "rgba(124,58,237,0.08)"; e.currentTarget.style.boxShadow = "none"; }}
 						>
 							Admin Login
 						</button>

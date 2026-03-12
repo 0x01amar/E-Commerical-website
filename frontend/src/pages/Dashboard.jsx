@@ -240,7 +240,7 @@ function Dashboard() {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
         <div className="glass rounded-2xl p-8 text-center">
-          <p style={{ color: "#94a3b8" }}>You are not logged in.</p>
+          <p style={{ color: "#3a5470" }}>You are not logged in.</p>
           <button
             type="button"
             onClick={() => navigate("/login")}
@@ -256,38 +256,38 @@ function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center gap-3 p-8">
-        <div className="h-5 w-5 rounded-full animate-spin" style={{ border: "2px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff" }} />
-        <p style={{ color: "#94a3b8" }}>Loading profile...</p>
+        <div className="h-5 w-5 rounded-full animate-spin" style={{ border: "2px solid rgba(2,132,199,0.18)", borderTopColor: "#0284c7" }} />
+        <p style={{ color: "#3a5470" }}>Loading profile...</p>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="p-6 rounded-xl" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+      <div className="p-6 rounded-xl" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626" }}>
         {error || "User not found"}
       </div>
     );
   }
 
-  const displayPhoto = photoPreview || user.photo || "https://placehold.co/160x160/0d0e1a/00d4ff?text=U";
+  const displayPhoto = photoPreview || user.photo || "https://placehold.co/160x160/dce8f5/0284c7?text=U";
   const displayAddress = formatAddress(form.address) || "-";
 
   return (
     <div className="space-y-6">
       {/* Hero */}
-      <div
-        className="hero-dark rounded-3xl p-6 sm:p-8"
-      >
-        <p className="text-xs uppercase tracking-widest font-semibold" style={{ color: "#00d4ff" }}>👤 User Portal</p>
-        <h1 className="mt-2 text-2xl font-bold sm:text-3xl" style={{ color: "#f1f5f9" }}>Your Dashboard</h1>
-        <p className="mt-1 text-sm" style={{ color: "#94a3b8" }}>Manage your profile and track your orders</p>
+        <div
+          className="hero-dark rounded-3xl p-6 sm:p-8"
+        >
+          <p className="text-xs uppercase tracking-widest font-semibold" style={{ color: "#0284c7" }}>👤 User Portal</p>
+          <h1 className="mt-2 text-2xl font-bold sm:text-3xl" style={{ color: "#1a2f48" }}>Your Dashboard</h1>
+          <p className="mt-1 text-sm" style={{ color: "#3a5470" }}>Manage your profile and track your orders</p>
         <div className="mt-5 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => navigate("/")}
             className="rounded-full px-4 py-2 text-sm font-semibold transition-all duration-250 hover:scale-105"
-            style={{ background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.25)", color: "#00d4ff" }}
+              style={{ background: "rgba(2,132,199,0.10)", border: "1px solid rgba(2,132,199,0.25)", color: "#0284c7" }}
           >
             Browse Products
           </button>
@@ -295,7 +295,7 @@ function Dashboard() {
             type="button"
             onClick={logout}
             className="rounded-full px-4 py-2 text-sm font-semibold transition-all duration-250 hover:scale-105"
-            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}
+              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.22)", color: "#dc2626" }}
           >
             Logout
           </button>
@@ -303,40 +303,40 @@ function Dashboard() {
       </div>
 
       {error ? (
-        <p className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+        <p className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626" }}>
           {error}
         </p>
       ) : null}
 
-      <div className="glass rounded-2xl p-6">
-        <h2 className="text-xl font-semibold" style={{ color: "#e2e8f0" }}>Profile</h2>
+        <div className="glass rounded-2xl p-6">
+          <h2 className="text-xl font-semibold" style={{ color: "#1a2f48" }}>Profile</h2>
 
         <div
           className="mt-5 flex flex-col gap-4 rounded-xl p-4 sm:flex-row sm:items-center"
-          style={{ background: "rgba(0,212,255,0.04)", border: "1px solid rgba(0,212,255,0.12)" }}
+            style={{ background: "rgba(240,248,255,0.78)", border: "1px solid rgba(2,132,199,0.14)" }}
         >
           <img
             src={displayPhoto}
             alt={user.name || "User profile"}
             className="h-24 w-24 rounded-full object-cover"
-            style={{ border: "2px solid rgba(0,212,255,0.3)", boxShadow: "0 0 15px rgba(0,212,255,0.15)" }}
+              style={{ border: "2px solid rgba(2,132,199,0.24)", boxShadow: "0 10px 24px rgba(2,132,199,0.10)" }}
           />
           <div className="space-y-2">
-            <p className="text-sm font-medium" style={{ color: "#94a3b8" }}>Profile Photo</p>
+              <p className="text-sm font-medium" style={{ color: "#3a5470" }}>Profile Photo</p>
             <input
               type="file"
               accept="image/*"
               onChange={handlePhotoChange}
               className="block w-full text-sm"
-              style={{ color: "#94a3b8" }}
+                style={{ color: "#3a5470" }}
             />
-            <p className="text-xs" style={{ color: "#94a3b8" }}>Choose a photo and click Save Changes.</p>
+              <p className="text-xs" style={{ color: "#6080a0" }}>Choose a photo and click Save Changes.</p>
           </div>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="mb-1 text-xs font-medium" style={{ color: "#94a3b8" }}>Name</p>
+              <p className="mb-1 text-xs font-medium" style={{ color: "#6080a0" }}>Name</p>
             {isEditing ? (
               <input
                 value={form.name}
@@ -344,12 +344,12 @@ function Dashboard() {
                 className="input-dark"
               />
             ) : (
-              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "#e2e8f0" }}>{user.name || "-"}</p>
+                <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#1a2f48" }}>{user.name || "-"}</p>
             )}
           </div>
 
           <div>
-            <p className="mb-1 text-xs font-medium" style={{ color: "#94a3b8" }}>Phone</p>
+              <p className="mb-1 text-xs font-medium" style={{ color: "#6080a0" }}>Phone</p>
             {isEditing ? (
               <input
                 value={form.phone}
@@ -363,17 +363,17 @@ function Dashboard() {
                 className="input-dark"
               />
             ) : (
-              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "#e2e8f0" }}>{user.phone || "-"}</p>
+                <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#1a2f48" }}>{user.phone || "-"}</p>
             )}
           </div>
 
           <div className="sm:col-span-2">
-            <p className="mb-1 text-xs font-medium" style={{ color: "#94a3b8" }}>Email</p>
-            <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "#94a3b8" }}>{user.email}</p>
+              <p className="mb-1 text-xs font-medium" style={{ color: "#6080a0" }}>Email</p>
+              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#3a5470" }}>{user.email}</p>
           </div>
 
           <div className="sm:col-span-2">
-            <p className="mb-1 text-xs font-medium" style={{ color: "#94a3b8" }}>Address</p>
+              <p className="mb-1 text-xs font-medium" style={{ color: "#6080a0" }}>Address</p>
             {isEditing ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {[["line1","Address line"],["landmark","Landmark"],["villageTown","Village/Town"],["wardNo","Ward No"],["district","District"],["state","State"],["pincode","Pincode",6]].map(([field, ph, maxLen]) => (
@@ -390,7 +390,7 @@ function Dashboard() {
                 ))}
               </div>
             ) : (
-              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "#94a3b8" }}>{displayAddress}</p>
+                <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#3a5470" }}>{displayAddress}</p>
             )}
           </div>
         </div>
@@ -428,7 +428,7 @@ function Dashboard() {
               type="button"
               onClick={() => setIsEditing(true)}
               className="rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-250 hover:scale-105"
-              style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24" }}
+                style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.26)", color: "#b45309" }}
             >
               ✏️ Edit Profile
             </button>
@@ -436,16 +436,16 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="glass rounded-2xl p-6">
-        <h2 className="text-xl font-semibold" style={{ color: "#e2e8f0" }}>📦 My Orders</h2>
+        <div className="glass rounded-2xl p-6">
+          <h2 className="text-xl font-semibold" style={{ color: "#1a2f48" }}>📦 My Orders</h2>
         {ordersLoading ? (
           <div className="flex items-center gap-3 mt-4">
-            <div className="h-4 w-4 rounded-full animate-spin" style={{ border: "2px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff" }} />
-            <p className="text-sm" style={{ color: "#94a3b8" }}>Loading orders...</p>
+              <div className="h-4 w-4 rounded-full animate-spin" style={{ border: "2px solid rgba(2,132,199,0.18)", borderTopColor: "#0284c7" }} />
+              <p className="text-sm" style={{ color: "#3a5470" }}>Loading orders...</p>
           </div>
         ) : null}
         {ordersError ? (
-          <p className="mt-4 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+            <p className="mt-4 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626" }}>
             {ordersError}
           </p>
         ) : null}
@@ -457,30 +457,30 @@ function Dashboard() {
                 <div
                   key={order._id}
                   className="glass-hover rounded-xl p-4"
-                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(0,212,255,0.16)" }}
+                    style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.22)" }}
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex gap-3">
                       <img
-                        src={order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/160x110/0d0e1a/00d4ff?text=No+Image"}
+                          src={order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/160x110/dce8f5/0284c7?text=No+Image"}
                         alt={order.productName}
                         className="h-16 w-20 rounded-lg object-cover shrink-0"
-                        style={{ border: "1px solid rgba(0,212,255,0.15)" }}
-                        onError={(e) => { e.target.src = "https://placehold.co/160x110/0d0e1a/00d4ff?text=No+Image"; }}
+                          style={{ border: "1px solid rgba(100,160,220,0.22)" }}
+                          onError={(e) => { e.target.src = "https://placehold.co/160x110/dce8f5/0284c7?text=No+Image"; }}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold" style={{ color: "#e2e8f0" }}>{order.productName}</p>
-                        <p className="mt-0.5 text-xs" style={{ color: "#94a3b8" }}>
-                          ID: <span style={{ color: "#00d4ff" }}>{order.orderCode}</span>
+                          <p className="text-sm font-semibold" style={{ color: "#1a2f48" }}>{order.productName}</p>
+                          <p className="mt-0.5 text-xs" style={{ color: "#3a5470" }}>
+                            ID: <span style={{ color: "#0284c7" }}>{order.orderCode}</span>
                         </p>
-                        <p className="mt-0.5 text-xs" style={{ color: "#94a3b8" }}>
+                          <p className="mt-0.5 text-xs" style={{ color: "#3a5470" }}>
                           Qty: {order.quantity} • ₹{Number(order.totalAmount || 0).toFixed(2)}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <span className="rounded-lg px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(0,116,184,0.1)", border: "1px solid rgba(0,116,184,0.25)", color: "#60a5fa" }}>
+                            <span className="rounded-lg px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(37,99,235,0.10)", border: "1px solid rgba(37,99,235,0.20)", color: "#2563eb" }}>
                             📅 {new Date(order.createdAt).toLocaleDateString()}
                           </span>
-                          <span className="rounded-lg px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(20,184,166,0.1)", border: "1px solid rgba(20,184,166,0.25)", color: "#2dd4bf" }}>
+                            <span className="rounded-lg px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(13,148,136,0.10)", border: "1px solid rgba(13,148,136,0.22)", color: "#0f766e" }}>
                             🚚 {order.expectedDelivery}
                           </span>
                         </div>
@@ -493,7 +493,7 @@ function Dashboard() {
                         style={{
                           background: order.status === "Delivered" ? "rgba(20,184,166,0.15)" : order.status === "Cancelled" ? "rgba(239,68,68,0.12)" : "rgba(251,191,36,0.12)",
                           border: order.status === "Delivered" ? "1px solid rgba(20,184,166,0.3)" : order.status === "Cancelled" ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(251,191,36,0.25)",
-                          color: order.status === "Delivered" ? "#2dd4bf" : order.status === "Cancelled" ? "#f87171" : "#fbbf24",
+                            color: order.status === "Delivered" ? "#0f766e" : order.status === "Cancelled" ? "#dc2626" : "#b45309",
                         }}
                       >
                         {order.status}
@@ -521,12 +521,12 @@ function Dashboard() {
 
                   <div
                     className="mt-3 rounded-xl p-3"
-                    style={{ background: "rgba(0,212,255,0.03)", border: "1px solid rgba(0,212,255,0.08)" }}
+                      style={{ background: "rgba(240,248,255,0.72)", border: "1px solid rgba(100,160,220,0.18)" }}
                   >
                     <OrderTimeline status={order.status} compact />
                   </div>
 
-                  <p className="mt-2 text-xs" style={{ color: "#94a3b8" }}>
+                    <p className="mt-2 text-xs" style={{ color: "#3a5470" }}>
                     Payment: {order.paymentOption === "half" ? "Half Payment" : "Cash on Delivery"}
                   </p>
                 </div>
@@ -534,7 +534,7 @@ function Dashboard() {
             </div>
           ) : (
             <div className="mt-6 text-center">
-              <p className="text-sm" style={{ color: "#94a3b8" }}>No orders yet.</p>
+                <p className="text-sm" style={{ color: "#3a5470" }}>No orders yet.</p>
               <button
                 type="button"
                 onClick={() => navigate("/")}
