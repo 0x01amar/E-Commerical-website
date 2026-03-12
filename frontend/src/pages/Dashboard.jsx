@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiUrl } from "../config/api";
+import OrderTimeline from "../components/OrderTimeline";
+import { apiUrl, mediaUrl } from "../config/api";
 
 const EMPTY_ADDRESS = {
   line1: "",
@@ -505,17 +506,46 @@ function Dashboard() {
             <div className="mt-4 space-y-3">
               {orders.map((order) => (
                 <div key={order._id} className="rounded-xl border border-slate-200 p-4">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm font-semibold text-slate-900">{order.productName}</p>
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
-                      {order.status}
-                    </span>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex gap-3">
+                      <img
+                        src={order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/160x110?text=No+Image"}
+                        alt={order.productName}
+                        className="h-18 w-24 rounded-lg object-cover"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{order.productName}</p>
+                        <p className="mt-1 text-sm text-slate-600">Order ID: {order.orderCode}</p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          Qty: {order.quantity} • Total: ₹{Number(order.totalAmount || 0).toFixed(2)}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">Expected delivery: {order.expectedDelivery}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
+                        {order.status}
+                      </span>
+                      {order.productId ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/product/${order.productId}`)}
+                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                        >
+                          View Product
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                  <p className="mt-2 text-sm text-slate-600">Order ID: {order.orderCode}</p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Qty: {order.quantity} • Total: ₹{Number(order.totalAmount || 0).toFixed(2)} • Payment: {order.paymentOption === "half" ? "Half Payment" : "COD"}
+
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <OrderTimeline status={order.status} compact />
+                  </div>
+
+                  <p className="mt-2 text-xs text-slate-500">
+                    Payment: {order.paymentOption === "half" ? "Half Payment" : "COD"}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">Expected delivery: {order.expectedDelivery}</p>
                 </div>
               ))}
             </div>

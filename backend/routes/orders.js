@@ -259,8 +259,8 @@ router.post("/", async (req, res) => {
       userPhone,
       productId: product._id,
       productName: trimString(product.name),
-      productImage: trimString(product.image),
-      productCategory: trimString(product.category),
+      productImage: trimString(product.image || (Array.isArray(product.images) ? product.images[0] : "")),
+      productCategory: trimString(product.section || product.category),
       quantity,
       unitPrice: asTwoDecimals(product.price),
       subtotal: pricing.subtotal,
@@ -310,6 +310,21 @@ router.get("/my", async (req, res) => {
     return res.json(orders);
   } catch (error) {
     return res.status(500).json({ message: "Failed to load orders" });
+  }
+});
+
+router.get("/admin/all", async (req, res) => {
+  try {
+    const adminKey = trimString(req.headers["x-admin-key"] || "");
+
+    if (!isAdminKeyValid(adminKey)) {
+      return res.status(403).json({ message: "Admin access denied" });
+    }
+
+    const orders = await Order.find().sort({ createdAt: -1 });
+    return res.json(orders);
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to load all orders" });
   }
 });
 

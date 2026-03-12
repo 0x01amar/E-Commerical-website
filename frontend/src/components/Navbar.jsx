@@ -18,12 +18,12 @@ function Navbar({ search, setSearch }) {
   };
 
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-indigo-100 bg-white/90 shadow-sm backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6 lg:px-8">
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 sm:px-4 sm:text-sm"
+          className="rounded-xl bg-linear-to-r from-indigo-700 to-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:from-indigo-600 hover:to-indigo-500 sm:px-4 sm:text-sm"
         >
           Satyam Iron Art
         </button>
@@ -49,7 +49,7 @@ function Navbar({ search, setSearch }) {
             <button
               type="button"
               onClick={goToProfile}
-              className="rounded-lg bg-slate-800 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 sm:px-3 sm:text-sm"
+              className="rounded-lg bg-indigo-700 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-indigo-600 sm:px-3 sm:text-sm"
             >
               Profile
             </button>
@@ -72,7 +72,7 @@ function Navbar({ search, setSearch }) {
               <button
                 type="button"
                 onClick={() => navigate("/admin-login")}
-                className="rounded-lg bg-slate-800 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 sm:px-3 sm:text-sm"
+                className="rounded-lg bg-indigo-700 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-indigo-600 sm:px-3 sm:text-sm"
               >
                 Admin Login
               </button>

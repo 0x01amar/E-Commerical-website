@@ -154,6 +154,8 @@ function Checkout() {
 
         if (formatted) {
           setAddressForm(profileAddress);
+        } else {
+          setAddressForm(EMPTY_ADDRESS);
         }
 
         if (data?.phone) {
@@ -162,6 +164,7 @@ function Checkout() {
       } catch {
         setSavedAddress(EMPTY_ADDRESS);
         setSavedAddressText("");
+        setAddressForm(EMPTY_ADDRESS);
       }
     };
 
@@ -420,7 +423,7 @@ function Checkout() {
     );
   }
 
-  const imageUrl = mediaUrl(product.image) || "https://placehold.co/600x400?text=No+Image";
+  const imageUrl = mediaUrl(product.image || product.images?.[0] || "") || "https://placehold.co/600x400?text=No+Image";
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-5">
@@ -505,6 +508,13 @@ function Checkout() {
                   className="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
                 >
                   Use Saved Address
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddressForm(EMPTY_ADDRESS)}
+                  className="mt-2 ml-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
+                >
+                  Use Empty Form
                 </button>
               </div>
             ) : null}

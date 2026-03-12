@@ -1,4 +1,5 @@
 import { mediaUrl } from "../config/api";
+import StarRating from "./StarRating";
 
 function ProductCard({
   product,
@@ -7,13 +8,17 @@ function ProductCard({
   onDelete,
   showAdminActions = false,
 }) {
-  const imageUrl = product?.image
-    ? mediaUrl(product.image)
+  const mainImage = product?.image || product?.images?.[0] || "";
+
+  const imageUrl = mainImage
+    ? mediaUrl(mainImage)
     : "https://placehold.co/600x400?text=No+Image";
+
+  const sectionLabel = product?.section || product?.category || "General";
 
   return (
     <article
-      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+      className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
       <button
         type="button"
@@ -26,9 +31,23 @@ function ProductCard({
           className="h-44 w-full object-cover sm:h-52"
         />
         <div className="space-y-1 p-3.5 sm:p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{product.category}</p>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
+              {sectionLabel}
+            </span>
+            {product.category && product.category !== sectionLabel ? (
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                {product.category}
+              </span>
+            ) : null}
+          </div>
           <h3 className="line-clamp-1 text-lg font-semibold text-slate-900">{product.name}</h3>
           <p className="text-xl font-bold text-slate-900">₹{product.price}</p>
+          <StarRating
+            value={product?.ratingAverage || 0}
+            count={product?.ratingCount || 0}
+            size="sm"
+          />
           {product.description ? (
             <p className="line-clamp-2 text-sm text-slate-600">{product.description}</p>
           ) : null}

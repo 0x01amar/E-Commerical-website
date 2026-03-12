@@ -73,8 +73,8 @@ function Cart() {
 				<>
 					<div className="space-y-4">
 						{items.map((item) => {
-							const imageUrl = item.image
-								? mediaUrl(item.image)
+							const imageUrl = item.image || item.images?.[0]
+								? mediaUrl(item.image || item.images?.[0] || "")
 								: "https://placehold.co/200x150?text=No+Image";
 
 							return (

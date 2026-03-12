@@ -4,6 +4,7 @@ const productSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
+    trim: true,
   },
 
   price: {
@@ -13,15 +14,32 @@ const productSchema = new mongoose.Schema({
 
   category: {
     type: String,
+    default: "",
+    trim: true,
+  },
+
+  section: {
+    type: String,
     required: true,
+    default: "General",
+    trim: true,
   },
 
   description: {
     type: String,
+    default: "",
+    trim: true,
   },
 
   image: {
     type: String,
+    default: "",
+    trim: true,
+  },
+
+  images: {
+    type: [String],
+    default: [],
   },
 
   stock: {
@@ -31,6 +49,54 @@ const productSchema = new mongoose.Schema({
 
   warranty:{
     type:String,
+    default: "",
+    trim: true,
+  },
+
+  ratingAverage: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5,
+  },
+
+  ratingCount: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+
+  ratings: {
+    type: [
+      {
+        userEmail: {
+          type: String,
+          required: true,
+          trim: true,
+          lowercase: true,
+        },
+        rating: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 5,
+        },
+        comment: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+        updatedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
   },
 
   createdAt: {
