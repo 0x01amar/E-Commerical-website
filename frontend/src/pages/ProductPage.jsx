@@ -272,7 +272,7 @@ function ProductPage() {
         ? mediaUrl(selectedImage)
         : productImages[0]
             ? mediaUrl(productImages[0])
-            : "https://placehold.co/700x500?text=No+Image";
+            : "https://placehold.co/700x500/dce8f5/0284c7?text=No+Image";
 
     const visibleRatings = Array.isArray(product?.ratings) ? product.ratings.slice(0, 6) : [];
 
@@ -296,7 +296,7 @@ function ProductPage() {
                             src={imageUrl}
                             alt={product.name}
                             className="h-72 w-full object-cover sm:h-108"
-                            onError={e => { e.currentTarget.src = "https://placehold.co/700x500?text=No+Image"; }}
+                            onError={e => { e.currentTarget.src = "https://placehold.co/700x500/dce8f5/0284c7?text=No+Image"; }}
                         />
                     </div>
 
@@ -316,6 +316,7 @@ function ProductPage() {
                                             src={mediaUrl(imagePath)}
                                             alt={`${product.name} view ${index + 1}`}
                                             className="h-16 w-full object-cover"
+                                            onError={e => { e.currentTarget.src = "https://placehold.co/160x120/dce8f5/0284c7?text=Image"; }}
                                         />
                                     </button>
                                 );
@@ -347,14 +348,14 @@ function ProductPage() {
                         <button
                             type="button"
                             onClick={handleAddToCart}
-                            className="btn-ghost flex-1 rounded-xl py-3 text-sm"
+                            className="btn-amazon-cart flex-1"
                         >
                             Add to Cart
                         </button>
                         <button
                             type="button"
                             onClick={handleBuyNow}
-                            className="btn-neon flex-1 rounded-xl py-3 text-sm"
+                            className="btn-amazon-buy flex-1"
                         >
                             Buy Now
                         </button>

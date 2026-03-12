@@ -89,6 +89,49 @@ html {
 }
 .btn-neon:active { transform: translateY(0) scale(0.99); }
 
+/* ─── Product action buttons ─── */
+.btn-amazon-cart,
+.btn-amazon-buy {
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  padding: 0.82rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  box-shadow: 0 4px 12px rgba(148, 104, 0, 0.10);
+}
+
+.btn-amazon-cart {
+  background: linear-gradient(180deg, #fbe8a6 0%, #f6d76f 100%);
+  border-color: #dabb56;
+  color: #5b4300;
+}
+
+.btn-amazon-cart:hover {
+  background: linear-gradient(180deg, #f8df8d 0%, #f1cd52 100%);
+  box-shadow: 0 8px 18px rgba(198, 152, 28, 0.18);
+  transform: translateY(-1px);
+}
+
+.btn-amazon-buy {
+  background: linear-gradient(180deg, #f9d5ab 0%, #f5b164 100%);
+  border-color: #de9753;
+  color: #5d2f00;
+  box-shadow: 0 4px 12px rgba(212, 127, 45, 0.12);
+}
+
+.btn-amazon-buy:hover {
+  background: linear-gradient(180deg, #f7c791 0%, #ef9d44 100%);
+  box-shadow: 0 8px 18px rgba(212, 127, 45, 0.18);
+  transform: translateY(-1px);
+}
+
+.btn-amazon-cart:active,
+.btn-amazon-buy:active {
+  transform: translateY(0);
+}
+
 /* ─── Secondary Button ─── */
 .btn-ghost {
   background: rgba(255, 255, 255, 0.85);

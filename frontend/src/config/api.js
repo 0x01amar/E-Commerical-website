@@ -23,17 +23,42 @@ export const apiUrl = (path = "") => {
 	return `${API_BASE_URL}${normalizedPath}`;
 };
 
-export const mediaUrl = (path = "") => {
-	if (!path) {
+const normalizeMediaPath = (value = "") => {
+	const trimmedValue = String(value || "").trim();
+
+	if (!trimmedValue) {
 		return "";
 	}
 
-	if (path.startsWith("http://") || path.startsWith("https://")) {
-		return path;
+	if (/^(https?:|data:|blob:)/i.test(trimmedValue)) {
+		return trimmedValue;
 	}
 
-	// Normalize path
-	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+	const slashNormalizedValue = trimmedValue.replace(/\\+/g, "/");
+	const uploadsMatch = slashNormalizedValue.match(/(?:^|\/)(uploads\/.+)$/i);
+
+	if (uploadsMatch?.[1]) {
+		return `/${uploadsMatch[1]}`.replace(/\/{2,}/g, "/");
+	}
+
+	const withoutLeadingSlashes = slashNormalizedValue.replace(/^\/+/, "");
+	const prefixedPath = withoutLeadingSlashes.toLowerCase().startsWith("uploads/")
+		? `/${withoutLeadingSlashes}`
+		: `/uploads/${withoutLeadingSlashes}`;
+
+	return prefixedPath.replace(/\/{2,}/g, "/");
+};
+
+export const mediaUrl = (path = "") => {
+	const normalizedPath = normalizeMediaPath(path);
+
+	if (!normalizedPath) {
+		return "";
+	}
+
+	if (/^(https?:|data:|blob:)/i.test(normalizedPath)) {
+		return normalizedPath;
+	}
 
 	// In local development, let Vite proxy handle uploaded assets.
 	if (useProxyApi && normalizedPath.startsWith("/uploads")) {

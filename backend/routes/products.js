@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const path = require("path");
+const fs = require("fs");
 const multer = require("multer");
 const Product = require("../models/Product");
 const Section = require("../models/Section");
@@ -11,11 +12,15 @@ const Order = require("../models/Order");
    IMAGE UPLOAD SETUP
   */
 
+const uploadsDirectory = path.join(__dirname, "..", "uploads");
+
+fs.mkdirSync(uploadsDirectory, { recursive: true });
+
 // multer storage configuration
 // images backend/uploads folder mein save hogi
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/");
+    cb(null, uploadsDirectory);
   },
   filename: function (req, file, cb) {
     const extension = path.extname(file.originalname || "");
@@ -31,6 +36,31 @@ const toNumber = (value, fallback = 0) => {
 };
 
 const trimString = (value = "") => String(value || "").trim();
+
+const normalizeImagePath = (value = "") => {
+  const trimmedValue = trimString(value).replace(/\\+/g, "/");
+
+  if (!trimmedValue) {
+    return "";
+  }
+
+  if (/^(https?:|data:|blob:)/i.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  const uploadsMatch = trimmedValue.match(/(?:^|\/)(uploads\/.+)$/i);
+
+  if (uploadsMatch?.[1]) {
+    return `/${uploadsMatch[1]}`.replace(/\/{2,}/g, "/");
+  }
+
+  const withoutLeadingSlashes = trimmedValue.replace(/^\/+/, "");
+  const prefixedPath = withoutLeadingSlashes.toLowerCase().startsWith("uploads/")
+    ? `/${withoutLeadingSlashes}`
+    : `/uploads/${withoutLeadingSlashes}`;
+
+  return prefixedPath.replace(/\/{2,}/g, "/");
+};
 
 const normalizeEmail = (email = "") => trimString(email).toLowerCase();
 
@@ -67,7 +97,7 @@ const asArray = (value) => {
 
 const uniqueImageList = (values = []) => {
   const normalized = values
-    .map((value) => trimString(value))
+    .map((value) => normalizeImagePath(value))
     .filter(Boolean);
 
   return Array.from(new Set(normalized));
@@ -86,7 +116,7 @@ const normalizeProductResponse = (productDocument) => {
   const product = productDocument?.toObject ? productDocument.toObject() : { ...productDocument };
   const mergedImages = uniqueImageList([...(product.images || []), product.image]);
 
-  const mainImage = trimString(product.image) || mergedImages[0] || "";
+  const mainImage = normalizeImagePath(product.image) || mergedImages[0] || "";
 
   product.images = mergedImages.length ? mergedImages : (mainImage ? [mainImage] : []);
   product.image = mainImage;
@@ -179,7 +209,7 @@ const ensureSectionExists = async (sectionName) => {
 
 const resolveMainImage = ({ images = [], mainImage, mainImageIndex }) => {
   const normalizedImages = uniqueImageList(images);
-  const normalizedMain = trimString(mainImage);
+  const normalizedMain = normalizeImagePath(mainImage);
   const parsedIndex = Number(mainImageIndex);
 
   if (normalizedMain && normalizedImages.includes(normalizedMain)) {
