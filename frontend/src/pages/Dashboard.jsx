@@ -257,7 +257,7 @@ function Dashboard() {
     return (
       <div className="flex items-center gap-3 p-8">
         <div className="h-5 w-5 rounded-full animate-spin" style={{ border: "2px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff" }} />
-        <p style={{ color: "#64748b" }}>Loading profile...</p>
+        <p style={{ color: "#94a3b8" }}>Loading profile...</p>
       </div>
     );
   }
@@ -281,7 +281,7 @@ function Dashboard() {
       >
         <p className="text-xs uppercase tracking-widest font-semibold" style={{ color: "#00d4ff" }}>👤 User Portal</p>
         <h1 className="mt-2 text-2xl font-bold sm:text-3xl" style={{ color: "#f1f5f9" }}>Your Dashboard</h1>
-        <p className="mt-1 text-sm" style={{ color: "#64748b" }}>Manage your profile and track your orders</p>
+        <p className="mt-1 text-sm" style={{ color: "#94a3b8" }}>Manage your profile and track your orders</p>
         <div className="mt-5 flex flex-wrap gap-2">
           <button
             type="button"
@@ -328,15 +328,15 @@ function Dashboard() {
               accept="image/*"
               onChange={handlePhotoChange}
               className="block w-full text-sm"
-              style={{ color: "#64748b" }}
+              style={{ color: "#94a3b8" }}
             />
-            <p className="text-xs" style={{ color: "#475569" }}>Choose a photo and click Save Changes.</p>
+            <p className="text-xs" style={{ color: "#94a3b8" }}>Choose a photo and click Save Changes.</p>
           </div>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="mb-1 text-xs font-medium" style={{ color: "#64748b" }}>Name</p>
+            <p className="mb-1 text-xs font-medium" style={{ color: "#94a3b8" }}>Name</p>
             {isEditing ? (
               <input
                 value={form.name}
@@ -344,12 +344,12 @@ function Dashboard() {
                 className="input-dark"
               />
             ) : (
-              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#e2e8f0" }}>{user.name || "-"}</p>
+              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "#e2e8f0" }}>{user.name || "-"}</p>
             )}
           </div>
 
           <div>
-            <p className="mb-1 text-xs font-medium" style={{ color: "#64748b" }}>Phone</p>
+            <p className="mb-1 text-xs font-medium" style={{ color: "#94a3b8" }}>Phone</p>
             {isEditing ? (
               <input
                 value={form.phone}
@@ -363,17 +363,17 @@ function Dashboard() {
                 className="input-dark"
               />
             ) : (
-              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#e2e8f0" }}>{user.phone || "-"}</p>
+              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "#e2e8f0" }}>{user.phone || "-"}</p>
             )}
           </div>
 
           <div className="sm:col-span-2">
-            <p className="mb-1 text-xs font-medium" style={{ color: "#64748b" }}>Email</p>
-            <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#94a3b8" }}>{user.email}</p>
+            <p className="mb-1 text-xs font-medium" style={{ color: "#94a3b8" }}>Email</p>
+            <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "#94a3b8" }}>{user.email}</p>
           </div>
 
           <div className="sm:col-span-2">
-            <p className="mb-1 text-xs font-medium" style={{ color: "#64748b" }}>Address</p>
+            <p className="mb-1 text-xs font-medium" style={{ color: "#94a3b8" }}>Address</p>
             {isEditing ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {[["line1","Address line"],["landmark","Landmark"],["villageTown","Village/Town"],["wardNo","Ward No"],["district","District"],["state","State"],["pincode","Pincode",6]].map(([field, ph, maxLen]) => (
@@ -390,7 +390,7 @@ function Dashboard() {
                 ))}
               </div>
             ) : (
-              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#94a3b8" }}>{displayAddress}</p>
+              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "#94a3b8" }}>{displayAddress}</p>
             )}
           </div>
         </div>
@@ -441,7 +441,7 @@ function Dashboard() {
         {ordersLoading ? (
           <div className="flex items-center gap-3 mt-4">
             <div className="h-4 w-4 rounded-full animate-spin" style={{ border: "2px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff" }} />
-            <p className="text-sm" style={{ color: "#64748b" }}>Loading orders...</p>
+            <p className="text-sm" style={{ color: "#94a3b8" }}>Loading orders...</p>
           </div>
         ) : null}
         {ordersError ? (
@@ -457,7 +457,7 @@ function Dashboard() {
                 <div
                   key={order._id}
                   className="glass-hover rounded-xl p-4"
-                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(0,212,255,0.08)" }}
+                  style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(0,212,255,0.16)" }}
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex gap-3">
@@ -470,10 +470,10 @@ function Dashboard() {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold" style={{ color: "#e2e8f0" }}>{order.productName}</p>
-                        <p className="mt-0.5 text-xs" style={{ color: "#475569" }}>
+                        <p className="mt-0.5 text-xs" style={{ color: "#94a3b8" }}>
                           ID: <span style={{ color: "#00d4ff" }}>{order.orderCode}</span>
                         </p>
-                        <p className="mt-0.5 text-xs" style={{ color: "#475569" }}>
+                        <p className="mt-0.5 text-xs" style={{ color: "#94a3b8" }}>
                           Qty: {order.quantity} • ₹{Number(order.totalAmount || 0).toFixed(2)}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
@@ -526,7 +526,7 @@ function Dashboard() {
                     <OrderTimeline status={order.status} compact />
                   </div>
 
-                  <p className="mt-2 text-xs" style={{ color: "#334155" }}>
+                  <p className="mt-2 text-xs" style={{ color: "#94a3b8" }}>
                     Payment: {order.paymentOption === "half" ? "Half Payment" : "Cash on Delivery"}
                   </p>
                 </div>
@@ -534,7 +534,7 @@ function Dashboard() {
             </div>
           ) : (
             <div className="mt-6 text-center">
-              <p className="text-sm" style={{ color: "#475569" }}>No orders yet.</p>
+              <p className="text-sm" style={{ color: "#94a3b8" }}>No orders yet.</p>
               <button
                 type="button"
                 onClick={() => navigate("/")}

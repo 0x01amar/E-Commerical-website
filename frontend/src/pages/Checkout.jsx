@@ -527,7 +527,7 @@ function Checkout() {
               </div>
             ) : null}
 
-              <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.04)", border: "2px solid rgba(255,255,255,0.1)" }}>
+              <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.10)", border: "2px solid rgba(255,255,255,0.18)" }}>
               <div className="flex items-center gap-3">
                 <input
                   type="radio"

@@ -134,11 +134,11 @@ function UserLogin() {
             <div
                 className="w-full max-w-md rounded-3xl p-6 sm:p-8"
                 style={{
-                    background: "rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.11)",
                     backdropFilter: "blur(20px)",
                     WebkitBackdropFilter: "blur(20px)",
-                    border: "1px solid rgba(0,212,255,0.15)",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 60px rgba(0,212,255,0.03)",
+                    border: "1px solid rgba(0,212,255,0.25)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.4), 0 0 60px rgba(0,212,255,0.06)",
                 }}
             >
                 <div className="mb-1 text-xs uppercase tracking-widest font-semibold" style={{ color: "#00d4ff" }}>
@@ -147,7 +147,7 @@ function UserLogin() {
                 <h1 className="text-2xl font-bold" style={{ color: "#f1f5f9" }}>
                     {step === 1 ? "Create Account" : "Verify OTP"}
                 </h1>
-                <p className="mt-1 text-sm" style={{ color: "#64748b" }}>
+                <p className="mt-1 text-sm" style={{ color: "#94a3b8" }}>
                     {step === 1 ? "Sign up and verify via email OTP." : "Enter the OTP sent to your email."}
                 </p>
 
@@ -190,9 +190,9 @@ function UserLogin() {
                                 type="button"
                                 onClick={() => setShowPassword((prev) => !prev)}
                                 className="absolute inset-y-0 right-3 text-xs font-semibold transition-colors"
-                                style={{ color: "#475569" }}
+                                style={{ color: "#7dd3fc" }}
                                 onMouseEnter={e => e.currentTarget.style.color = "#00d4ff"}
-                                onMouseLeave={e => e.currentTarget.style.color = "#475569"}
+                                onMouseLeave={e => e.currentTarget.style.color = "#7dd3fc"}
                             >
                                 {showPassword ? "Hide" : "Show"}
                             </button>
@@ -209,14 +209,14 @@ function UserLogin() {
                                 type="button"
                                 onClick={() => setShowConfirmPassword((prev) => !prev)}
                                 className="absolute inset-y-0 right-3 text-xs font-semibold transition-colors"
-                                style={{ color: "#475569" }}
+                                style={{ color: "#7dd3fc" }}
                                 onMouseEnter={e => e.currentTarget.style.color = "#00d4ff"}
-                                onMouseLeave={e => e.currentTarget.style.color = "#475569"}
+                                onMouseLeave={e => e.currentTarget.style.color = "#7dd3fc"}
                             >
                                 {showConfirmPassword ? "Hide" : "Show"}
                             </button>
                         </div>
-                        <p className="text-xs" style={{ color: "#334155" }}>
+                        <p className="text-xs" style={{ color: "#94a3b8" }}>
                             Min 8 chars with 1 uppercase, 1 number, 1 special character.
                         </p>
                         <button

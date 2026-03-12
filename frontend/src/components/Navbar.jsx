@@ -23,7 +23,7 @@ function Navbar({ search, setSearch }) {
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
         borderBottom: "1px solid rgba(0,212,255,0.12)",
-        boxShadow: "0 4px 30px rgba(0,0,0,0.5), 0 0 60px rgba(0,212,255,0.03)",
+        boxShadow: "0 4px 30px rgba(0,0,0,0.35), 0 0 60px rgba(0,212,255,0.06)",
       }}
       className="sticky top-0 z-20"
     >
@@ -99,7 +99,7 @@ function Navbar({ search, setSearch }) {
                 type="button"
                 onClick={() => navigate("/login")}
                 style={{
-                  background: "rgba(255,255,255,0.04)",
+                  background: "rgba(255,255,255,0.12)",
                   border: "1px solid rgba(255,255,255,0.12)",
                   color: "#94a3b8",
                 }}

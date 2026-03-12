@@ -146,7 +146,7 @@ function Home({ search }) {
 						for Modern Homes
 					</span>
 				</h1>
-				<p className="mt-4 max-w-2xl text-sm sm:text-base" style={{ color: "#64748b" }}>
+				<p className="mt-4 max-w-2xl text-sm sm:text-base" style={{ color: "#94a3b8" }}>
 					Explore premium wooden and iron furniture. Crafted for elegance, built to last.
 				</p>
 
@@ -202,7 +202,7 @@ function Home({ search }) {
 						className="h-5 w-5 rounded-full animate-spin"
 						style={{ border: "2px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff" }}
 					/>
-					<p style={{ color: "#64748b" }}>Loading products...</p>
+					<p style={{ color: "#94a3b8" }}>Loading products...</p>
 				</div>
 			) : null}
 			{error ? (
@@ -282,7 +282,7 @@ function Home({ search }) {
 					<div
 						className="glass rounded-2xl p-10 text-center"
 					>
-						<p style={{ color: "#64748b" }}>No products found for your search.</p>
+						<p style={{ color: "#94a3b8" }}>No products found for your search.</p>
 					</div>
 				)
 			) : null}

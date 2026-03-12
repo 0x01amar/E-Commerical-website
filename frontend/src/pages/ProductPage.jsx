@@ -433,7 +433,7 @@ function ProductPage() {
                 {visibleRatings.length ? (
                     <div className="mt-4 space-y-3">
                         {visibleRatings.map((rating, index) => (
-                            <div key={`${rating?.userEmail || "user"}-${index}`} className="rounded-xl p-4 transition" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,212,255,0.08)" }}>
+                            <div key={`${rating?.userEmail || "user"}-${index}`} className="rounded-xl p-4 transition" style={{ background: "rgba(255,255,255,0.09)", border: "1px solid rgba(0,212,255,0.16)" }}>
                                 <div className="flex items-center justify-between gap-3 mb-2">
                                     <p className="text-xs font-semibold uppercase tracking-wide text-cyan-400">
                                         ✓ {maskEmail(rating?.userEmail)}

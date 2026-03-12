@@ -67,16 +67,16 @@ function AdminLogin() {
       <div
         className="w-full max-w-md rounded-3xl p-6 sm:p-8"
         style={{
-          background: "rgba(255,255,255,0.04)",
+          background: "rgba(255,255,255,0.11)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
-          border: "1px solid rgba(168,85,247,0.2)",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 60px rgba(168,85,247,0.04)",
+          border: "1px solid rgba(168,85,247,0.3)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.35), 0 0 60px rgba(168,85,247,0.07)",
         }}
       >
         <div className="mb-1 text-xs uppercase tracking-widest font-semibold" style={{ color: "#c084fc" }}>Admin Portal</div>
         <h1 className="text-2xl font-bold" style={{ color: "#f1f5f9" }}>Admin Login</h1>
-        <p className="mt-1 text-sm" style={{ color: "#64748b" }}>Login with email, password and admin key.</p>
+        <p className="mt-1 text-sm" style={{ color: "#94a3b8" }}>Login with email, password and admin key.</p>
 
         {error ? (
           <p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
@@ -105,9 +105,9 @@ function AdminLogin() {
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               className="absolute inset-y-0 right-3 text-xs font-semibold transition-colors"
-              style={{ color: "#475569" }}
-              onMouseEnter={e => e.currentTarget.style.color = "#c084fc"}
-              onMouseLeave={e => e.currentTarget.style.color = "#475569"}
+              style={{ color: "#c084fc" }}
+              onMouseEnter={e => e.currentTarget.style.color = "#e879f9"}
+              onMouseLeave={e => e.currentTarget.style.color = "#c084fc"}
             >
               {showPassword ? "Hide" : "Show"}
             </button>

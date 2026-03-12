@@ -76,7 +76,7 @@ function Cart() {
 			{/* Hero */}
 			<div className="hero-dark rounded-3xl p-6 sm:p-8">
 				<h1 className="text-2xl font-bold sm:text-3xl" style={{ color: "#f1f5f9" }}>🛒 Shopping Cart</h1>
-				<p className="mt-1 text-sm" style={{ color: "#64748b" }}>Review items and proceed to checkout</p>
+				<p className="mt-1 text-sm" style={{ color: "#94a3b8" }}>Review items and proceed to checkout</p>
 				<button
 					type="button"
 					onClick={() => navigate("/")}
@@ -89,7 +89,7 @@ function Cart() {
 			{!items.length ? (
 				<div className="glass rounded-2xl p-12 text-center">
 					<p className="text-lg font-semibold" style={{ color: "#e2e8f0" }}>Your cart is empty</p>
-					<p className="mt-2 text-sm" style={{ color: "#64748b" }}>Start shopping to add items!</p>
+					<p className="mt-2 text-sm" style={{ color: "#94a3b8" }}>Start shopping to add items!</p>
 					<button
 						type="button"
 						onClick={() => navigate("/")}
@@ -122,7 +122,7 @@ function Cart() {
 										/>
 										<div className="flex-1 min-w-0">
 											<h2 className="font-semibold" style={{ color: "#e2e8f0" }}>{item.name}</h2>
-											<p className="mt-1 text-sm" style={{ color: "#64748b" }}>
+											<p className="mt-1 text-sm" style={{ color: "#94a3b8" }}>
 												₹{Number(item.price || 0).toFixed(2)} × {item.quantity} = {" "}
 												<strong style={{ color: "#00d4ff" }}>₹{(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)}</strong>
 											</p>
@@ -178,15 +178,15 @@ function Cart() {
 					>
 						<h2 className="text-lg font-semibold mb-4" style={{ color: "#e2e8f0" }}>Order Summary</h2>
 						<div className="space-y-3 text-sm">
-							<div className="flex justify-between" style={{ color: "#64748b" }}>
+							<div className="flex justify-between" style={{ color: "#94a3b8" }}>
 								<span>Subtotal</span>
 								<span style={{ color: "#94a3b8" }}>₹{total.toFixed(2)}</span>
 							</div>
-							<div className="flex justify-between" style={{ color: "#64748b" }}>
+							<div className="flex justify-between" style={{ color: "#94a3b8" }}>
 								<span>Tax (8%)</span>
 								<span style={{ color: "#94a3b8" }}>₹{tax.toFixed(2)}</span>
 							</div>
-							<div className="flex justify-between" style={{ color: "#64748b" }}>
+							<div className="flex justify-between" style={{ color: "#94a3b8" }}>
 								<span>Shipping</span>
 								<span style={{ color: "#94a3b8" }}>₹{SHIPPING_CHARGE}</span>
 							</div>
@@ -209,7 +209,7 @@ function Cart() {
 							🛍️ Checkout ({items.length})
 						</button>
 
-						<p className="mt-3 text-xs text-center" style={{ color: "#334155" }}>
+							<p className="mt-3 text-xs text-center" style={{ color: "#7dd3fc" }}>
 							✦ Free shipping on orders over ₹500
 						</p>
 					</div>
