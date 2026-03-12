@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+CHANGES_MADE.txt
+COMPLETION_REPORT.txt
+FEATURE_GUIDE.md
+IMPLEMENTATION_SUMMARY.md

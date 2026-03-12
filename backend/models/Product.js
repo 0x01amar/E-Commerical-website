@@ -86,6 +86,10 @@ const productSchema = new mongoose.Schema({
           default: "",
           trim: true,
         },
+        reviewImages: {
+          type: [String],
+          default: [],
+        },
         createdAt: {
           type: Date,
           default: Date.now,

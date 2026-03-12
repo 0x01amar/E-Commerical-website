@@ -9,6 +9,7 @@ function Home({ search }) {
 	const [sections, setSections] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	const isAdmin = localStorage.getItem("role") === "admin";
 
 	const normalizeSectionName = (product = {}) => {
 		const sectionValue = String(product?.section || product?.category || "General").trim();
@@ -172,7 +173,10 @@ function Home({ search }) {
 												<ProductCard
 													key={product._id}
 													product={product}
-													onView={() => navigate(`/product/${product._id}`)}
+													onView={() => !isAdmin && navigate(`/product/${product._id}`)}
+													onEdit={() => navigate(`/admin-dashboard?edit=${product._id}`)}
+													onDelete={() => console.log("delete")}
+													showAdminActions={isAdmin}
 												/>
 											))}
 										</div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiUrl, mediaUrl } from "../config/api";
 import StarRating from "../components/StarRating";
+import ReviewForm from "../components/ReviewForm";
 
 function ProductPage() {
   const { id } = useParams();
@@ -413,24 +414,52 @@ function ProductPage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Recent Ratings</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Customer Reviews & Ratings</h2>
+
+                {/* Review Form - Only for users who purchased */}
+                {isLoggedIn && ratingInfo.canRate && (
+                    <div className="mt-4">
+                        <ReviewForm productId={id} email={email} onReviewSubmitted={() => {}} />
+                    </div>
+                )}
+
+                <h3 className="mt-6 text-base font-semibold text-slate-900">Recent Ratings</h3>
 
                 {visibleRatings.length ? (
                     <div className="mt-4 space-y-3">
                         {visibleRatings.map((rating, index) => (
-                            <div key={`${rating?.userEmail || "user"}-${index}`} className="rounded-xl border border-slate-200 p-3">
-                                <div className="flex items-center justify-between gap-3">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                        {maskEmail(rating?.userEmail)}
+                            <div key={`${rating?.userEmail || "user"}-${index}`} className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50 p-4 hover:shadow-md transition">
+                                <div className="flex items-center justify-between gap-3 mb-2">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                        ✓ {maskEmail(rating?.userEmail)}
                                     </p>
                                     <StarRating value={Number(rating?.rating || 0)} showValue={false} size="sm" />
                                 </div>
-                                {rating?.comment ? <p className="mt-2 text-sm text-slate-700">{rating.comment}</p> : null}
+                                {rating?.comment ? (
+                                    <p className="mt-2 text-sm text-slate-700 leading-relaxed">{rating.comment}</p>
+                                ) : null}
+                                {rating?.reviewImages && rating.reviewImages.length > 0 ? (
+                                    <div className="mt-3 flex gap-2 flex-wrap">
+                                        {rating.reviewImages.slice(0, 4).map((imagePath, i) => (
+                                            <img
+                                                key={`${imagePath}-${i}`}
+                                                src={mediaUrl(imagePath)}
+                                                alt={`Review ${i + 1}`}
+                                                className="h-16 w-16 rounded-lg object-cover border border-slate-200 hover:shadow-md cursor-pointer"
+                                            />
+                                        ))}
+                                        {rating.reviewImages.length > 4 && (
+                                            <div className="h-16 w-16 rounded-lg bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600">
+                                                +{rating.reviewImages.length - 4}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : null}
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <p className="mt-3 text-sm text-slate-600">No ratings yet.</p>
+                    <p className="mt-3 text-sm text-slate-600">No ratings yet. Be the first to review this product!</p>
                 )}
             </div>
         </section>

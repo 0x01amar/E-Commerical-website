@@ -81,6 +81,7 @@ function Checkout() {
   const [loadingProduct, setLoadingProduct] = useState(true);
   const [step, setStep] = useState(1);
   const [quantity, setQuantity] = useState(1);
+  const [addressMode, setAddressMode] = useState("saved"); // "saved" or "new"
   const [addressForm, setAddressForm] = useState(EMPTY_ADDRESS);
   const [savedAddress, setSavedAddress] = useState(EMPTY_ADDRESS);
   const [savedAddressText, setSavedAddressText] = useState("");
@@ -499,105 +500,138 @@ function Checkout() {
         {step === 2 ? (
           <div className="space-y-4">
             {savedAddressText ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Saved Address</p>
-                <p className="mt-1 text-sm text-slate-700">{savedAddressText}</p>
-                <button
-                  type="button"
-                  onClick={() => setAddressForm(savedAddress)}
-                  className="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
-                >
-                  Use Saved Address
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAddressForm(EMPTY_ADDRESS)}
-                  className="mt-2 ml-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
-                >
-                  Use Empty Form
-                </button>
+              <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-blue-50 p-4">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      id="use-saved"
+                      name="addressMode"
+                      value="saved"
+                      checked={addressMode === "saved"}
+                      onChange={(e) => {
+                        setAddressMode(e.target.value);
+                        setAddressForm(savedAddress);
+                      }}
+                      className="mt-1"
+                    />
+                    <label htmlFor="use-saved">
+                      <p className="text-sm font-semibold text-slate-900">Use Saved Address</p>
+                      <p className="mt-1 text-sm text-slate-700 bg-white/80 rounded-lg px-3 py-2">📍 {savedAddressText}</p>
+                    </label>
+                  </div>
+                </div>
               </div>
             ) : null}
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Address Line *</label>
+            <div className="rounded-2xl border-2 border-slate-300 bg-gradient-to-r from-slate-50 to-gray-50 p-4">
+              <div className="flex items-center gap-3">
                 <input
-                  value={addressForm.line1}
-                  onChange={(event) => setAddressField("line1", event.target.value)}
-                  placeholder="House no, street, locality"
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                  type="radio"
+                  id="use-new"
+                  name="addressMode"
+                  value="new"
+                  checked={addressMode === "new"}
+                  onChange={(e) => {
+                    setAddressMode(e.target.value);
+                    setAddressForm(EMPTY_ADDRESS);
+                  }}
+                  className="mt-1"
                 />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Village/Town *</label>
-                <input
-                  value={addressForm.villageTown}
-                  onChange={(event) => setAddressField("villageTown", event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Ward No *</label>
-                <input
-                  value={addressForm.wardNo}
-                  onChange={(event) => setAddressField("wardNo", event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">District *</label>
-                <input
-                  value={addressForm.district}
-                  onChange={(event) => setAddressField("district", event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">State *</label>
-                <input
-                  value={addressForm.state}
-                  onChange={(event) => setAddressField("state", event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Pincode *</label>
-                <input
-                  value={addressForm.pincode}
-                  maxLength={6}
-                  onChange={(event) =>
-                    setAddressField("pincode", event.target.value.replace(/[^0-9]/g, ""))
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Landmark</label>
-                <input
-                  value={addressForm.landmark}
-                  onChange={(event) => setAddressField("landmark", event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Phone Number *</label>
-                <input
-                  value={contactPhone}
-                  maxLength={10}
-                  onChange={(event) => setContactPhone(event.target.value.replace(/[^0-9]/g, ""))}
-                  placeholder="10-digit mobile number"
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
-                />
+                <label htmlFor="use-new" className="text-sm font-semibold text-slate-900">
+                  Enter New Address
+                </label>
               </div>
             </div>
+
+            {addressMode === "new" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Address Line *</label>
+                  <input
+                    value={addressForm.line1}
+                    onChange={(event) => setAddressField("line1", event.target.value)}
+                    placeholder="House no, street, locality"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Village/Town *</label>
+                  <input
+                    value={addressForm.villageTown}
+                    onChange={(event) => setAddressField("villageTown", event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Ward No *</label>
+                  <input
+                    value={addressForm.wardNo}
+                    onChange={(event) => setAddressField("wardNo", event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">District *</label>
+                  <input
+                    value={addressForm.district}
+                    onChange={(event) => setAddressField("district", event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">State *</label>
+                  <input
+                    value={addressForm.state}
+                    onChange={(event) => setAddressField("state", event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Pincode *</label>
+                  <input
+                    value={addressForm.pincode}
+                    maxLength={6}
+                    onChange={(event) =>
+                      setAddressField("pincode", event.target.value.replace(/[^0-9]/g, ""))
+                    }
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Landmark</label>
+                  <input
+                    value={addressForm.landmark}
+                    onChange={(event) => setAddressField("landmark", event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Phone Number *</label>
+                  <input
+                    value={contactPhone}
+                    maxLength={10}
+                    onChange={(event) => setContactPhone(event.target.value.replace(/[^0-9]/g, ""))}
+                    placeholder="10-digit mobile number"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                  />
+                </div>
+              </div>
+            )}
+
+            {addressMode === "saved" && savedAddressText && (
+              <div className="rounded-lg bg-emerald-50 border-2 border-emerald-300 p-4">
+                <p className="text-sm font-medium text-emerald-900">✓ Using saved address</p>
+                <p className="mt-2 text-sm text-emerald-800">{contactPhone}</p>
+              </div>
+            )}
 
             <div className="flex flex-col gap-2 sm:flex-row">
               <button

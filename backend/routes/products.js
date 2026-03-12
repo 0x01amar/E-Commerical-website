@@ -563,6 +563,79 @@ router.put("/:id/admin-rating", requireAdminKey, async (req, res) => {
 });
 
 
+/* REVIEW IMAGE UPLOAD */
+
+router.post("/:id/review", upload.array("reviewImages", 5), async (req, res) => {
+  try {
+    const email = normalizeEmail(req.headers["x-user-email"] || "");
+    const rating = Number(req.body?.rating);
+    const comment = trimString(req.body?.comment);
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+    }
+
+    if (!comment) {
+      return res.status(400).json({ message: "Comment is required" });
+    }
+
+    const canRate = await didUserPurchaseProduct(email, req.params.id);
+
+    if (!canRate) {
+      return res.status(403).json({ message: "You can review this product only after purchase" });
+    }
+
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Upload review images
+    const reviewImagePaths = (req.files || []).map((file) => `/uploads/${file.filename}`);
+
+    const ratings = Array.isArray(product.ratings) ? product.ratings : [];
+    const existingRatingIndex = ratings.findIndex((entry) => normalizeEmail(entry.userEmail) === email);
+
+    if (existingRatingIndex >= 0) {
+      ratings[existingRatingIndex].rating = Number(rating.toFixed(1));
+      ratings[existingRatingIndex].comment = comment;
+      ratings[existingRatingIndex].reviewImages = reviewImagePaths;
+      ratings[existingRatingIndex].updatedAt = new Date();
+    } else {
+      ratings.push({
+        userEmail: email,
+        rating: Number(rating.toFixed(1)),
+        comment,
+        reviewImages: reviewImagePaths,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+
+    product.ratings = ratings;
+    const summary = computeRatingSummary(ratings);
+    product.ratingAverage = summary.ratingAverage;
+    product.ratingCount = summary.ratingCount;
+
+    await product.save();
+
+    return res.json({
+      message: existingRatingIndex >= 0 ? "Review updated" : "Review submitted",
+      ratingSummary: summary,
+      product: normalizeProductResponse(product),
+    });
+  } catch (error) {
+    console.error("Review upload error:", error);
+    return res.status(500).json({ message: "Failed to submit review" });
+  }
+});
+
+
 /* GET SINGLE PRODUCT */
 
 router.get("/:id", async (req, res) => {

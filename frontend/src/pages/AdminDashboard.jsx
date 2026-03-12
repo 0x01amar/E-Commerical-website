@@ -67,6 +67,8 @@ function AdminDashboard() {
   const [sectionError, setSectionError] = useState("");
   const [ordersError, setOrdersError] = useState("");
   const [statusDrafts, setStatusDrafts] = useState({});
+  const [deliveryDateDrafts, setDeliveryDateDrafts] = useState({});
+  const [deliveryUpdatingOrderId, setDeliveryUpdatingOrderId] = useState("");
 
   const navigate = useNavigate();
   const isAdmin = localStorage.getItem("role") === "admin";
@@ -528,6 +530,36 @@ function AdminDashboard() {
     }
   };
 
+  const updateDeliveryDate = async (orderId) => {
+    const expectedDelivery = deliveryDateDrafts[orderId] || "10-15 days";
+
+    try {
+      setDeliveryUpdatingOrderId(orderId);
+      setOrdersError("");
+
+      const response = await fetch(apiUrl(`/orders/${orderId}/delivery-date`), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ expectedDelivery }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to update delivery date");
+      }
+
+      setOrders((prev) => prev.map((order) => (order._id === orderId ? data.order : order)));
+    } catch (updateError) {
+      setOrdersError(updateError.message || "Failed to update delivery date");
+    } finally {
+      setDeliveryUpdatingOrderId("");
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("email");
     localStorage.removeItem("role");
@@ -876,51 +908,79 @@ function AdminDashboard() {
                 const imagePath = order.productImage || "";
 
                 return (
-                  <div key={order._id} className="rounded-xl border border-slate-200 p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="flex gap-3">
+                  <div key={order._id} className="rounded-xl border border-slate-200 bg-white p-4 hover:shadow-md transition">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex gap-3 flex-1">
                         <img
                           src={imagePath ? mediaUrl(imagePath) : "https://placehold.co/140x100?text=No+Image"}
                           alt={order.productName}
-                          className="h-20 w-24 rounded-lg object-cover"
+                          className="h-20 w-24 rounded-lg object-cover shadow-sm"
                         />
 
-                        <div className="space-y-1">
+                        <div className="space-y-1 flex-1">
                           <p className="text-sm font-semibold text-slate-900">{order.productName}</p>
-                          <p className="text-xs text-slate-500">Order ID: {order.orderCode}</p>
-                          <p className="text-xs text-slate-500">Customer: {order.userName} • {order.userEmail}</p>
-                          <p className="text-xs text-slate-500">
-                            Qty: {order.quantity} • Total: ₹{Number(order.totalAmount || 0).toFixed(2)}
-                          </p>
+                          <p className="text-xs text-slate-600">Order ID: <span className="font-medium">{order.orderCode}</span></p>
+                          <p className="text-xs text-slate-600">Customer: {order.userName} • {order.userEmail}</p>
+                          <p className="text-xs text-slate-600">Qty: {order.quantity} • Total: ₹{Number(order.totalAmount || 0).toFixed(2)}</p>
+                          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                            <div className="bg-blue-50 rounded px-2 py-1 border border-blue-200"><p className="text-blue-700">📅 Placed: {new Date(order.createdAt).toLocaleDateString()}</p></div>
+                            <div className="bg-green-50 rounded px-2 py-1 border border-green-200"><p className="text-green-700">🚚 Delivery: {order.expectedDelivery}</p></div>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
-                        <select
-                          value={selectedStatus}
-                          onChange={(event) =>
-                            setStatusDrafts((prev) => ({
-                              ...prev,
-                              [order._id]: event.target.value,
-                            }))
-                          }
-                          className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                        >
-                          {ORDER_STATUS_STEPS.map((statusOption) => (
-                            <option key={statusOption} value={statusOption}>
-                              {statusOption}
-                            </option>
-                          ))}
-                        </select>
+                      <div className="flex flex-col gap-3 lg:min-w-80">
+                        <div className="flex gap-2">
+                          <select
+                            value={selectedStatus}
+                            onChange={(event) =>
+                              setStatusDrafts((prev) => ({
+                                ...prev,
+                                [order._id]: event.target.value,
+                              }))
+                            }
+                            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                          >
+                            {ORDER_STATUS_STEPS.map((statusOption) => (
+                              <option key={statusOption} value={statusOption}>
+                                {statusOption}
+                              </option>
+                            ))}
+                          </select>
 
-                        <button
-                          type="button"
-                          onClick={() => updateOrderStatus(order._id)}
-                          disabled={statusUpdatingOrderId === order._id}
-                          className="rounded-xl bg-indigo-700 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {statusUpdatingOrderId === order._id ? "Updating..." : "Update Status"}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => updateOrderStatus(order._id)}
+                            disabled={statusUpdatingOrderId === order._id}
+                            className="rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 px-3 py-2 text-xs font-semibold text-white hover:from-indigo-700 hover:to-indigo-800 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                          >
+                            {statusUpdatingOrderId === order._id ? "..." : "Update"}
+                          </button>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={deliveryDateDrafts[order._id] || order.expectedDelivery || "10-15 days"}
+                            onChange={(e) =>
+                              setDeliveryDateDrafts((prev) => ({
+                                ...prev,
+                                [order._id]: e.target.value,
+                              }))
+                            }
+                            placeholder="e.g., 5-7 days"
+                            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-xs outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => updateDeliveryDate(order._id)}
+                            disabled={deliveryUpdatingOrderId === order._id}
+                            className="rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:from-emerald-700 hover:to-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                          >
+                            {deliveryUpdatingOrderId === order._id ? "..." : "Set"}
+                          </button>
+                        </div>
                       </div>
                     </div>
 

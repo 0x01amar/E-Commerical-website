@@ -361,4 +361,71 @@ router.put("/:orderId/status", async (req, res) => {
   }
 });
 
+router.put("/:orderId/delivery-date", async (req, res) => {
+  try {
+    const adminKey = trimString(req.headers["x-admin-key"] || "");
+
+    if (!isAdminKeyValid(adminKey)) {
+      return res.status(403).json({ message: "Admin access denied" });
+    }
+
+    const expectedDelivery = trimString(req.body?.expectedDelivery);
+
+    if (!expectedDelivery) {
+      return res.status(400).json({ message: "Expected delivery date is required" });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.orderId,
+      { expectedDelivery },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    return res.json({
+      message: "Delivery date updated",
+      order,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update delivery date" });
+  }
+});
+
+router.put("/:orderId/cancel", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email || "");
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const order = await Order.findById(req.params.orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.userEmail !== email) {
+      return res.status(403).json({ message: "You can only cancel your own orders" });
+    }
+
+    if (order.status === "Delivered" || order.status === "Cancelled") {
+      return res.status(400).json({ message: `Cannot cancel an order with status: ${order.status}` });
+    }
+
+    order.status = "Cancelled";
+    await order.save();
+
+    return res.json({
+      message: "Order cancelled successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to cancel order" });
+  }
+});
+
 module.exports = router;
