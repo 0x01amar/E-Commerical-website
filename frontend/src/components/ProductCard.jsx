@@ -18,8 +18,13 @@ function ProductCard({
 
   return (
     <article
-      className="glass glass-hover overflow-hidden rounded-2xl flex flex-col"
-      style={{ transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }}
+      className="glass-hover overflow-hidden rounded-2xl flex flex-col"
+      style={{
+        background: "rgba(255,255,255,0.11)",
+        border: "1px solid rgba(125,211,252,0.18)",
+        boxShadow: "0 6px 24px rgba(2,6,23,0.22)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      }}
     >
       <button
         type="button"
@@ -27,7 +32,7 @@ function ProductCard({
         className="block w-full text-left flex-1"
       >
         {/* Product Image */}
-        <div className="relative overflow-hidden" style={{ height: "180px" }}>
+          <div className="relative overflow-hidden" style={{ height: "185px" }}>
           <img
             src={imageUrl}
             alt={product.name}
@@ -40,7 +45,7 @@ function ProductCard({
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: "linear-gradient(to top, rgba(5,6,15,0.6) 0%, transparent 50%)",
+              background: "linear-gradient(to top, rgba(5,10,30,0.45) 0%, transparent 55%)",
             }}
           />
           {/* Section badge on image */}
@@ -58,7 +63,7 @@ function ProductCard({
         </div>
 
         {/* Product Info */}
-        <div className="p-3.5 space-y-2">
+        <div className="p-3.5 space-y-2" style={{ background: "rgba(15,23,42,0.45)" }}>
           {product.category && product.category !== sectionLabel ? (
             <span
               className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
@@ -74,7 +79,7 @@ function ProductCard({
 
           <h3
             className="line-clamp-1 text-base font-semibold"
-            style={{ color: "#f1f5f9" }}
+            style={{ color: "#f8fafc" }}
           >
             {product.name}
           </h3>
@@ -97,7 +102,7 @@ function ProductCard({
           />
 
           {product.description ? (
-            <p className="line-clamp-2 text-xs" style={{ color: "#64748b" }}>
+            <p className="line-clamp-2 text-xs" style={{ color: "#94a3b8" }}>
               {product.description}
             </p>
           ) : null}

@@ -5,11 +5,16 @@ const rawBackendUrl =
 
 export const BACKEND_URL = rawBackendUrl.replace(/\/+$/, "");
 
-const isLocalDevelopment =
-	typeof window !== "undefined" &&
-	["localhost", "127.0.0.1"].includes(window.location.hostname);
+const currentHostname = typeof window !== "undefined" ? window.location.hostname : "";
+const isLikelyLocalHost =
+	["localhost", "127.0.0.1", "0.0.0.0"].includes(currentHostname) ||
+	/^192\.168\./.test(currentHostname) ||
+	/^10\./.test(currentHostname) ||
+	/^172\.(1[6-9]|2\d|3[0-1])\./.test(currentHostname);
 
-export const API_BASE_URL = isLocalDevelopment
+const useProxyApi = Boolean(import.meta.env.DEV) || isLikelyLocalHost;
+
+export const API_BASE_URL = useProxyApi
 	? "/api"
 	: `${BACKEND_URL}/api`;
 
@@ -31,7 +36,7 @@ export const mediaUrl = (path = "") => {
 	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
 	// In local development, let Vite proxy handle uploaded assets.
-	if (isLocalDevelopment && normalizedPath.startsWith("/uploads")) {
+	if (useProxyApi && normalizedPath.startsWith("/uploads")) {
 		return normalizedPath;
 	}
 

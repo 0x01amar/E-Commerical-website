@@ -16,11 +16,11 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
-  background: #05060f;
+  background: #0b1220;
   background-image:
-    radial-gradient(ellipse at 20% 10%, rgba(0, 212, 255, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(20, 184, 166, 0.03) 0%, transparent 70%);
+    radial-gradient(ellipse at 20% 10%, rgba(0, 212, 255, 0.09) 0%, transparent 52%),
+    radial-gradient(ellipse at 80% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 52%),
+    radial-gradient(ellipse at 50% 50%, rgba(20, 184, 166, 0.04) 0%, transparent 72%);
   background-attachment: fixed;
   color: #e2e8f0;
 }
@@ -42,20 +42,20 @@ html {
 
 /* ─── Glassmorphism Card ─── */
 .glass {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.09);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 212, 255, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  box-shadow: 0 10px 34px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .glass-hover {
   transition: all 0.3s ease;
 }
 .glass-hover:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(0, 212, 255, 0.25);
-  box-shadow: 0 0 30px rgba(0, 212, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(56, 189, 248, 0.34);
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.12), 0 10px 34px rgba(2, 6, 23, 0.32);
   transform: translateY(-2px);
 }
 
@@ -105,9 +105,9 @@ html {
 
 /* ─── Secondary Button ─── */
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(0, 212, 255, 0.2);
-  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  color: #e2e8f0;
   border-radius: 10px;
   padding: 8px 18px;
   font-size: 0.875rem;
@@ -115,10 +115,10 @@ html {
   transition: all 0.25s ease;
 }
 .btn-ghost:hover {
-  background: rgba(0, 212, 255, 0.08);
-  border-color: rgba(0, 212, 255, 0.4);
-  color: #00d4ff;
-  box-shadow: 0 0 15px rgba(0, 212, 255, 0.12);
+  background: rgba(125, 211, 252, 0.16);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #f8fafc;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
 }
 
 /* ─── Danger Button ─── */
@@ -141,9 +141,9 @@ html {
 
 /* ─── Neon Input ─── */
 .input-dark {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(0, 212, 255, 0.15);
-  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  color: #f8fafc;
   border-radius: 10px;
   padding: 10px 16px;
   width: 100%;
@@ -151,7 +151,7 @@ html {
   outline: none;
   transition: all 0.25s ease;
 }
-.input-dark::placeholder { color: #475569; }
+.input-dark::placeholder { color: #94a3b8; }
 .input-dark:focus {
   border-color: rgba(0, 212, 255, 0.45);
   background: rgba(0, 212, 255, 0.04);
@@ -188,8 +188,8 @@ html {
 
 /* ─── Hero Banner ─── */
 .hero-dark {
-  background: linear-gradient(135deg, rgba(0,212,255,0.08) 0%, rgba(168,85,247,0.06) 50%, rgba(20,184,166,0.04) 100%);
-  border: 1px solid rgba(0,212,255,0.15);
+  background: linear-gradient(135deg, rgba(125,211,252,0.16) 0%, rgba(168,85,247,0.11) 50%, rgba(45,212,191,0.08) 100%);
+  border: 1px solid rgba(125,211,252,0.2);
   border-radius: 24px;
   position: relative;
   overflow: hidden;
