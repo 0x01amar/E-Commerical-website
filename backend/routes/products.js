@@ -1,34 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const path = require("path");
-const fs = require("fs");
 const multer = require("multer");
 const Product = require("../models/Product");
 const Section = require("../models/Section");
 const Order = require("../models/Order");
+const { deleteGridFSFileByPath, uploadBufferToGridFS } = require("../utils/gridfs");
 
 
 /*
    IMAGE UPLOAD SETUP
   */
 
-const uploadsDirectory = path.join(__dirname, "..", "uploads");
-
-fs.mkdirSync(uploadsDirectory, { recursive: true });
-
-// multer storage configuration
-// images backend/uploads folder mein save hogi
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDirectory);
-  },
-  filename: function (req, file, cb) {
-    const extension = path.extname(file.originalname || "");
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`);
-  }
-});
-
-const upload = multer({ storage: storage });
+const upload = multer({ storage: multer.memoryStorage() });
 
 const toNumber = (value, fallback = 0) => {
   const converted = Number(value);
@@ -103,13 +87,30 @@ const uniqueImageList = (values = []) => {
   return Array.from(new Set(normalized));
 };
 
-const uploadedFilesToImagePaths = (filesByField = {}) => {
+const buildUploadFilename = (file = {}) => {
+  const extension = path.extname(file.originalname || "") || ".jpg";
+  return `${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`;
+};
+
+const uploadedFilesToImagePaths = async (filesByField = {}) => {
   const files = [
     ...(filesByField?.images || []),
     ...(filesByField?.image || []),
   ];
 
-  return uniqueImageList(files.map((file) => (file?.filename ? `/uploads/${file.filename}` : "")));
+  const imagePaths = await Promise.all(files.map(async (file) => {
+    if (file?.buffer?.length) {
+      return uploadBufferToGridFS({
+        buffer: file.buffer,
+        filename: buildUploadFilename(file),
+        contentType: file.mimetype,
+      });
+    }
+
+    return file?.filename ? `/uploads/${file.filename}` : "";
+  }));
+
+  return uniqueImageList(imagePaths);
 };
 
 const normalizeProductResponse = (productDocument) => {
@@ -386,6 +387,8 @@ router.post("/", requireAdminKey, upload.fields([
   { name: "image", maxCount: 1 },
   { name: "images", maxCount: 25 },
 ]), async (req, res) => {
+  let uploadedImages = [];
+
   try {
 
     const name = trimString(req.body?.name);
@@ -396,7 +399,7 @@ router.post("/", requireAdminKey, upload.fields([
     }
 
     const requestedImages = uniqueImageList(asArray(req.body?.images));
-    const uploadedImages = uploadedFilesToImagePaths(req.files);
+    uploadedImages = await uploadedFilesToImagePaths(req.files);
     const images = uniqueImageList([...requestedImages, ...uploadedImages]);
     const image = resolveMainImage({
       images,
@@ -428,6 +431,7 @@ router.post("/", requireAdminKey, upload.fields([
     res.status(201).json(normalizeProductResponse(savedProduct));
 
   } catch (error) {
+    await Promise.allSettled(uploadedImages.map((imagePath) => deleteGridFSFileByPath(imagePath)));
     res.status(500).json({ message: "Failed to create product" });
   }
 });
@@ -691,6 +695,8 @@ router.put("/:id", requireAdminKey, upload.fields([
   { name: "image", maxCount: 1 },
   { name: "images", maxCount: 25 },
 ]), async (req, res) => {
+  let uploadedImages = [];
+
   try {
 
     const existingProduct = await Product.findById(req.params.id);
@@ -740,10 +746,12 @@ router.put("/:id", requireAdminKey, upload.fields([
       nextImages = nextImages.filter((imagePath) => !imagesToRemove.includes(imagePath));
     }
 
-    const uploadedImages = uploadedFilesToImagePaths(req.files);
+    uploadedImages = await uploadedFilesToImagePaths(req.files);
     if (uploadedImages.length) {
       nextImages = uniqueImageList([...nextImages, ...uploadedImages]);
     }
+
+    const removedImages = baseImages.filter((imagePath) => !nextImages.includes(imagePath));
 
     const mainImage = resolveMainImage({
       images: nextImages,
@@ -782,12 +790,16 @@ router.put("/:id", requireAdminKey, upload.fields([
     );
 
     if (!updatedProduct) {
+      await Promise.allSettled(uploadedImages.map((imagePath) => deleteGridFSFileByPath(imagePath)));
       return res.status(404).json({ message: "Product not found" });
     }
+
+    await Promise.allSettled(removedImages.map((imagePath) => deleteGridFSFileByPath(imagePath)));
 
     res.json(normalizeProductResponse(updatedProduct));
 
   } catch (error) {
+    await Promise.allSettled(uploadedImages.map((imagePath) => deleteGridFSFileByPath(imagePath)));
     res.status(500).json({ message: "Failed to update product" });
   }
 });
@@ -803,6 +815,9 @@ router.delete("/:id", requireAdminKey, async (req, res) => {
     if (!deletedProduct) {
       return res.status(404).json({ message: "Product not found" });
     }
+
+    const deletedImages = uniqueImageList([...(deletedProduct.images || []), deletedProduct.image]);
+    await Promise.allSettled(deletedImages.map((imagePath) => deleteGridFSFileByPath(imagePath)));
 
     res.json({
       message: "Product deleted successfully",
