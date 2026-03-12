@@ -24,7 +24,7 @@ function App() {
   const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname);
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-slate-50 via-indigo-50/40 to-slate-100 text-slate-900">
+    <div className="min-h-screen" style={{ background: "transparent", color: "#e2e8f0" }}>
       {!shouldHideNavbar && <Navbar search={search} setSearch={setSearch} />}
 
       <main className={shouldHideNavbar ? "" : "mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"}>

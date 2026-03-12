@@ -241,17 +241,21 @@ function ProductPage() {
     };
 
     if (loading) {
-        return <p className="p-8 text-slate-600">Loading product...</p>;
+        return (
+            <div className="flex items-center justify-center p-12">
+                <div style={{ width: 40, height: 40, border: "3px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            </div>
+        );
     }
 
     if (error) {
         return (
             <div className="space-y-4 p-8">
-                <p className="rounded-xl bg-rose-50 px-4 py-3 text-rose-600">{error}</p>
+                <p className="rounded-xl bg-rose-900/40 border border-rose-500/30 px-4 py-3 text-rose-400">{error}</p>
                 <button
                     type="button"
                     onClick={() => navigate("/")}
-                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                    className="btn-ghost rounded-lg px-4 py-2 text-sm"
                 >
                     Back to Home
                 </button>
@@ -280,18 +284,19 @@ function ProductPage() {
             <button
                 type="button"
                 onClick={() => navigate("/")}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                className="btn-ghost rounded-lg px-4 py-2 text-sm"
             >
                 ← Back to products
             </button>
 
-            <div className="grid gap-8 overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1.1fr_1fr] lg:p-8">
+            <div className="glass rounded-3xl p-5 lg:p-8 grid gap-8 lg:grid-cols-[1.1fr_1fr]">
                 <div className="space-y-4">
-                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                    <div className="overflow-hidden rounded-2xl" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(0,212,255,0.12)" }}>
                         <img
                             src={imageUrl}
                             alt={product.name}
                             className="h-72 w-full object-cover sm:h-108"
+                            onError={e => { e.currentTarget.src = "https://placehold.co/700x500?text=No+Image"; }}
                         />
                     </div>
 
@@ -305,7 +310,7 @@ function ProductPage() {
                                         key={`${imagePath}-${index}`}
                                         type="button"
                                         onClick={() => setSelectedImage(imagePath)}
-                                        className={`overflow-hidden rounded-xl border ${active ? "border-indigo-500 ring-2 ring-indigo-200" : "border-slate-200"}`}
+                                        className={`overflow-hidden rounded-xl border transition ${active ? "border-cyan-400 ring-2 ring-cyan-400/30" : "border-slate-700 hover:border-cyan-500/50"}`}
                                     >
                                         <img
                                             src={mediaUrl(imagePath)}
@@ -321,51 +326,51 @@ function ProductPage() {
 
                 <div className="space-y-4">
                     <div className="flex flex-wrap gap-2">
-                        <span className="inline-flex rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                        <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide" style={{ background: "rgba(0,212,255,0.15)", color: "#00d4ff", border: "1px solid rgba(0,212,255,0.3)" }}>
                             {product.section || product.category || "General"}
                         </span>
                         {product.category && product.category !== product.section ? (
-                            <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                            <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide" style={{ background: "rgba(168,85,247,0.15)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.3)" }}>
                                 {product.category}
                             </span>
                         ) : null}
                     </div>
 
-                    <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">{product.name}</h1>
+                    <h1 className="text-2xl font-bold text-white sm:text-3xl">{product.name}</h1>
                     <StarRating value={displayedAverage} count={displayedCount} size="md" />
-                    <p className="text-3xl font-extrabold text-slate-900">₹{Number(product.price || 0).toFixed(2)}</p>
-                    <p className="text-slate-600">{product.description || "No description available."}</p>
-                    <p className="text-sm text-slate-500">Stock: {product.stock ?? 0}</p>
-                    {product.warranty ? <p className="text-sm text-slate-500">Warranty: {product.warranty}</p> : null}
+                    <p className="text-3xl font-extrabold" style={{ background: "linear-gradient(135deg,#00d4ff,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>₹{Number(product.price || 0).toFixed(2)}</p>
+                    <p className="text-slate-300">{product.description || "No description available."}</p>
+                    <p className="text-sm text-slate-400">Stock: {product.stock ?? 0}</p>
+                    {product.warranty ? <p className="text-sm text-slate-400">Warranty: {product.warranty}</p> : null}
 
                     <div className="mt-2 flex flex-col gap-3 sm:flex-row">
                         <button
                             type="button"
                             onClick={handleAddToCart}
-                            className="rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400"
+                            className="btn-ghost flex-1 rounded-xl py-3 text-sm"
                         >
                             Add to Cart
                         </button>
                         <button
                             type="button"
                             onClick={handleBuyNow}
-                            className="rounded-xl bg-indigo-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-600"
+                            className="btn-neon flex-1 rounded-xl py-3 text-sm"
                         >
                             Buy Now
                         </button>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <h2 className="text-sm font-semibold text-slate-900">Customer Rating</h2>
+                    <div className="rounded-2xl p-4" style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(0,212,255,0.1)" }}>
+                        <h2 className="text-sm font-semibold text-white">Customer Rating</h2>
                         <StarRating value={displayedAverage} count={displayedCount} size="md" className="mt-2" />
 
-                        {ratingError ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{ratingError}</p> : null}
-                        {ratingMessage ? <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{ratingMessage}</p> : null}
+                        {ratingError ? <p className="mt-3 rounded-lg bg-rose-900/40 border border-rose-500/30 px-3 py-2 text-sm text-rose-400">{ratingError}</p> : null}
+                        {ratingMessage ? <p className="mt-3 rounded-lg bg-cyan-900/40 border border-cyan-500/30 px-3 py-2 text-sm text-cyan-400">{ratingMessage}</p> : null}
 
                         {isLoggedIn ? (
                             ratingInfo.canRate ? (
                                 <div className="mt-3 space-y-3">
-                                    <p className="text-xs text-slate-600">
+                                    <p className="text-xs text-slate-400">
                                         {ratingInfo.hasRated
                                             ? "You have already rated this product. You can update your rating."
                                             : "You purchased this product. Add your rating."}
@@ -383,20 +388,20 @@ function ProductPage() {
                                         value={ratingComment}
                                         onChange={(event) => setRatingComment(event.target.value)}
                                         placeholder="Write your review (optional)"
-                                        className="min-h-20 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                                        className="input-dark min-h-20 w-full"
                                     />
 
                                     <button
                                         type="button"
                                         onClick={submitRating}
                                         disabled={ratingSubmitting}
-                                        className="rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="btn-neon rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         {ratingSubmitting ? "Submitting..." : "Submit Rating"}
                                     </button>
                                 </div>
                             ) : (
-                                <p className="mt-3 rounded-lg bg-white px-3 py-2 text-xs text-slate-600">
+                                <p className="mt-3 rounded-lg px-3 py-2 text-xs text-slate-400" style={{ background: "rgba(0,0,0,0.3)" }}>
                                     You can rate this product only after purchasing it.
                                 </p>
                             )
@@ -404,7 +409,7 @@ function ProductPage() {
                             <button
                                 type="button"
                                 onClick={() => redirectToLogin(`/product/${id}`)}
-                                className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                                className="mt-3 btn-ghost rounded-lg px-3 py-2 text-xs"
                             >
                                 Login to rate this product
                             </button>
@@ -413,8 +418,8 @@ function ProductPage() {
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Customer Reviews & Ratings</h2>
+            <div className="glass rounded-2xl p-5">
+                <h2 className="text-lg font-semibold text-white">Customer Reviews & Ratings</h2>
 
                 {/* Review Form - Only for users who purchased */}
                 {isLoggedIn && ratingInfo.canRate && (
@@ -423,20 +428,20 @@ function ProductPage() {
                     </div>
                 )}
 
-                <h3 className="mt-6 text-base font-semibold text-slate-900">Recent Ratings</h3>
+                <h3 className="mt-6 text-base font-semibold text-slate-200">Recent Ratings</h3>
 
                 {visibleRatings.length ? (
                     <div className="mt-4 space-y-3">
                         {visibleRatings.map((rating, index) => (
-                            <div key={`${rating?.userEmail || "user"}-${index}`} className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50 p-4 hover:shadow-md transition">
+                            <div key={`${rating?.userEmail || "user"}-${index}`} className="rounded-xl p-4 transition" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,212,255,0.08)" }}>
                                 <div className="flex items-center justify-between gap-3 mb-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-400">
                                         ✓ {maskEmail(rating?.userEmail)}
                                     </p>
                                     <StarRating value={Number(rating?.rating || 0)} showValue={false} size="sm" />
                                 </div>
                                 {rating?.comment ? (
-                                    <p className="mt-2 text-sm text-slate-700 leading-relaxed">{rating.comment}</p>
+                                    <p className="mt-2 text-sm text-slate-300 leading-relaxed">{rating.comment}</p>
                                 ) : null}
                                 {rating?.reviewImages && rating.reviewImages.length > 0 ? (
                                     <div className="mt-3 flex gap-2 flex-wrap">
@@ -445,11 +450,13 @@ function ProductPage() {
                                                 key={`${imagePath}-${i}`}
                                                 src={mediaUrl(imagePath)}
                                                 alt={`Review ${i + 1}`}
-                                                className="h-16 w-16 rounded-lg object-cover border border-slate-200 hover:shadow-md cursor-pointer"
+                                                className="h-16 w-16 rounded-lg object-cover cursor-pointer"
+                                                style={{ border: "1px solid rgba(0,212,255,0.2)" }}
+                                                onError={e => { e.currentTarget.src = "https://placehold.co/64x64?text=Img"; }}
                                             />
                                         ))}
                                         {rating.reviewImages.length > 4 && (
-                                            <div className="h-16 w-16 rounded-lg bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600">
+                                            <div className="h-16 w-16 rounded-lg flex items-center justify-center text-xs font-semibold text-slate-400" style={{ background: "rgba(255,255,255,0.06)" }}>
                                                 +{rating.reviewImages.length - 4}
                                             </div>
                                         )}
@@ -459,7 +466,7 @@ function ProductPage() {
                         ))}
                     </div>
                 ) : (
-                    <p className="mt-3 text-sm text-slate-600">No ratings yet. Be the first to review this product!</p>
+                    <p className="mt-3 text-sm text-slate-400">No ratings yet. Be the first to review this product!</p>
                 )}
             </div>
         </section>

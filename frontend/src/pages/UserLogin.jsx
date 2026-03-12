@@ -125,14 +125,41 @@ function UserLogin() {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-100 via-amber-50 to-slate-200 px-4 py-10">
-            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
-                <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
-                <p className="mt-2 text-sm text-slate-600">Sign up with your details, then verify OTP sent to your email.</p>
+        <div
+            className="flex min-h-screen items-center justify-center px-4 py-10"
+            style={{
+                background: "radial-gradient(ellipse at 30% 20%, rgba(0,212,255,0.07) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(20,184,166,0.05) 0%, transparent 50%)",
+            }}
+        >
+            <div
+                className="w-full max-w-md rounded-3xl p-6 sm:p-8"
+                style={{
+                    background: "rgba(255,255,255,0.04)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    border: "1px solid rgba(0,212,255,0.15)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 60px rgba(0,212,255,0.03)",
+                }}
+            >
+                <div className="mb-1 text-xs uppercase tracking-widest font-semibold" style={{ color: "#00d4ff" }}>
+                    {step === 1 ? "New Account" : "OTP Verification"}
+                </div>
+                <h1 className="text-2xl font-bold" style={{ color: "#f1f5f9" }}>
+                    {step === 1 ? "Create Account" : "Verify OTP"}
+                </h1>
+                <p className="mt-1 text-sm" style={{ color: "#64748b" }}>
+                    {step === 1 ? "Sign up and verify via email OTP." : "Enter the OTP sent to your email."}
+                </p>
 
-                {error ? <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p> : null}
+                {error ? (
+                    <p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+                        {error}
+                    </p>
+                ) : null}
                 {successMessage ? (
-                    <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{successMessage}</p>
+                    <p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", color: "#2dd4bf" }}>
+                        {successMessage}
+                    </p>
                 ) : null}
 
                 {step === 1 ? (
@@ -142,14 +169,14 @@ function UserLogin() {
                             placeholder="Full Name"
                             value={name}
                             onChange={(event) => setName(event.target.value)}
-                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                            className="input-dark"
                         />
                         <input
                             type="email"
                             placeholder="you@example.com"
                             value={email}
                             onChange={(event) => setEmail(event.target.value)}
-                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                            className="input-dark"
                         />
                         <div className="relative">
                             <input
@@ -157,12 +184,15 @@ function UserLogin() {
                                 placeholder="Password"
                                 value={password}
                                 onChange={(event) => setPassword(event.target.value)}
-                                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 pr-16 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                                className="input-dark pr-14"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword((prev) => !prev)}
-                                className="absolute inset-y-0 right-3 text-xs font-semibold text-slate-600 hover:text-slate-900"
+                                className="absolute inset-y-0 right-3 text-xs font-semibold transition-colors"
+                                style={{ color: "#475569" }}
+                                onMouseEnter={e => e.currentTarget.style.color = "#00d4ff"}
+                                onMouseLeave={e => e.currentTarget.style.color = "#475569"}
                             >
                                 {showPassword ? "Hide" : "Show"}
                             </button>
@@ -173,31 +203,34 @@ function UserLogin() {
                                 placeholder="Confirm Password"
                                 value={confirmPassword}
                                 onChange={(event) => setConfirmPassword(event.target.value)}
-                                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 pr-16 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                                className="input-dark pr-14"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowConfirmPassword((prev) => !prev)}
-                                className="absolute inset-y-0 right-3 text-xs font-semibold text-slate-600 hover:text-slate-900"
+                                className="absolute inset-y-0 right-3 text-xs font-semibold transition-colors"
+                                style={{ color: "#475569" }}
+                                onMouseEnter={e => e.currentTarget.style.color = "#00d4ff"}
+                                onMouseLeave={e => e.currentTarget.style.color = "#475569"}
                             >
                                 {showConfirmPassword ? "Hide" : "Show"}
                             </button>
                         </div>
-                        <p className="text-xs text-slate-500">
-                            Use at least 8 characters with 1 uppercase letter, 1 number, and 1 special character.
+                        <p className="text-xs" style={{ color: "#334155" }}>
+                            Min 8 chars with 1 uppercase, 1 number, 1 special character.
                         </p>
                         <button
                             type="button"
                             onClick={sendOtp}
                             disabled={loading}
-                            className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="btn-neon w-full py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? "Sending OTP..." : "Sign Up & Send OTP"}
                         </button>
                         <button
                             type="button"
                             onClick={() => navigate("/login")}
-                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                            className="btn-ghost w-full py-2.5"
                         >
                             Already have an account? Login
                         </button>
@@ -209,22 +242,22 @@ function UserLogin() {
                             placeholder="Enter 6-digit OTP"
                             value={otp}
                             onChange={(event) => setOtp(event.target.value)}
-                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                            className="input-dark"
                         />
                         <button
                             type="button"
                             onClick={verifyOtp}
                             disabled={loading}
-                            className="w-full rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="btn-neon w-full py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? "Verifying..." : "Verify OTP"}
                         </button>
                         <button
                             type="button"
                             onClick={() => setStep(1)}
-                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                            className="btn-ghost w-full py-2.5"
                         >
-                            Change Signup Details
+                            ← Change Signup Details
                         </button>
                     </div>
                 )}

@@ -406,17 +406,17 @@ function Checkout() {
   };
 
   if (loadingProduct) {
-    return <p className="p-6 text-slate-600">Loading checkout...</p>;
+    return <p className="p-6" style={{ color: "#00d4ff" }}>Loading checkout...</p>;
   }
 
   if (!product) {
     return (
       <div className="space-y-4 p-6">
-        <p className="rounded-xl bg-rose-50 px-4 py-3 text-rose-600">{error || "Product not found"}</p>
+        <p className="rounded-xl bg-rose-900/40 border border-rose-500/30 px-4 py-3 text-rose-400">{error || "Product not found"}</p>
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+          className="btn-ghost rounded-lg px-4 py-2 text-sm"
         >
           Back to Home
         </button>
@@ -431,12 +431,12 @@ function Checkout() {
       <button
         type="button"
         onClick={() => navigate(`/product/${product._id}`)}
-        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+        className="btn-ghost rounded-lg px-4 py-2 text-sm"
       >
         ← Back to product
       </button>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="glass rounded-2xl p-4 sm:p-6">
         <div className="mb-4 flex flex-wrap gap-2">
           {["Quantity", "Address", "Summary", "Payment"].map((label, index) => {
             const active = step === index + 1;
@@ -444,7 +444,8 @@ function Checkout() {
             return (
               <span
                 key={label}
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${active ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"}`}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${active ? "text-white" : "text-slate-400"}`}
+                style={active ? { background: "linear-gradient(135deg,#00d4ff,#a855f7)" } : { background: "rgba(255,255,255,0.06)" }}
               >
                 {index + 1}. {label}
               </span>
@@ -452,35 +453,37 @@ function Checkout() {
           })}
         </div>
 
-        {error ? <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p> : null}
-        {notice ? <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{notice}</p> : null}
+        {error ? <p className="mb-4 rounded-lg bg-rose-900/40 border border-rose-500/30 px-3 py-2 text-sm text-rose-400">{error}</p> : null}
+        {notice ? <p className="mb-4 rounded-lg bg-cyan-900/40 border border-cyan-500/30 px-3 py-2 text-sm text-cyan-400">{notice}</p> : null}
 
         {step === 1 ? (
           <div className="space-y-5">
-            <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row">
-              <img src={imageUrl} alt={product.name} className="h-36 w-full rounded-xl object-cover sm:h-28 sm:w-36" />
+            <div className="flex flex-col gap-4 rounded-xl p-4 sm:flex-row" style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(0,212,255,0.1)" }}>
+              <img src={imageUrl} alt={product.name} className="h-36 w-full rounded-xl object-cover sm:h-28 sm:w-36" onError={e => { e.currentTarget.src = "https://placehold.co/200x150?text=No+Image"; }} />
               <div className="flex-1 space-y-1">
-                <h2 className="text-lg font-semibold text-slate-900">{product.name}</h2>
-                <p className="text-sm text-slate-500">{product.category}</p>
-                <p className="text-xl font-bold text-slate-900">₹{Number(product.price || 0).toFixed(2)}</p>
+                <h2 className="text-lg font-semibold text-white">{product.name}</h2>
+                <p className="text-sm text-slate-400">{product.category}</p>
+                <p className="text-xl font-bold" style={{ color: "#00d4ff" }}>₹{Number(product.price || 0).toFixed(2)}</p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <p className="text-sm font-medium text-slate-700">Choose Quantity</p>
-              <div className="inline-flex items-center gap-2 rounded-xl border border-slate-300 p-2">
+              <p className="text-sm font-medium text-slate-200">Choose Quantity</p>
+              <div className="inline-flex items-center gap-2 rounded-xl p-2" style={{ border: "1px solid rgba(0,212,255,0.2)" }}>
                 <button
                   type="button"
                   onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                  className="h-9 w-9 rounded-lg border border-slate-300 text-lg text-slate-700"
+                  className="h-9 w-9 rounded-lg text-lg text-slate-200 transition hover:text-cyan-400"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(0,212,255,0.15)" }}
                 >
                   -
                 </button>
-                <span className="w-10 text-center text-base font-semibold text-slate-900">{quantity}</span>
+                <span className="w-10 text-center text-base font-semibold text-white">{quantity}</span>
                 <button
                   type="button"
                   onClick={() => setQuantity((prev) => prev + 1)}
-                  className="h-9 w-9 rounded-lg border border-slate-300 text-lg text-slate-700"
+                  className="h-9 w-9 rounded-lg text-lg text-slate-200 transition hover:text-cyan-400"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(0,212,255,0.15)" }}
                 >
                   +
                 </button>
@@ -490,7 +493,7 @@ function Checkout() {
             <button
               type="button"
               onClick={moveToAddressStep}
-              className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
+              className="btn-neon w-full rounded-xl py-3 text-sm"
             >
               Next
             </button>
@@ -500,7 +503,7 @@ function Checkout() {
         {step === 2 ? (
           <div className="space-y-4">
             {savedAddressText ? (
-              <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-blue-50 p-4">
+              <div className="rounded-2xl p-4" style={{ background: "rgba(0,212,255,0.05)", border: "2px solid rgba(0,212,255,0.2)" }}>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
                     <input
@@ -516,15 +519,15 @@ function Checkout() {
                       className="mt-1"
                     />
                     <label htmlFor="use-saved">
-                      <p className="text-sm font-semibold text-slate-900">Use Saved Address</p>
-                      <p className="mt-1 text-sm text-slate-700 bg-white/80 rounded-lg px-3 py-2">📍 {savedAddressText}</p>
+                      <p className="text-sm font-semibold text-white">Use Saved Address</p>
+                      <p className="mt-1 text-sm text-slate-300 rounded-lg px-3 py-2" style={{ background: "rgba(0,0,0,0.3)" }}>📍 {savedAddressText}</p>
                     </label>
                   </div>
                 </div>
               </div>
             ) : null}
 
-            <div className="rounded-2xl border-2 border-slate-300 bg-gradient-to-r from-slate-50 to-gray-50 p-4">
+              <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.04)", border: "2px solid rgba(255,255,255,0.1)" }}>
               <div className="flex items-center gap-3">
                 <input
                   type="radio"
@@ -538,7 +541,7 @@ function Checkout() {
                   }}
                   className="mt-1"
                 />
-                <label htmlFor="use-new" className="text-sm font-semibold text-slate-900">
+                <label htmlFor="use-new" className="text-sm font-semibold text-slate-200">
                   Enter New Address
                 </label>
               </div>
@@ -547,89 +550,89 @@ function Checkout() {
             {addressMode === "new" && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Address Line *</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-300">Address Line *</label>
                   <input
                     value={addressForm.line1}
                     onChange={(event) => setAddressField("line1", event.target.value)}
                     placeholder="House no, street, locality"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                    className="input-dark w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Village/Town *</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-300">Village/Town *</label>
                   <input
                     value={addressForm.villageTown}
                     onChange={(event) => setAddressField("villageTown", event.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                    className="input-dark w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Ward No *</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-300">Ward No *</label>
                   <input
                     value={addressForm.wardNo}
                     onChange={(event) => setAddressField("wardNo", event.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                    className="input-dark w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">District *</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-300">District *</label>
                   <input
                     value={addressForm.district}
                     onChange={(event) => setAddressField("district", event.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                    className="input-dark w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">State *</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-300">State *</label>
                   <input
                     value={addressForm.state}
                     onChange={(event) => setAddressField("state", event.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                    className="input-dark w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Pincode *</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-300">Pincode *</label>
                   <input
                     value={addressForm.pincode}
                     maxLength={6}
                     onChange={(event) =>
                       setAddressField("pincode", event.target.value.replace(/[^0-9]/g, ""))
                     }
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                    className="input-dark w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Landmark</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-300">Landmark</label>
                   <input
                     value={addressForm.landmark}
                     onChange={(event) => setAddressField("landmark", event.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                    className="input-dark w-full"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Phone Number *</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-300">Phone Number *</label>
                   <input
                     value={contactPhone}
                     maxLength={10}
                     onChange={(event) => setContactPhone(event.target.value.replace(/[^0-9]/g, ""))}
                     placeholder="10-digit mobile number"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200"
+                    className="input-dark w-full"
                   />
                 </div>
               </div>
             )}
 
             {addressMode === "saved" && savedAddressText && (
-              <div className="rounded-lg bg-emerald-50 border-2 border-emerald-300 p-4">
-                <p className="text-sm font-medium text-emerald-900">✓ Using saved address</p>
-                <p className="mt-2 text-sm text-emerald-800">{contactPhone}</p>
+              <div className="rounded-lg p-4" style={{ background: "rgba(0,212,255,0.08)", border: "2px solid rgba(0,212,255,0.2)" }}>
+                <p className="text-sm font-medium text-cyan-400">✓ Using saved address</p>
+                <p className="mt-2 text-sm text-slate-300">{contactPhone}</p>
               </div>
             )}
 
@@ -637,7 +640,7 @@ function Checkout() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                className="btn-ghost rounded-xl px-4 py-3 text-sm"
               >
                 Back
               </button>
@@ -645,7 +648,7 @@ function Checkout() {
                 type="button"
                 onClick={saveAddressAndNext}
                 disabled={savingAddress}
-                className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex-1 btn-neon rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {savingAddress ? "Saving..." : "Save & Next"}
               </button>
@@ -655,28 +658,28 @@ function Checkout() {
 
         {step === 3 ? (
           <div className="space-y-4">
-            <div className="rounded-xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Delivery Address</p>
-              <p className="mt-1 text-sm font-medium text-slate-800">{deliveryAddressText || "-"}</p>
-              <p className="mt-2 text-sm text-slate-500">Phone: {contactPhone || "-"}</p>
+            <div className="rounded-xl p-4" style={{ border: "1px solid rgba(0,212,255,0.12)", background: "rgba(0,0,0,0.3)" }}>
+              <p className="text-sm text-slate-400">Delivery Address</p>
+              <p className="mt-1 text-sm font-medium text-slate-200">{deliveryAddressText || "-"}</p>
+              <p className="mt-2 text-sm text-slate-400">Phone: {contactPhone || "-"}</p>
             </div>
 
-            <div className="rounded-xl border border-slate-200 p-4">
-              <div className="flex items-center justify-between text-sm text-slate-700">
+            <div className="rounded-xl p-4" style={{ border: "1px solid rgba(0,212,255,0.12)", background: "rgba(0,0,0,0.3)" }}>
+              <div className="flex items-center justify-between text-sm text-slate-300">
                 <span>Price ({quantity} × ₹{Number(product.price || 0).toFixed(2)})</span>
                 <span>₹{subtotal.toFixed(2)}</span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-sm text-slate-700">
+              <div className="mt-2 flex items-center justify-between text-sm text-slate-300">
                 <span>Tax ({Math.round(TAX_RATE * 100)}%)</span>
                 <span>₹{taxAmount.toFixed(2)}</span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-sm text-slate-700">
+              <div className="mt-2 flex items-center justify-between text-sm text-slate-300">
                 <span>Shipping</span>
                 <span>₹{shippingCharge.toFixed(2)}</span>
               </div>
-              <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 text-base font-semibold text-slate-900">
+              <div className="mt-3 flex items-center justify-between pt-3 text-base font-semibold text-white" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
                 <span>Total</span>
-                <span>₹{totalPrice.toFixed(2)}</span>
+                <span style={{ color: "#00d4ff" }}>₹{totalPrice.toFixed(2)}</span>
               </div>
             </div>
 
@@ -684,14 +687,14 @@ function Checkout() {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                className="btn-ghost rounded-xl px-4 py-3 text-sm"
               >
                 Back
               </button>
               <button
                 type="button"
                 onClick={continueToPayment}
-                className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
+                className="flex-1 btn-neon rounded-xl py-3 text-sm"
               >
                 Next
               </button>
@@ -701,34 +704,34 @@ function Checkout() {
 
         {step === 4 ? (
           <div className="space-y-4">
-            <div className="space-y-2 rounded-xl border border-slate-200 p-4">
-              <label className="flex items-start gap-2 text-sm text-slate-700">
+            <div className="space-y-2 rounded-xl p-4" style={{ border: "1px solid rgba(0,212,255,0.12)", background: "rgba(0,0,0,0.3)" }}>
+              <label className="flex items-start gap-2 text-sm text-slate-200">
                 <input
                   type="radio"
                   name="paymentOption"
                   value="cod"
                   checked={paymentOption === "cod"}
                   onChange={(event) => setPaymentOption(event.target.value)}
-                  className="mt-0.5"
+                  className="mt-0.5 accent-cyan-400"
                 />
                 <span>Cash on Delivery</span>
               </label>
-              <label className="flex items-start gap-2 text-sm text-slate-700">
+              <label className="flex items-start gap-2 text-sm text-slate-200">
                 <input
                   type="radio"
                   name="paymentOption"
                   value="half"
                   checked={paymentOption === "half"}
                   onChange={(event) => setPaymentOption(event.target.value)}
-                  className="mt-0.5"
+                  className="mt-0.5 accent-cyan-400"
                 />
                 <span>Half payment now and half after delivery</span>
               </label>
             </div>
 
             {paymentOption === "half" ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm font-medium text-amber-800">
+              <div className="rounded-xl p-4" style={{ border: "1px solid rgba(250,173,20,0.3)", background: "rgba(250,173,20,0.08)" }}>
+                <p className="text-sm font-medium text-amber-300">
                   Pay exactly ₹{expectedHalfAmount.toFixed(2)} now (half of total amount)
                 </p>
                 <input
@@ -738,16 +741,16 @@ function Checkout() {
                   value={paidNowAmountInput}
                   onChange={(event) => setPaidNowAmountInput(event.target.value)}
                   placeholder={`Enter ₹${expectedHalfAmount.toFixed(2)}`}
-                  className="mt-3 w-full rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                  className="input-dark mt-3 w-full"
                 />
               </div>
             ) : null}
 
             {orderPlaced ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                <p className="font-semibold">Order placed: {orderPlaced.orderCode}</p>
-                <p className="mt-1">Status: {orderPlaced.status}</p>
-                <p className="mt-1">Expected delivery: {orderPlaced.expectedDelivery}</p>
+              <div className="rounded-xl p-4 text-sm" style={{ border: "1px solid rgba(0,212,255,0.2)", background: "rgba(0,212,255,0.08)" }}>
+                <p className="font-semibold text-cyan-400">Order placed: {orderPlaced.orderCode}</p>
+                <p className="mt-1 text-slate-300">Status: {orderPlaced.status}</p>
+                <p className="mt-1 text-slate-300">Expected delivery: {orderPlaced.expectedDelivery}</p>
               </div>
             ) : null}
 
@@ -755,7 +758,7 @@ function Checkout() {
               type="button"
               onClick={handlePlaceOrder}
               disabled={processingPayment || Boolean(orderPlaced)}
-              className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full btn-neon rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {processingPayment
                 ? "Processing..."
@@ -769,14 +772,14 @@ function Checkout() {
                 <button
                   type="button"
                   onClick={() => navigate("/")}
-                  className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  className="btn-ghost rounded-xl px-4 py-2.5 text-sm"
                 >
                   Back to Home
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate("/dashboard")}
-                  className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                  className="btn-neon rounded-xl px-4 py-2.5 text-sm"
                 >
                   Track in Profile
                 </button>

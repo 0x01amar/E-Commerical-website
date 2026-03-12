@@ -564,18 +564,18 @@ function AdminDashboard() {
     localStorage.removeItem("email");
     localStorage.removeItem("role");
     localStorage.removeItem("adminKey");
-    navigate("/admin-login");
+    navigate("/");
   };
 
   if (!isAdmin) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <p className="text-slate-600">Admin access required.</p>
+        <div className="glass rounded-2xl p-8 text-center">
+          <p className="text-slate-300">Admin access required.</p>
           <button
             type="button"
             onClick={() => navigate("/admin-login")}
-            className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+            className="mt-4 btn-neon rounded-lg px-4 py-2 text-sm"
           >
             Go to Admin Login
           </button>
@@ -587,42 +587,42 @@ function AdminDashboard() {
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold" style={{ background: "linear-gradient(135deg,#00d4ff,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Admin Dashboard</h1>
         <button
           type="button"
           onClick={logout}
-          className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600"
+          className="btn-danger rounded-lg px-4 py-2 text-sm"
         >
           Logout
         </button>
       </div>
 
-      {error ? <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-600">{error}</p> : null}
-      {sectionError ? <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-600">{sectionError}</p> : null}
+      {error ? <p className="rounded-lg bg-rose-900/40 border border-rose-500/30 px-4 py-3 text-sm text-rose-400">{error}</p> : null}
+      {sectionError ? <p className="rounded-lg bg-rose-900/40 border border-rose-500/30 px-4 py-3 text-sm text-rose-400">{sectionError}</p> : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_2fr]">
-        <form onSubmit={submitSection} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Manage Sections</h2>
+        <form onSubmit={submitSection} className="glass rounded-2xl p-5">
+          <h2 className="text-lg font-semibold text-white">Manage Sections</h2>
 
           <div className="mt-4 space-y-3">
             <input
               placeholder="Section name (e.g. Wooden Chair)"
               value={sectionForm.name}
               onChange={(event) => setSectionForm((prev) => ({ ...prev, name: event.target.value }))}
-              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
-            />
-            <input
-              placeholder="Display order"
-              type="number"
-              value={sectionForm.displayOrder}
-              onChange={(event) => setSectionForm((prev) => ({ ...prev, displayOrder: event.target.value }))}
-              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+              className="input-dark w-full"
+              />
+              <input
+                placeholder="Display order"
+                type="number"
+                value={sectionForm.displayOrder}
+                onChange={(event) => setSectionForm((prev) => ({ ...prev, displayOrder: event.target.value }))}
+                className="input-dark w-full"
             />
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={sectionSaving}
-                className="rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-neon rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {sectionSaving ? "Saving..." : editingSectionId ? "Update Section" : "Add Section"}
               </button>
@@ -630,7 +630,7 @@ function AdminDashboard() {
                 <button
                   type="button"
                   onClick={resetSectionForm}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  className="btn-ghost rounded-xl px-4 py-2 text-sm"
                 >
                   Cancel
                 </button>
@@ -640,10 +640,10 @@ function AdminDashboard() {
 
           <div className="mt-5 space-y-2">
             {sections.map((section) => (
-              <div key={section._id || section.name} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+              <div key={section._id || section.name} className="flex items-center justify-between rounded-xl px-3 py-2" style={{ border: "1px solid rgba(0,212,255,0.1)", background: "rgba(0,0,0,0.2)" }}>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{section.name}</p>
-                  <p className="text-xs text-slate-500">Order: {Number(section.displayOrder || 0)}</p>
+                  <p className="text-sm font-semibold text-white">{section.name}</p>
+                  <p className="text-xs text-slate-400">Order: {Number(section.displayOrder || 0)}</p>
                 </div>
                 <button
                   type="button"
@@ -654,7 +654,7 @@ function AdminDashboard() {
                       displayOrder: String(section.displayOrder || 0),
                     });
                   }}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                  className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
                 >
                   Edit
                 </button>
@@ -663,8 +663,8 @@ function AdminDashboard() {
           </div>
         </form>
 
-        <form onSubmit={submitProduct} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-900">
+        <form onSubmit={submitProduct} className="glass rounded-2xl p-6">
+          <h2 className="text-xl font-semibold text-white">
             {editingId ? "Edit Product" : "Add New Product"}
           </h2>
 
@@ -673,7 +673,7 @@ function AdminDashboard() {
               placeholder="Product Name"
               value={productForm.name}
               onChange={(event) => setProductForm((prev) => ({ ...prev, name: event.target.value }))}
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+              className="input-dark"
             />
 
             <select
@@ -685,7 +685,7 @@ function AdminDashboard() {
                   category: prev.category || event.target.value,
                 }))
               }
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+              className="input-dark"
             >
               <option value="">Select Section</option>
               {sections.map((section) => (
@@ -699,7 +699,7 @@ function AdminDashboard() {
               placeholder="Category (optional)"
               value={productForm.category}
               onChange={(event) => setProductForm((prev) => ({ ...prev, category: event.target.value }))}
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+              className="input-dark"
             />
 
             <input
@@ -708,7 +708,7 @@ function AdminDashboard() {
               min="0"
               value={productForm.price}
               onChange={(event) => setProductForm((prev) => ({ ...prev, price: event.target.value }))}
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+              className="input-dark"
             />
 
             <input
@@ -717,14 +717,14 @@ function AdminDashboard() {
               min="0"
               value={productForm.stock}
               onChange={(event) => setProductForm((prev) => ({ ...prev, stock: event.target.value }))}
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+              className="input-dark"
             />
 
             <input
               placeholder="Warranty"
               value={productForm.warranty}
               onChange={(event) => setProductForm((prev) => ({ ...prev, warranty: event.target.value }))}
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+              className="input-dark"
             />
 
             <input
@@ -735,7 +735,7 @@ function AdminDashboard() {
               step="0.1"
               value={productForm.ratingAverage}
               onChange={(event) => setProductForm((prev) => ({ ...prev, ratingAverage: event.target.value }))}
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+              className="input-dark"
             />
 
             <input
@@ -744,20 +744,20 @@ function AdminDashboard() {
               min="0"
               value={productForm.ratingCount}
               onChange={(event) => setProductForm((prev) => ({ ...prev, ratingCount: event.target.value }))}
-              className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400"
+              className="input-dark"
             />
 
             <textarea
               placeholder="Description"
               value={productForm.description}
               onChange={(event) => setProductForm((prev) => ({ ...prev, description: event.target.value }))}
-              className="min-h-24 rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 md:col-span-2"
+              className="input-dark min-h-24 md:col-span-2"
             />
           </div>
 
-          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <h3 className="text-sm font-semibold text-slate-900">Add Product Pictures</h3>
-            <p className="mt-1 text-xs text-slate-600">
+          <div className="mt-5 rounded-2xl p-4" style={{ border: "1px solid rgba(0,212,255,0.12)", background: "rgba(0,0,0,0.3)" }}>
+            <h3 className="text-sm font-semibold text-white">Add Product Pictures</h3>
+            <p className="mt-1 text-xs text-slate-400">
               Upload multiple pictures and mark one as main image.
             </p>
 
@@ -766,18 +766,18 @@ function AdminDashboard() {
               accept="image/*"
               multiple
               onChange={onAddNewImages}
-              className="mt-3 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-indigo-600"
+              className="mt-3 block w-full text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-500 file:px-3 file:py-2 file:text-sm file:font-medium file:text-black hover:file:bg-cyan-400"
             />
 
             <div className="mt-4 space-y-3">
               {existingImages.length ? (
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Saved Images</p>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Saved Images</p>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {existingImages.map((imagePath) => (
-                      <div key={imagePath} className="rounded-xl border border-slate-200 bg-white p-2">
+                      <div key={imagePath} className="rounded-xl p-2" style={{ border: "1px solid rgba(0,212,255,0.1)", background: "rgba(255,255,255,0.05)" }}>
                         <img src={mediaUrl(imagePath)} alt="Existing product" className="h-20 w-full rounded-lg object-cover" />
-                        <label className="mt-2 flex items-center gap-2 text-[11px] text-slate-600">
+                        <label className="mt-2 flex items-center gap-2 text-[11px] text-slate-300">
                           <input
                             type="radio"
                             name="main-image"
@@ -789,7 +789,7 @@ function AdminDashboard() {
                         <button
                           type="button"
                           onClick={() => removeExistingImage(imagePath)}
-                          className="mt-1 w-full rounded-md bg-rose-50 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-100"
+                          className="mt-1 w-full rounded-md bg-rose-900/40 px-2 py-1 text-[11px] font-medium text-rose-300 hover:bg-rose-900/60"
                         >
                           Remove
                         </button>
@@ -801,12 +801,12 @@ function AdminDashboard() {
 
               {newImages.length ? (
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">New Uploads</p>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">New Uploads</p>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {newImages.map((entry, index) => (
-                      <div key={entry.id} className="rounded-xl border border-slate-200 bg-white p-2">
+                      <div key={entry.id} className="rounded-xl p-2" style={{ border: "1px solid rgba(0,212,255,0.1)", background: "rgba(255,255,255,0.05)" }}>
                         <img src={entry.preview} alt="New product" className="h-20 w-full rounded-lg object-cover" />
-                        <label className="mt-2 flex items-center gap-2 text-[11px] text-slate-600">
+                        <label className="mt-2 flex items-center gap-2 text-[11px] text-slate-300">
                           <input
                             type="radio"
                             name="main-image"
@@ -818,7 +818,7 @@ function AdminDashboard() {
                         <button
                           type="button"
                           onClick={() => removeNewImage(index)}
-                          className="mt-1 w-full rounded-md bg-rose-50 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-100"
+                          className="mt-1 w-full rounded-md bg-rose-900/40 px-2 py-1 text-[11px] font-medium text-rose-300 hover:bg-rose-900/60"
                         >
                           Remove
                         </button>
@@ -834,7 +834,7 @@ function AdminDashboard() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-neon rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? "Saving..." : editingId ? "Update Product" : "Add Product"}
             </button>
@@ -842,7 +842,7 @@ function AdminDashboard() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                className="btn-ghost rounded-xl px-4 py-2 text-sm"
               >
                 Cancel Edit
               </button>
@@ -851,7 +851,7 @@ function AdminDashboard() {
         </form>
       </div>
 
-      {loading ? <p className="text-slate-600">Loading products...</p> : null}
+      {loading ? <p className="text-cyan-400">Loading products...</p> : null}
 
       {!loading ? (
         groupedProducts.length ? (
@@ -859,8 +859,8 @@ function AdminDashboard() {
             {groupedProducts.map((sectionGroup) => (
               <div key={sectionGroup.name} className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-slate-900">{sectionGroup.name}</h2>
-                  <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                  <h2 className="text-xl font-bold text-white">{sectionGroup.name}</h2>
+                  <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "rgba(0,212,255,0.12)", color: "#00d4ff", border: "1px solid rgba(0,212,255,0.2)" }}>
                     {sectionGroup.products.length} products
                   </span>
                 </div>
@@ -875,8 +875,8 @@ function AdminDashboard() {
                         onEdit={editProduct}
                         onDelete={deleteProduct}
                       />
-                      <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rating Snapshot</p>
+                      <div className="rounded-xl px-3 py-2" style={{ border: "1px solid rgba(0,212,255,0.08)", background: "rgba(255,255,255,0.04)" }}>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Rating Snapshot</p>
                         <StarRating
                           value={Number(product?.ratingAverage || 0)}
                           count={Number(product?.ratingCount || 0)}
@@ -891,14 +891,14 @@ function AdminDashboard() {
             ))}
           </div>
         ) : (
-          <p className="rounded-xl bg-white p-6 text-center text-slate-600 shadow-sm">No products yet.</p>
+          <p className="glass rounded-xl p-6 text-center text-slate-300">No products yet.</p>
         )
       ) : null}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">Order Tracking Management</h2>
-        {ordersError ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{ordersError}</p> : null}
-        {ordersLoading ? <p className="mt-4 text-sm text-slate-600">Loading orders...</p> : null}
+      <div className="glass rounded-2xl p-6">
+        <h2 className="text-xl font-semibold text-white">Order Tracking Management</h2>
+        {ordersError ? <p className="mt-3 rounded-lg bg-rose-900/40 border border-rose-500/30 px-3 py-2 text-sm text-rose-400">{ordersError}</p> : null}
+        {ordersLoading ? <p className="mt-4 text-sm text-cyan-400">Loading orders...</p> : null}
 
         {!ordersLoading ? (
           orders.length ? (
@@ -908,23 +908,26 @@ function AdminDashboard() {
                 const imagePath = order.productImage || "";
 
                 return (
-                  <div key={order._id} className="rounded-xl border border-slate-200 bg-white p-4 hover:shadow-md transition">
+                  <div key={order._id} className="rounded-xl p-4 transition" style={{ border: "1px solid rgba(0,212,255,0.1)", background: "rgba(255,255,255,0.04)" }}>
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex gap-3 flex-1">
                         <img
                           src={imagePath ? mediaUrl(imagePath) : "https://placehold.co/140x100?text=No+Image"}
                           alt={order.productName}
                           className="h-20 w-24 rounded-lg object-cover shadow-sm"
+                          onError={(e) => {
+                            e.currentTarget.src = "https://placehold.co/140x100?text=No+Image";
+                          }}
                         />
 
                         <div className="space-y-1 flex-1">
-                          <p className="text-sm font-semibold text-slate-900">{order.productName}</p>
-                          <p className="text-xs text-slate-600">Order ID: <span className="font-medium">{order.orderCode}</span></p>
-                          <p className="text-xs text-slate-600">Customer: {order.userName} • {order.userEmail}</p>
-                          <p className="text-xs text-slate-600">Qty: {order.quantity} • Total: ₹{Number(order.totalAmount || 0).toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-white">{order.productName}</p>
+                          <p className="text-xs text-slate-300">Order ID: <span className="font-medium">{order.orderCode}</span></p>
+                          <p className="text-xs text-slate-300">Customer: {order.userName} • {order.userEmail}</p>
+                          <p className="text-xs text-slate-300">Qty: {order.quantity} • Total: ₹{Number(order.totalAmount || 0).toFixed(2)}</p>
                           <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                            <div className="bg-blue-50 rounded px-2 py-1 border border-blue-200"><p className="text-blue-700">📅 Placed: {new Date(order.createdAt).toLocaleDateString()}</p></div>
-                            <div className="bg-green-50 rounded px-2 py-1 border border-green-200"><p className="text-green-700">🚚 Delivery: {order.expectedDelivery}</p></div>
+                            <div className="rounded px-2 py-1" style={{ background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.25)" }}><p className="text-cyan-300">📅 Placed: {new Date(order.createdAt).toLocaleDateString()}</p></div>
+                            <div className="rounded px-2 py-1" style={{ background: "rgba(45,212,191,0.1)", border: "1px solid rgba(45,212,191,0.25)" }}><p className="text-teal-300">🚚 Delivery: {order.expectedDelivery}</p></div>
                           </div>
                         </div>
                       </div>
@@ -939,7 +942,7 @@ function AdminDashboard() {
                                 [order._id]: event.target.value,
                               }))
                             }
-                            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                            className="input-dark flex-1"
                           >
                             {ORDER_STATUS_STEPS.map((statusOption) => (
                               <option key={statusOption} value={statusOption}>
@@ -952,7 +955,7 @@ function AdminDashboard() {
                             type="button"
                             onClick={() => updateOrderStatus(order._id)}
                             disabled={statusUpdatingOrderId === order._id}
-                            className="rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 px-3 py-2 text-xs font-semibold text-white hover:from-indigo-700 hover:to-indigo-800 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                            className="btn-neon rounded-lg px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {statusUpdatingOrderId === order._id ? "..." : "Update"}
                           </button>
@@ -969,14 +972,14 @@ function AdminDashboard() {
                               }))
                             }
                             placeholder="e.g., 5-7 days"
-                            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-xs outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                            className="input-dark flex-1 text-xs"
                           />
 
                           <button
                             type="button"
                             onClick={() => updateDeliveryDate(order._id)}
                             disabled={deliveryUpdatingOrderId === order._id}
-                            className="rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:from-emerald-700 hover:to-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                            className="btn-ghost rounded-lg px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {deliveryUpdatingOrderId === order._id ? "..." : "Set"}
                           </button>
@@ -984,7 +987,7 @@ function AdminDashboard() {
                       </div>
                     </div>
 
-                    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="mt-4 rounded-xl p-3" style={{ border: "1px solid rgba(0,212,255,0.12)", background: "rgba(0,0,0,0.25)" }}>
                       <OrderTimeline status={order.status} compact />
                     </div>
                   </div>
@@ -992,7 +995,7 @@ function AdminDashboard() {
               })}
             </div>
           ) : (
-            <p className="mt-4 text-sm text-slate-600">No orders found.</p>
+            <p className="mt-4 text-sm text-slate-400">No orders found.</p>
           )
         ) : null}
       </div>

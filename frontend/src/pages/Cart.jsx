@@ -73,71 +73,91 @@ function Cart() {
 
 	return (
 		<section className="space-y-6">
-			<div className="rounded-3xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-6 sm:p-8">
-				<h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">🛒 Shopping Cart</h1>
-				<p className="mt-2 text-sm text-slate-700">Review items and proceed to checkout</p>
+			{/* Hero */}
+			<div className="hero-dark rounded-3xl p-6 sm:p-8">
+				<h1 className="text-2xl font-bold sm:text-3xl" style={{ color: "#f1f5f9" }}>🛒 Shopping Cart</h1>
+				<p className="mt-1 text-sm" style={{ color: "#64748b" }}>Review items and proceed to checkout</p>
 				<button
 					type="button"
 					onClick={() => navigate("/")}
-					className="mt-4 rounded-lg border border-amber-300 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white transition"
+					className="mt-4 btn-ghost text-sm"
 				>
 					← Continue Shopping
 				</button>
 			</div>
 
 			{!items.length ? (
-				<div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
-					<p className="text-lg font-semibold text-slate-900">Your cart is empty</p>
-					<p className="mt-2 text-slate-600">Start shopping to add items!</p>
+				<div className="glass rounded-2xl p-12 text-center">
+					<p className="text-lg font-semibold" style={{ color: "#e2e8f0" }}>Your cart is empty</p>
+					<p className="mt-2 text-sm" style={{ color: "#64748b" }}>Start shopping to add items!</p>
 					<button
 						type="button"
 						onClick={() => navigate("/")}
-						className="mt-4 rounded-lg bg-indigo-700 px-6 py-2 font-medium text-white hover:bg-indigo-600 transition"
+						className="mt-4 btn-neon"
 					>
 						Browse Products
 					</button>
 				</div>
 			) : (
 				<div className="grid gap-6 lg:grid-cols-3">
+					{/* Cart Items */}
 					<div className="space-y-4 lg:col-span-2">
 						{items.map((item) => {
 							const imageUrl = item.image || item.images?.[0]
 								? mediaUrl(item.image || item.images?.[0] || "")
-								: "https://placehold.co/200x150?text=No+Image";
+								: "https://placehold.co/200x150/0d0e1a/00d4ff?text=No+Image";
 
 							return (
 								<div
 									key={item._id}
-									className="rounded-xl border border-slate-200 bg-white p-4 hover:shadow-md transition"
+									className="glass glass-hover rounded-xl p-4"
 								>
 									<div className="flex gap-4">
-										<img src={imageUrl} alt={item.name} className="h-24 w-28 rounded-lg object-cover shadow-sm" />
-										<div className="flex-1">
-											<h2 className="font-semibold text-slate-900">{item.name}</h2>
-											<p className="text-sm text-slate-600">₹{Number(item.price || 0).toFixed(2)} × {item.quantity} = <strong>₹{(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)}</strong></p>
-											
+										<img
+											src={imageUrl}
+											alt={item.name}
+											className="h-24 w-28 rounded-lg object-cover shrink-0"
+											style={{ border: "1px solid rgba(0,212,255,0.15)" }}
+											onError={(e) => { e.target.src = "https://placehold.co/200x150/0d0e1a/00d4ff?text=No+Image"; }}
+										/>
+										<div className="flex-1 min-w-0">
+											<h2 className="font-semibold" style={{ color: "#e2e8f0" }}>{item.name}</h2>
+											<p className="mt-1 text-sm" style={{ color: "#64748b" }}>
+												₹{Number(item.price || 0).toFixed(2)} × {item.quantity} = {" "}
+												<strong style={{ color: "#00d4ff" }}>₹{(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)}</strong>
+											</p>
+
 											<div className="mt-3 flex items-center gap-2">
 												<button
 													type="button"
 													onClick={() => changeQuantity(item._id, Number(item.quantity || 1) - 1)}
-													className="h-8 w-8 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium"
+													className="h-8 w-8 rounded-lg font-medium transition-all duration-200 hover:scale-110"
+													style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8" }}
+													onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(0,212,255,0.3)"; e.currentTarget.style.color = "#00d4ff"; }}
+													onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#94a3b8"; }}
 												>
 													−
 												</button>
-												<span className="w-8 text-center text-sm font-semibold">{item.quantity || 1}</span>
+												<span className="w-8 text-center text-sm font-bold" style={{ color: "#e2e8f0" }}>{item.quantity || 1}</span>
 												<button
 													type="button"
 													onClick={() => changeQuantity(item._id, Number(item.quantity || 1) + 1)}
-													className="h-8 w-8 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium"
+													className="h-8 w-8 rounded-lg font-medium transition-all duration-200 hover:scale-110"
+													style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8" }}
+													onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(0,212,255,0.3)"; e.currentTarget.style.color = "#00d4ff"; }}
+													onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#94a3b8"; }}
 												>
 													+
 												</button>
 												<button
 													type="button"
 													onClick={() => removeItem(item._id)}
-													className="ml-auto text-xs text-rose-600 hover:text-rose-700 font-medium"
+													className="ml-auto text-xs font-medium transition-colors"
+													style={{ color: "#f87171" }}
+													onMouseEnter={e => e.currentTarget.style.color = "#fca5a5"}
+													onMouseLeave={e => e.currentTarget.style.color = "#f87171"}
 												>
-													Remove
+													🗑️ Remove
 												</button>
 											</div>
 										</div>
@@ -147,37 +167,50 @@ function Cart() {
 						})}
 					</div>
 
-					<div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-6 h-fit sticky top-24">
-						<h2 className="text-lg font-semibold text-slate-900 mb-4">Order Summary</h2>
-						<div className="space-y-2 text-sm">
-							<div className="flex justify-between text-slate-600">
+					{/* Order Summary */}
+					<div
+						className="rounded-xl p-6 h-fit sticky top-24"
+						style={{
+							background: "rgba(20,184,166,0.05)",
+							border: "1px solid rgba(20,184,166,0.2)",
+							boxShadow: "0 0 30px rgba(20,184,166,0.05)",
+						}}
+					>
+						<h2 className="text-lg font-semibold mb-4" style={{ color: "#e2e8f0" }}>Order Summary</h2>
+						<div className="space-y-3 text-sm">
+							<div className="flex justify-between" style={{ color: "#64748b" }}>
 								<span>Subtotal</span>
-								<span>₹{total.toFixed(2)}</span>
+								<span style={{ color: "#94a3b8" }}>₹{total.toFixed(2)}</span>
 							</div>
-							<div className="flex justify-between text-slate-600">
+							<div className="flex justify-between" style={{ color: "#64748b" }}>
 								<span>Tax (8%)</span>
-								<span>₹{tax.toFixed(2)}</span>
+								<span style={{ color: "#94a3b8" }}>₹{tax.toFixed(2)}</span>
 							</div>
-							<div className="flex justify-between text-slate-600">
+							<div className="flex justify-between" style={{ color: "#64748b" }}>
 								<span>Shipping</span>
-								<span>₹{SHIPPING_CHARGE}</span>
+								<span style={{ color: "#94a3b8" }}>₹{SHIPPING_CHARGE}</span>
 							</div>
-							<div className="border-t border-emerald-200 pt-2 flex justify-between text-lg font-bold text-slate-900">
-								<span>Total</span>
-								<span>₹{grand_total.toFixed(2)}</span>
+							<hr className="neon-divider" />
+							<div className="flex justify-between text-lg font-bold">
+								<span style={{ color: "#e2e8f0" }}>Total</span>
+								<span style={{
+									background: "linear-gradient(135deg, #2dd4bf, #00d4ff)",
+									WebkitBackgroundClip: "text",
+									WebkitTextFillColor: "transparent",
+								}}>₹{grand_total.toFixed(2)}</span>
 							</div>
 						</div>
 
 						<button
 							type="button"
 							onClick={checkoutAllItems}
-							className="mt-6 w-full rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 py-3 font-semibold text-white hover:from-emerald-700 hover:to-emerald-800 transition shadow-md"
+							className="btn-neon w-full mt-6 py-3"
 						>
 							🛍️ Checkout ({items.length})
 						</button>
 
-						<p className="mt-3 text-xs text-slate-600 text-center">
-							💡 Free shipping on orders over ₹500
+						<p className="mt-3 text-xs text-center" style={{ color: "#334155" }}>
+							✦ Free shipping on orders over ₹500
 						</p>
 					</div>
 				</div>

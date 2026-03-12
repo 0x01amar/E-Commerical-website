@@ -27,15 +27,15 @@ function OrderTimeline({ status = "Order Placed", compact = false }) {
                     className={`h-4 w-4 rounded-full border-2 ${isActive
                       ? isCancelled
                         ? "border-rose-500 bg-rose-500"
-                        : "border-emerald-500 bg-emerald-500"
-                      : "border-slate-300 bg-white"
+                        : "border-cyan-400 bg-cyan-400"
+                      : "border-slate-600 bg-slate-800"
                       }`}
                   />
                   <span
                     className={`mt-2 text-[10px] font-medium sm:text-xs ${isCurrent
                       ? isCancelled
-                        ? "text-rose-600"
-                        : "text-emerald-700"
+                        ? "text-rose-400"
+                        : "text-cyan-400"
                       : "text-slate-500"
                       }`}
                   >
@@ -46,8 +46,8 @@ function OrderTimeline({ status = "Order Placed", compact = false }) {
                 {index < ORDER_STATUS_STEPS.length - 1 ? (
                   <span
                     className={`mx-2 h-1 flex-1 rounded-full ${isActive && !isCancelled
-                      ? "bg-emerald-400"
-                      : "bg-slate-200"
+                      ? "bg-cyan-400"
+                      : "bg-slate-700"
                       }`}
                   />
                 ) : null}

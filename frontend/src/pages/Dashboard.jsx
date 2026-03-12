@@ -232,18 +232,19 @@ function Dashboard() {
     localStorage.removeItem("email");
     localStorage.removeItem("role");
     localStorage.removeItem("adminKey");
-    navigate("/login");
+    localStorage.removeItem("cartItems");
+    navigate("/");
   };
 
   if (!email) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <p className="text-slate-600">You are not logged in.</p>
+        <div className="glass rounded-2xl p-8 text-center">
+          <p style={{ color: "#94a3b8" }}>You are not logged in.</p>
           <button
             type="button"
             onClick={() => navigate("/login")}
-            className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+            className="mt-4 btn-neon"
           >
             Go to Login
           </button>
@@ -253,78 +254,102 @@ function Dashboard() {
   }
 
   if (loading) {
-    return <div className="p-6 text-slate-600">Loading profile...</div>;
+    return (
+      <div className="flex items-center gap-3 p-8">
+        <div className="h-5 w-5 rounded-full animate-spin" style={{ border: "2px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff" }} />
+        <p style={{ color: "#64748b" }}>Loading profile...</p>
+      </div>
+    );
   }
 
   if (!user) {
-    return <div className="p-6 text-rose-600">{error || "User not found"}</div>;
+    return (
+      <div className="p-6 rounded-xl" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+        {error || "User not found"}
+      </div>
+    );
   }
 
-  const displayPhoto = photoPreview || user.photo || "https://placehold.co/160x160?text=Photo";
+  const displayPhoto = photoPreview || user.photo || "https://placehold.co/160x160/0d0e1a/00d4ff?text=U";
   const displayAddress = formatAddress(form.address) || "-";
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-indigo-200 bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 p-6 text-white shadow-xl sm:p-8">
-        <h1 className="text-3xl font-bold sm:text-4xl">👤 Your Dashboard</h1>
-        <p className="mt-2 text-indigo-100">Manage your profile and track your orders</p>
+      {/* Hero */}
+      <div
+        className="hero-dark rounded-3xl p-6 sm:p-8"
+      >
+        <p className="text-xs uppercase tracking-widest font-semibold" style={{ color: "#00d4ff" }}>👤 User Portal</p>
+        <h1 className="mt-2 text-2xl font-bold sm:text-3xl" style={{ color: "#f1f5f9" }}>Your Dashboard</h1>
+        <p className="mt-1 text-sm" style={{ color: "#64748b" }}>Manage your profile and track your orders</p>
         <div className="mt-5 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/30 border border-white/30"
+            className="rounded-full px-4 py-2 text-sm font-semibold transition-all duration-250 hover:scale-105"
+            style={{ background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.25)", color: "#00d4ff" }}
           >
             Browse Products
           </button>
           <button
             type="button"
             onClick={logout}
-            className="rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600"
+            className="rounded-full px-4 py-2 text-sm font-semibold transition-all duration-250 hover:scale-105"
+            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}
           >
             Logout
           </button>
         </div>
       </div>
 
-      {error ? <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-600">{error}</p> : null}
+      {error ? (
+        <p className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+          {error}
+        </p>
+      ) : null}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition">
-        <h2 className="text-xl font-semibold text-slate-900">Profile</h2>
+      <div className="glass rounded-2xl p-6">
+        <h2 className="text-xl font-semibold" style={{ color: "#e2e8f0" }}>Profile</h2>
 
-        <div className="mt-5 flex flex-col gap-4 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 p-4 sm:flex-row sm:items-center">
+        <div
+          className="mt-5 flex flex-col gap-4 rounded-xl p-4 sm:flex-row sm:items-center"
+          style={{ background: "rgba(0,212,255,0.04)", border: "1px solid rgba(0,212,255,0.12)" }}
+        >
           <img
             src={displayPhoto}
             alt={user.name || "User profile"}
-            className="h-24 w-24 rounded-full border border-slate-200 object-cover"
+            className="h-24 w-24 rounded-full object-cover"
+            style={{ border: "2px solid rgba(0,212,255,0.3)", boxShadow: "0 0 15px rgba(0,212,255,0.15)" }}
           />
           <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-700">Profile Photo</p>
+            <p className="text-sm font-medium" style={{ color: "#94a3b8" }}>Profile Photo</p>
             <input
               type="file"
               accept="image/*"
               onChange={handlePhotoChange}
-              className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
+              className="block w-full text-sm"
+              style={{ color: "#64748b" }}
             />
-            <p className="text-xs text-slate-500">Choose a photo and click Save Changes.</p>
+            <p className="text-xs" style={{ color: "#475569" }}>Choose a photo and click Save Changes.</p>
           </div>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="mb-1 text-sm text-slate-500">Name</p>
+            <p className="mb-1 text-xs font-medium" style={{ color: "#64748b" }}>Name</p>
             {isEditing ? (
               <input
                 value={form.name}
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400"
+                className="input-dark"
               />
             ) : (
-              <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-800">{user.name || "-"}</p>
+              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#e2e8f0" }}>{user.name || "-"}</p>
             )}
           </div>
 
           <div>
-            <p className="mb-1 text-sm text-slate-500">Phone</p>
+            <p className="mb-1 text-xs font-medium" style={{ color: "#64748b" }}>Phone</p>
             {isEditing ? (
               <input
                 value={form.phone}
@@ -335,124 +360,37 @@ function Dashboard() {
                     phone: event.target.value.replace(/[^0-9]/g, ""),
                   }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400"
+                className="input-dark"
               />
             ) : (
-              <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-800">{user.phone || "-"}</p>
+              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#e2e8f0" }}>{user.phone || "-"}</p>
             )}
           </div>
 
           <div className="sm:col-span-2">
-            <p className="mb-1 text-sm text-slate-500">Email</p>
-            <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-800">{user.email}</p>
+            <p className="mb-1 text-xs font-medium" style={{ color: "#64748b" }}>Email</p>
+            <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#94a3b8" }}>{user.email}</p>
           </div>
 
           <div className="sm:col-span-2">
-            <p className="mb-1 text-sm text-slate-500">Address</p>
+            <p className="mb-1 text-xs font-medium" style={{ color: "#64748b" }}>Address</p>
             {isEditing ? (
               <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  value={form.address.line1}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      address: {
-                        ...prev.address,
-                        line1: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Address line"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400"
-                />
-                <input
-                  value={form.address.landmark}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      address: {
-                        ...prev.address,
-                        landmark: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Landmark"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400"
-                />
-                <input
-                  value={form.address.villageTown}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      address: {
-                        ...prev.address,
-                        villageTown: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Village/Town"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400"
-                />
-                <input
-                  value={form.address.wardNo}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      address: {
-                        ...prev.address,
-                        wardNo: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Ward No"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400"
-                />
-                <input
-                  value={form.address.district}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      address: {
-                        ...prev.address,
-                        district: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="District"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400"
-                />
-                <input
-                  value={form.address.state}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      address: {
-                        ...prev.address,
-                        state: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="State"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400"
-                />
-                <input
-                  value={form.address.pincode}
-                  maxLength={6}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      address: {
-                        ...prev.address,
-                        pincode: event.target.value.replace(/[^0-9]/g, ""),
-                      },
-                    }))
-                  }
-                  placeholder="Pincode"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400"
-                />
+                {[["line1","Address line"],["landmark","Landmark"],["villageTown","Village/Town"],["wardNo","Ward No"],["district","District"],["state","State"],["pincode","Pincode",6]].map(([field, ph, maxLen]) => (
+                  <input
+                    key={field}
+                    value={form.address[field]}
+                    maxLength={maxLen || 100}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, address: { ...prev.address, [field]: field === "pincode" ? event.target.value.replace(/[^0-9]/g,"") : event.target.value } }))
+                    }
+                    placeholder={ph}
+                    className="input-dark"
+                  />
+                ))}
               </div>
             ) : (
-              <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-800">{displayAddress}</p>
+              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#94a3b8" }}>{displayAddress}</p>
             )}
           </div>
         </div>
@@ -464,7 +402,7 @@ function Dashboard() {
                 type="button"
                 onClick={updateProfile}
                 disabled={saving}
-                className="rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:from-emerald-700 hover:to-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                className="btn-neon disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? "Saving..." : "✓ Save Changes"}
               </button>
@@ -480,7 +418,7 @@ function Dashboard() {
                   });
                   setPhotoPreview(user?.photo || "");
                 }}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                className="btn-ghost"
               >
                 ✕ Cancel
               </button>
@@ -489,7 +427,8 @@ function Dashboard() {
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-sm font-semibold text-slate-900 hover:from-amber-600 hover:to-amber-700 shadow-sm"
+              className="rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-250 hover:scale-105"
+              style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24" }}
             >
               ✏️ Edit Profile
             </button>
@@ -497,60 +436,82 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">📦 Order Status Tracking</h2>
-        {ordersLoading ? <p className="mt-4 text-sm text-slate-600">Loading orders...</p> : null}
-        {ordersError ? <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{ordersError}</p> : null}
+      <div className="glass rounded-2xl p-6">
+        <h2 className="text-xl font-semibold" style={{ color: "#e2e8f0" }}>📦 My Orders</h2>
+        {ordersLoading ? (
+          <div className="flex items-center gap-3 mt-4">
+            <div className="h-4 w-4 rounded-full animate-spin" style={{ border: "2px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff" }} />
+            <p className="text-sm" style={{ color: "#64748b" }}>Loading orders...</p>
+          </div>
+        ) : null}
+        {ordersError ? (
+          <p className="mt-4 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+            {ordersError}
+          </p>
+        ) : null}
 
         {!ordersLoading && !ordersError ? (
           orders.length ? (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-4">
               {orders.map((order) => (
-                <div key={order._id} className="rounded-xl border border-slate-200 p-4 hover:shadow-md transition">
+                <div
+                  key={order._id}
+                  className="glass-hover rounded-xl p-4"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(0,212,255,0.08)" }}
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex gap-3">
                       <img
-                        src={order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/160x110?text=No+Image"}
+                        src={order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/160x110/0d0e1a/00d4ff?text=No+Image"}
                         alt={order.productName}
-                        className="h-18 w-24 rounded-lg object-cover shadow-sm"
+                        className="h-16 w-20 rounded-lg object-cover shrink-0"
+                        style={{ border: "1px solid rgba(0,212,255,0.15)" }}
+                        onError={(e) => { e.target.src = "https://placehold.co/160x110/0d0e1a/00d4ff?text=No+Image"; }}
                       />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-slate-900">{order.productName}</p>
-                        <p className="mt-1 text-xs text-slate-600">Order ID: <span className="font-medium">{order.orderCode}</span></p>
-                        <p className="mt-1 text-xs text-slate-600">Qty: {order.quantity} • Total: ₹{Number(order.totalAmount || 0).toFixed(2)}</p>
-                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                          <div className="rounded-lg bg-blue-50 px-2 py-1 border border-blue-200">
-                            <p className="text-blue-700 font-medium">📅 Ordered: {new Date(order.createdAt).toLocaleDateString()}</p>
-                          </div>
-                          <div className="rounded-lg bg-green-50 px-2 py-1 border border-green-200">
-                            <p className="text-green-700 font-medium">🚚 Delivery: {order.expectedDelivery}</p>
-                          </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold" style={{ color: "#e2e8f0" }}>{order.productName}</p>
+                        <p className="mt-0.5 text-xs" style={{ color: "#475569" }}>
+                          ID: <span style={{ color: "#00d4ff" }}>{order.orderCode}</span>
+                        </p>
+                        <p className="mt-0.5 text-xs" style={{ color: "#475569" }}>
+                          Qty: {order.quantity} • ₹{Number(order.totalAmount || 0).toFixed(2)}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="rounded-lg px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(0,116,184,0.1)", border: "1px solid rgba(0,116,184,0.25)", color: "#60a5fa" }}>
+                            📅 {new Date(order.createdAt).toLocaleDateString()}
+                          </span>
+                          <span className="rounded-lg px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(20,184,166,0.1)", border: "1px solid rgba(20,184,166,0.25)", color: "#2dd4bf" }}>
+                            🚚 {order.expectedDelivery}
+                          </span>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusClasses(order.status)}`}>
+                      <span
+                        className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                        style={{
+                          background: order.status === "Delivered" ? "rgba(20,184,166,0.15)" : order.status === "Cancelled" ? "rgba(239,68,68,0.12)" : "rgba(251,191,36,0.12)",
+                          border: order.status === "Delivered" ? "1px solid rgba(20,184,166,0.3)" : order.status === "Cancelled" ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(251,191,36,0.25)",
+                          color: order.status === "Delivered" ? "#2dd4bf" : order.status === "Cancelled" ? "#f87171" : "#fbbf24",
+                        }}
+                      >
                         {order.status}
                       </span>
                       {order.productId ? (
                         <button
                           type="button"
                           onClick={() => navigate(`/product/${order.productId}`)}
-                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                          className="btn-ghost text-xs px-3 py-1.5"
                         >
-                          View Product
+                          View
                         </button>
                       ) : null}
                       {order.status !== "Delivered" && order.status !== "Cancelled" ? (
                         <button
                           type="button"
-                          onClick={() => {
-                            if (window.confirm("Are you sure you want to cancel this order?")) {
-                              // Add cancel functionality later
-                            }
-                          }}
-                          className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                          onClick={() => window.confirm("Cancel this order?")}
+                          className="btn-danger text-xs px-3 py-1.5"
                         >
                           Cancel
                         </button>
@@ -558,18 +519,30 @@ function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div
+                    className="mt-3 rounded-xl p-3"
+                    style={{ background: "rgba(0,212,255,0.03)", border: "1px solid rgba(0,212,255,0.08)" }}
+                  >
                     <OrderTimeline status={order.status} compact />
                   </div>
 
-                  <p className="mt-2 text-xs text-slate-500">
-                    Payment: {order.paymentOption === "half" ? "Half Payment" : "COD"}
+                  <p className="mt-2 text-xs" style={{ color: "#334155" }}>
+                    Payment: {order.paymentOption === "half" ? "Half Payment" : "Cash on Delivery"}
                   </p>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="mt-4 text-sm text-slate-600">No orders yet.</p>
+            <div className="mt-6 text-center">
+              <p className="text-sm" style={{ color: "#475569" }}>No orders yet.</p>
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="mt-3 btn-neon text-xs"
+              >
+                Start Shopping
+              </button>
+            </div>
           )
         ) : null}
       </div>

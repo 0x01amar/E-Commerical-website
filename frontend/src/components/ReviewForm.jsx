@@ -104,29 +104,29 @@ function ReviewForm({ productId, email, onReviewSubmitted }) {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-3 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-indigo-800 shadow-md"
+          className="btn-neon w-full py-3 text-sm"
         >
           ✍️ Write a Review
         </button>
       ) : (
-        <div className="rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50 p-6">
+        <div className="glass rounded-2xl p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900">Share Your Experience</h3>
+            <h3 className="text-lg font-semibold text-white">Share Your Experience</h3>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="text-xl text-slate-500 hover:text-slate-700"
+              className="text-xl text-slate-400 hover:text-slate-200"
             >
               ✕
             </button>
           </div>
 
-          {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600 mb-4">{error}</p>}
-          {success && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-600 mb-4">{success}</p>}
+          {error && <p className="rounded-lg bg-rose-900/40 border border-rose-500/30 px-3 py-2 text-sm text-rose-400 mb-4">{error}</p>}
+          {success && <p className="rounded-lg bg-cyan-900/40 border border-cyan-500/30 px-3 py-2 text-sm text-cyan-400 mb-4">{success}</p>}
 
           {/* Rating Selection */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-slate-900 mb-3">Rate this product</label>
+            <label className="block text-sm font-semibold text-slate-200 mb-3">Rate this product</label>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -134,7 +134,7 @@ function ReviewForm({ productId, email, onReviewSubmitted }) {
                   type="button"
                   onClick={() => setRating(star)}
                   className={`text-4xl transition ${
-                    star <= rating ? "text-amber-400" : "text-slate-300 hover:text-amber-200"
+                    star <= rating ? "text-amber-400" : "text-slate-600 hover:text-amber-300"
                   }`}
                 >
                   ★
@@ -145,21 +145,21 @@ function ReviewForm({ productId, email, onReviewSubmitted }) {
 
           {/* Comment */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Your review comment</label>
+            <label className="block text-sm font-semibold text-slate-200 mb-2">Your review comment</label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Share your thoughts about this product..."
               maxLength={500}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 resize-none h-24"
+              className="input-dark min-h-20 w-full resize-none"
             />
             <p className="mt-1 text-xs text-slate-500">{comment.length}/500 characters</p>
           </div>
 
           {/* Image Upload */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Upload photos (optional)</label>
-            <div className="rounded-lg border-2 border-dashed border-indigo-300 bg-white p-4">
+            <label className="block text-sm font-semibold text-slate-200 mb-2">Upload photos (optional)</label>
+            <div className="rounded-lg border-2 border-dashed border-cyan-500/30 bg-slate-800/50 p-4">
               <input
                 type="file"
                 multiple
@@ -171,8 +171,8 @@ function ReviewForm({ productId, email, onReviewSubmitted }) {
               />
               <label htmlFor="review-image-input" className="block">
                 <div className="cursor-pointer text-center">
-                  <p className="text-sm font-medium text-indigo-600">📷 Click to upload images</p>
-                  <p className="mt-1 text-xs text-slate-500">Max 5 images, 5MB each</p>
+                  <p className="text-sm font-medium text-cyan-400">📷 Click to upload images</p>
+                  <p className="mt-1 text-xs text-slate-400">Max 5 images, 5MB each</p>
                 </div>
               </label>
             </div>
@@ -202,14 +202,14 @@ function ReviewForm({ productId, email, onReviewSubmitted }) {
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="flex-1 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:from-emerald-700 hover:to-emerald-800 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 rounded-lg btn-neon text-sm py-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Submitting..." : "✓ Submit Review"}
             </button>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              className="btn-ghost rounded-lg px-4 py-2 text-sm"
             >
               Cancel
             </button>

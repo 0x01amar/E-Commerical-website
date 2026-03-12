@@ -121,20 +121,57 @@ function Home({ search }) {
 
 	return (
 		<section className="space-y-8">
-			<div className="overflow-hidden rounded-3xl border border-indigo-200 bg-linear-to-r from-indigo-700 via-indigo-600 to-amber-500 p-6 text-white shadow-xl sm:p-8">
-				<p className="text-xs uppercase tracking-[0.25em] text-indigo-100 sm:text-sm">Premium Collection</p>
-				<h1 className="mt-2 text-2xl font-bold sm:text-4xl">Beautiful Furniture for Modern Homes</h1>
-				<p className="mt-3 max-w-2xl text-sm text-indigo-50 sm:text-base">
-					Explore modern wooden and iron furniture with section-wise browsing like top ecommerce stores.
+			{/* Hero Banner */}
+			<div
+				className="hero-dark relative overflow-hidden p-6 sm:p-10"
+			>
+				<p
+					className="text-xs uppercase tracking-[0.3em] font-semibold sm:text-sm"
+					style={{ color: "#00d4ff" }}
+				>
+          ✦ Premium Collection
+				</p>
+				<h1
+					className="mt-3 text-2xl font-bold sm:text-4xl lg:text-5xl"
+					style={{ color: "#f1f5f9", lineHeight: 1.15 }}
+				>
+					Beautiful Furniture<br />
+					<span
+						style={{
+							background: "linear-gradient(135deg, #00d4ff, #a855f7)",
+							WebkitBackgroundClip: "text",
+							WebkitTextFillColor: "transparent",
+						}}
+					>
+						for Modern Homes
+					</span>
+				</h1>
+				<p className="mt-4 max-w-2xl text-sm sm:text-base" style={{ color: "#64748b" }}>
+					Explore premium wooden and iron furniture. Crafted for elegance, built to last.
 				</p>
 
-				<div className="mt-5 flex flex-wrap gap-2">
+				<div className="mt-6 flex flex-wrap gap-2">
 					{groupedSections.slice(0, 10).map((section) => (
 						<button
 							key={section.name}
 							type="button"
 							onClick={() => jumpToSection(section.name)}
-							className="rounded-full border border-white/50 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
+							className="rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-250 hover:scale-105"
+							style={{
+								background: "rgba(0,212,255,0.08)",
+								border: "1px solid rgba(0,212,255,0.2)",
+								color: "#94a3b8",
+							}}
+							onMouseEnter={e => {
+								e.currentTarget.style.background = "rgba(0,212,255,0.15)";
+								e.currentTarget.style.color = "#00d4ff";
+								e.currentTarget.style.borderColor = "rgba(0,212,255,0.4)";
+							}}
+							onMouseLeave={e => {
+								e.currentTarget.style.background = "rgba(0,212,255,0.08)";
+								e.currentTarget.style.color = "#94a3b8";
+								e.currentTarget.style.borderColor = "rgba(0,212,255,0.2)";
+							}}
 						>
 							{section.name}
 						</button>
@@ -142,15 +179,44 @@ function Home({ search }) {
 				</div>
 			</div>
 
+			{/* Section Header */}
 			<div className="flex items-center justify-between">
-				<h2 className="text-2xl font-semibold text-slate-900">All Product Sections</h2>
-				<span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+				<h2 className="text-xl font-semibold sm:text-2xl" style={{ color: "#e2e8f0" }}>
+					All Product Sections
+				</h2>
+				<span
+					className="rounded-full px-3 py-1 text-sm font-medium"
+					style={{
+						background: "rgba(0,212,255,0.08)",
+						border: "1px solid rgba(0,212,255,0.2)",
+						color: "#00d4ff",
+					}}
+				>
 					{filteredProducts.length} items
 				</span>
 			</div>
 
-			{loading ? <p className="text-slate-600">Loading products...</p> : null}
-			{error ? <p className="rounded-xl bg-rose-50 px-4 py-3 text-rose-600">{error}</p> : null}
+			{loading ? (
+				<div className="flex items-center gap-3 py-8">
+					<div
+						className="h-5 w-5 rounded-full animate-spin"
+						style={{ border: "2px solid rgba(0,212,255,0.2)", borderTopColor: "#00d4ff" }}
+					/>
+					<p style={{ color: "#64748b" }}>Loading products...</p>
+				</div>
+			) : null}
+			{error ? (
+				<p
+					className="rounded-xl px-4 py-3 text-sm"
+					style={{
+						background: "rgba(239,68,68,0.08)",
+						border: "1px solid rgba(239,68,68,0.2)",
+						color: "#f87171",
+					}}
+				>
+					{error}
+				</p>
+			) : null}
 
 			{!loading && !error ? (
 				groupedSections.length ? (
@@ -160,15 +226,31 @@ function Home({ search }) {
 
 							return (
 								<div key={section.name} id={sectionId} className="space-y-4 scroll-mt-24">
+									{/* Section Label */}
 									<div className="flex flex-wrap items-center justify-between gap-2">
-										<h3 className="text-xl font-bold text-slate-900 sm:text-2xl">{section.name}</h3>
-										<span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+										<div className="flex items-center gap-3">
+											<div
+												className="h-6 w-1 rounded-full"
+												style={{ background: "linear-gradient(180deg, #00d4ff, #a855f7)" }}
+											/>
+											<h3 className="text-xl font-bold sm:text-2xl" style={{ color: "#f1f5f9" }}>
+												{section.name}
+											</h3>
+										</div>
+										<span
+											className="rounded-full px-3 py-1 text-xs font-semibold"
+											style={{
+												background: "rgba(168,85,247,0.1)",
+												border: "1px solid rgba(168,85,247,0.2)",
+												color: "#c084fc",
+											}}
+										>
 											{section.products.length} products
 										</span>
 									</div>
 
 									{section.products.length ? (
-										<div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+										<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 											{section.products.map((product) => (
 												<ProductCard
 													key={product._id}
@@ -181,7 +263,14 @@ function Home({ search }) {
 											))}
 										</div>
 									) : (
-										<div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500">
+										<div
+											className="rounded-xl p-5 text-sm"
+											style={{
+												background: "rgba(255,255,255,0.02)",
+												border: "1px dashed rgba(255,255,255,0.08)",
+												color: "#475569",
+											}}
+										>
 											No products currently available in this section.
 										</div>
 									)}
@@ -190,9 +279,11 @@ function Home({ search }) {
 						})}
 					</div>
 				) : (
-					<p className="rounded-xl bg-white p-6 text-center text-slate-600 shadow-sm">
-						No products found for your search.
-					</p>
+					<div
+						className="glass rounded-2xl p-10 text-center"
+					>
+						<p style={{ color: "#64748b" }}>No products found for your search.</p>
+					</div>
 				)
 			) : null}
 		</section>

@@ -4,7 +4,7 @@ const rawBackendUrl =
 	"http://localhost:5000";
 
 export const BACKEND_URL = rawBackendUrl.replace(/\/+$/, "");
-export const API_BASE_URL = `${BACKEND_URL}/api`;
+export const API_BASE_URL = `/api`;
 
 export const apiUrl = (path = "") => {
 	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -20,6 +20,13 @@ export const mediaUrl = (path = "") => {
 		return path;
 	}
 
+	// Normalize path
 	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+	// If it's an uploads path, use relative URL (Vite proxy handles it)
+	if (normalizedPath.startsWith("/uploads")) {
+		return normalizedPath;
+	}
+
 	return `${BACKEND_URL}${normalizedPath}`;
 };
