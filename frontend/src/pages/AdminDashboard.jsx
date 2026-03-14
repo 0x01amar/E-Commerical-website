@@ -63,6 +63,26 @@ const fetchApiWithFallback = async (path, options = {}) => {
   }
 };
 
+const parseApiResponse = async (response) => {
+  const rawText = await response.text();
+
+  if (!rawText) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    return {
+      message: rawText
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 300),
+    };
+  }
+};
+
 function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [sections, setSections] = useState([]);
@@ -390,11 +410,12 @@ function AdminDashboard() {
       setSaving(true);
       setError("");
 
-      const productApiPath = editingId
-        ? `/products/${editingId}/update`
-        : "/products";
-
-      const method = "POST";
+      const requestCandidates = editingId
+        ? [
+          { path: `/products/${editingId}/update`, method: "POST" },
+          { path: `/products/${editingId}`, method: "PUT" },
+        ]
+        : [{ path: "/products", method: "POST" }];
 
       const formData = new FormData();
 
@@ -425,23 +446,42 @@ function AdminDashboard() {
         }
       }
 
-      const response = await fetchApiWithFallback(productApiPath, {
-        method,
-        headers: {
-          "x-admin-key": adminKey,
-        },
-        body: formData,
-      });
-
       let data = {};
+      let saveSucceeded = false;
 
-      try {
-        data = await response.json();
-      } catch {
-        data = {};
+      for (let index = 0; index < requestCandidates.length; index += 1) {
+        const candidate = requestCandidates[index];
+        const response = await fetchApiWithFallback(candidate.path, {
+          method: candidate.method,
+          headers: {
+            "x-admin-key": adminKey,
+          },
+          body: formData,
+        });
+
+        data = await parseApiResponse(response);
+
+        if (response.ok) {
+          saveSucceeded = true;
+          break;
+        }
+
+        const responseMessage = String(data?.message || "");
+        const shouldRetryWithLegacyEditRoute =
+          Boolean(editingId) &&
+          index === 0 &&
+          (response.status === 404 ||
+            response.status === 405 ||
+            /cannot\s+post/i.test(responseMessage));
+
+        if (shouldRetryWithLegacyEditRoute) {
+          continue;
+        }
+
+        throw new Error(data?.message || `Failed to save product (HTTP ${response.status})`);
       }
 
-      if (!response.ok) {
+      if (!saveSucceeded) {
         throw new Error(data?.message || "Failed to save product");
       }
 
