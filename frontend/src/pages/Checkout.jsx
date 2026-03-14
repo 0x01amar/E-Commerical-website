@@ -174,6 +174,33 @@ const fetchApiJson = async (path, options = {}) => {
   }
 };
 
+const isRouteNotFoundResponse = (response, data) => {
+  const message = String(data?.message || "").toLowerCase();
+
+  if (response?.status !== 404) {
+    return false;
+  }
+
+  return message.includes("api route not found")
+    || message.includes("cannot post")
+    || message.includes("cannot get");
+};
+
+const toLegacyPaymentShape = (data = {}) => {
+  const gatewayOrderId = data?.order?.id || data?.checkout?.orderId || "";
+
+  return {
+    gatewayOrderId,
+    internalOrderId: data?.internalOrderId || "",
+    key: data?.key || data?.checkout?.key || "",
+    amount: data?.order?.amount ?? data?.checkout?.amount,
+    currency: data?.order?.currency || data?.checkout?.currency || "INR",
+    name: data?.name || data?.checkout?.name || "Apna Furniture House",
+    description: data?.description || data?.checkout?.description || "Secure payment",
+    prefill: data?.prefill || {},
+  };
+};
+
 function Checkout() {
   const { productId } = useParams();
   const location = useLocation();
@@ -519,25 +546,60 @@ function Checkout() {
     }
   };
 
-  const verifyGatewayPaymentAndPlaceOrder = async (payload, internalOrderId) => {
+  const verifyGatewayPaymentAndPlaceOrder = async (payload, verificationContext = {}) => {
     try {
       setProcessingPayment(true);
       setError("");
       setNotice("Verifying payment...");
 
-      const { response, data } = await fetchApiJson("/payment/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          internalOrderId,
-          razorpayOrderId: payload.razorpay_order_id,
-          razorpayPaymentId: payload.razorpay_payment_id,
-          razorpaySignature: payload.razorpay_signature,
-        }),
-      });
+      const hasInternalOrderId = Boolean(verificationContext?.internalOrderId);
+      const candidatePaths = hasInternalOrderId
+        ? ["/payment/verify", "/orders/payment/verify-and-place"]
+        : ["/orders/payment/verify-and-place"];
+
+      let verifyResult = null;
+
+      for (const path of candidatePaths) {
+        const requestBody = path === "/payment/verify"
+          ? {
+            email,
+            internalOrderId: verificationContext.internalOrderId,
+            razorpayOrderId: payload.razorpay_order_id,
+            razorpayPaymentId: payload.razorpay_payment_id,
+            razorpaySignature: payload.razorpay_signature,
+          }
+          : {
+            email,
+            razorpayOrderId: payload.razorpay_order_id,
+            razorpayPaymentId: payload.razorpay_payment_id,
+            razorpaySignature: payload.razorpay_signature,
+          };
+
+        const current = await fetchApiJson(path, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        verifyResult = current;
+
+        if (current.response.ok) {
+          break;
+        }
+
+        if (!isRouteNotFoundResponse(current.response, current.data)) {
+          break;
+        }
+      }
+
+      const response = verifyResult?.response;
+      const data = verifyResult?.data;
+
+      if (!response) {
+        throw new Error("Payment verification failed");
+      }
 
       if (!response.ok) {
         throw new Error(data?.message || "Payment verification failed");
@@ -576,25 +638,62 @@ function Checkout() {
       setError("");
       setNotice("Initiating secure payment...");
 
-      const { response: createResponse, data: createData } = await fetchApiJson("/payment/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          productId: product._id,
-          quantity,
-          address: finalAddress,
-          phone: contactPhone.trim(),
-          paymentOption,
-          amount: Number(payableAmount.toFixed(2)),
-        }),
-      });
+      const requestPayload = {
+        email,
+        productId: product._id,
+        quantity,
+        address: finalAddress,
+        phone: contactPhone.trim(),
+        paymentOption,
+        amount: Number(payableAmount.toFixed(2)),
+      };
+
+      const createCandidates = ["/payment/orders", "/orders/payment/create"];
+      let createResult = null;
+
+      for (const path of createCandidates) {
+        const bodyPayload = path === "/orders/payment/create"
+          ? {
+            email: requestPayload.email,
+            productId: requestPayload.productId,
+            quantity: requestPayload.quantity,
+            address: requestPayload.address,
+            phone: requestPayload.phone,
+            paymentOption: requestPayload.paymentOption,
+          }
+          : requestPayload;
+
+        const current = await fetchApiJson(path, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(bodyPayload),
+        });
+
+        createResult = current;
+
+        if (current.response.ok) {
+          break;
+        }
+
+        if (!isRouteNotFoundResponse(current.response, current.data)) {
+          break;
+        }
+      }
+
+      const createResponse = createResult?.response;
+      const createData = createResult?.data;
+
+      if (!createResponse) {
+        throw new Error("Failed to initiate payment");
+      }
 
       if (!createResponse.ok) {
         throw new Error(createData?.message || "Failed to initiate payment");
       }
+
+      const normalizedCheckout = toLegacyPaymentShape(createData);
 
       const loaded = await loadRazorpayScript();
 
@@ -602,30 +701,32 @@ function Checkout() {
         throw new Error("Unable to load payment gateway. Please try again.");
       }
 
-      const gatewayOrderId = createData?.order?.id;
-      const internalOrderId = createData?.internalOrderId;
+      const gatewayOrderId = normalizedCheckout.gatewayOrderId;
+      const internalOrderId = normalizedCheckout.internalOrderId;
 
-      if (!gatewayOrderId || !internalOrderId) {
+      if (!gatewayOrderId) {
         throw new Error("Invalid order response from payment gateway");
       }
 
       const options = {
-        key: createData?.key,
-        amount: createData?.order?.amount,
-        currency: createData?.order?.currency || "INR",
-        name: createData?.name || "Apna Furniture House",
-        description: createData?.description || "Secure payment",
+        key: normalizedCheckout.key,
+        amount: normalizedCheckout.amount,
+        currency: normalizedCheckout.currency || "INR",
+        name: normalizedCheckout.name || "Apna Furniture House",
+        description: normalizedCheckout.description || "Secure payment",
         order_id: gatewayOrderId,
         prefill: {
-          name: createData?.prefill?.name || "Customer",
-          email: createData?.prefill?.email || email,
-          contact: createData?.prefill?.contact || contactPhone,
+          name: normalizedCheckout?.prefill?.name || "Customer",
+          email: normalizedCheckout?.prefill?.email || email,
+          contact: normalizedCheckout?.prefill?.contact || contactPhone,
         },
         theme: {
           color: "#0284c7",
         },
         handler: (paymentPayload) => {
-          verifyGatewayPaymentAndPlaceOrder(paymentPayload, internalOrderId);
+          verifyGatewayPaymentAndPlaceOrder(paymentPayload, {
+            internalOrderId,
+          });
         },
         modal: {
           ondismiss: () => {
