@@ -11,21 +11,22 @@ const __dirname = dirname(__filename)
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "")
 
-  const backendUrl = env.BACKEND_URL || env.VITE_BACKEND_URL || "http://localhost:5000";
+  const explicitBackendUrl = env.BACKEND_URL || env.VITE_BACKEND_URL || "";
+  const devBackendUrl = explicitBackendUrl || "http://localhost:5000";
 
   return {
     plugins: [react(), tailwindcss()],
     define: {
-      'import.meta.env.BACKEND_URL': JSON.stringify(backendUrl),
+      'import.meta.env.BACKEND_URL': JSON.stringify(explicitBackendUrl),
     },
     server: {
       proxy: {
         '/api': {
-          target: backendUrl,
+          target: devBackendUrl,
           changeOrigin: true,
         },
         '/uploads': {
-          target: backendUrl,
+          target: devBackendUrl,
           changeOrigin: true,
         },
       },

@@ -1,7 +1,8 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
+const envPath = path.join(__dirname, ".env");
+require("dotenv").config({ path: envPath });
 const { ObjectId } = require("mongodb");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -16,6 +17,10 @@ const app = express();
 const uploadsDirectory = path.join(__dirname, "uploads");
 
 fs.mkdirSync(uploadsDirectory, { recursive: true });
+
+if (!fs.existsSync(envPath)) {
+  console.warn("Missing backend/.env. backend/.env.example is a template only.");
+}
 
 app.use(cors());
 app.use(express.json());

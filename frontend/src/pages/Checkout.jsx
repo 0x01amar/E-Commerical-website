@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { BACKEND_URL, apiUrl, mediaUrl } from "../config/api";
+import { API_BASE_URL, BACKEND_URL, BACKEND_URL_SOURCE, apiUrl, mediaUrl } from "../config/api";
 
 const DEFAULT_TAX_RATE = 0.08;
 const DEFAULT_SHIPPING_CHARGE = 79;
@@ -199,6 +199,52 @@ const toLegacyPaymentShape = (data = {}) => {
     description: data?.description || data?.checkout?.description || "Secure payment",
     prefill: data?.prefill || {},
   };
+};
+
+const isPaymentGatewayConfigMessage = (message = "") => String(message || "").toLowerCase().includes("not configured");
+
+const buildPaymentGatewayDiagnosis = ({
+  requestUrl = "",
+  healthUrl = "",
+  healthConfigured,
+}) => {
+  const targetLabel = BACKEND_URL || API_BASE_URL || "/api";
+
+  let message = `Payment gateway is not configured on the active backend. Backend: ${targetLabel}.`;
+
+  if (requestUrl) {
+    message += ` Request: ${requestUrl}.`;
+  }
+
+  if (healthUrl) {
+    message += ` Health check: ${healthUrl}.`;
+  }
+
+  if (healthConfigured === false) {
+    message += " That backend is missing Razorpay keys.";
+  } else if (healthConfigured === true) {
+    message += " That backend reports configured=true, so the frontend may be hitting a stale or different deployment.";
+  }
+
+  if (BACKEND_URL_SOURCE !== "env") {
+    message += " If frontend and backend are deployed separately, set VITE_BACKEND_URL or BACKEND_URL in the frontend environment.";
+  }
+
+  return message;
+};
+
+const diagnosePaymentGatewayConfig = async (requestUrl = "") => {
+  try {
+    const healthResult = await fetchApiJson("/payment/health", { method: "GET" });
+
+    return buildPaymentGatewayDiagnosis({
+      requestUrl,
+      healthUrl: healthResult?.url || "",
+      healthConfigured: healthResult?.data?.configured,
+    });
+  } catch {
+    return buildPaymentGatewayDiagnosis({ requestUrl });
+  }
 };
 
 function Checkout() {
@@ -690,10 +736,18 @@ function Checkout() {
       }
 
       if (!createResponse.ok) {
+        if (isPaymentGatewayConfigMessage(createData?.message)) {
+          throw new Error(await diagnosePaymentGatewayConfig(createResult?.url));
+        }
+
         throw new Error(createData?.message || "Failed to initiate payment");
       }
 
       const normalizedCheckout = toLegacyPaymentShape(createData);
+
+      if (!normalizedCheckout.key) {
+        throw new Error("Payment gateway key was not returned by the backend. Check the active backend payment configuration.");
+      }
 
       const loaded = await loadRazorpayScript();
 

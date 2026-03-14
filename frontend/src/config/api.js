@@ -1,16 +1,29 @@
-const rawBackendUrl =
+const configuredBackendUrl =
 	import.meta.env.BACKEND_URL ||
 	import.meta.env.VITE_BACKEND_URL ||
-	"https://e-commerical-website.onrender.com";
-
-export const BACKEND_URL = rawBackendUrl.replace(/\/+$/, "");
+	"";
 
 const currentHostname = typeof window !== "undefined" ? window.location.hostname : "";
+const currentProtocol = typeof window !== "undefined" ? window.location.protocol : "http:";
+const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
 const isLikelyLocalHost =
 	["localhost", "127.0.0.1", "0.0.0.0"].includes(currentHostname) ||
 	/^192\.168\./.test(currentHostname) ||
 	/^10\./.test(currentHostname) ||
 	/^172\.(1[6-9]|2\d|3[0-1])\./.test(currentHostname);
+
+const fallbackBackendUrl = configuredBackendUrl
+	|| (isLikelyLocalHost
+		? `${currentProtocol === "https:" ? "https:" : "http:"}//${currentHostname || "localhost"}:5000`
+		: currentOrigin);
+
+export const BACKEND_URL_SOURCE = configuredBackendUrl
+	? "env"
+	: isLikelyLocalHost
+		? "local-default"
+		: "current-origin-default";
+
+export const BACKEND_URL = String(fallbackBackendUrl || "").replace(/\/+$/, "");
 
 const useProxyApi = Boolean(import.meta.env.DEV) || isLikelyLocalHost;
 

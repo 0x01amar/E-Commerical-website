@@ -7,6 +7,7 @@ const CheckoutSetting = require("../models/CheckoutSetting");
 
 const DEFAULT_TAX_RATE = 0.08;
 const DEFAULT_SHIPPING_CHARGE = 79;
+const PAYMENT_CONFIG_ERROR_MESSAGE = "Payment gateway is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend/.env (or deployment environment variables). Do not put secrets in .env.example.";
 
 const trimString = (value = "") => String(value || "").trim();
 const normalizeEmail = (email = "") => trimString(email).toLowerCase();
@@ -260,7 +261,7 @@ const createRazorpayOrder = async (req, res) => {
 
     if (!razorpay) {
       return res.status(503).json({
-        message: "Payment gateway is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend environment.",
+        message: PAYMENT_CONFIG_ERROR_MESSAGE,
       });
     }
 
@@ -376,7 +377,7 @@ const verifyRazorpayPayment = async (req, res) => {
 
     if (!razorpaySecret) {
       return res.status(503).json({
-        message: "Payment gateway is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend environment.",
+        message: PAYMENT_CONFIG_ERROR_MESSAGE,
       });
     }
 
@@ -393,7 +394,7 @@ const verifyRazorpayPayment = async (req, res) => {
 
     if (!razorpay) {
       return res.status(503).json({
-        message: "Payment gateway is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend environment.",
+        message: PAYMENT_CONFIG_ERROR_MESSAGE,
       });
     }
 
