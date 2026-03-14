@@ -65,6 +65,9 @@ app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api", (_req, res) => {
+  res.status(404).json({ message: "API route not found" });
+});
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {

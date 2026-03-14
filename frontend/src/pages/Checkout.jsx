@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { apiUrl, mediaUrl } from "../config/api";
+import { BACKEND_URL, apiUrl, mediaUrl } from "../config/api";
 
 const DEFAULT_TAX_RATE = 0.08;
 const DEFAULT_SHIPPING_CHARGE = 79;
@@ -95,6 +95,85 @@ const loadRazorpayScript = async () => {
   });
 };
 
+const normalizeApiPath = (path = "") => (path.startsWith("/") ? path : `/${path}`);
+
+const directApiUrl = (path = "") => {
+  const normalizedPath = normalizeApiPath(path);
+  return `${BACKEND_URL}/api${normalizedPath}`;
+};
+
+const readApiResponse = async (response) => {
+  const rawText = await response.text();
+
+  if (!rawText) {
+    return {
+      rawText,
+      data: {},
+    };
+  }
+
+  try {
+    return {
+      rawText,
+      data: JSON.parse(rawText),
+    };
+  } catch {
+    return {
+      rawText,
+      data: {
+        message: rawText
+          .replace(/<[^>]*>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 300) || "Server returned an invalid response",
+      },
+    };
+  }
+};
+
+const looksLikeHtmlResponse = (response, rawText = "") => {
+  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+  const normalizedText = String(rawText || "").trim().toLowerCase();
+
+  return contentType.includes("text/html")
+    || normalizedText.startsWith("<!doctype html")
+    || normalizedText.startsWith("<html");
+};
+
+const fetchApiJson = async (path, options = {}) => {
+  const normalizedPath = normalizeApiPath(path);
+  const proxiedUrl = apiUrl(normalizedPath);
+  const fallbackUrl = directApiUrl(normalizedPath);
+
+  const execute = async (url) => {
+    const response = await fetch(url, options);
+    const { data, rawText } = await readApiResponse(response);
+
+    return {
+      url,
+      response,
+      data,
+      rawText,
+    };
+  };
+
+  try {
+    let result = await execute(proxiedUrl);
+
+    if (looksLikeHtmlResponse(result.response, result.rawText) && fallbackUrl !== proxiedUrl) {
+      result = await execute(fallbackUrl);
+    }
+
+    return result;
+  } catch (primaryError) {
+    if (fallbackUrl === proxiedUrl) {
+      throw primaryError;
+    }
+
+    return execute(fallbackUrl);
+  }
+};
+
 function Checkout() {
   const { productId } = useParams();
   const location = useLocation();
@@ -145,8 +224,7 @@ function Checkout() {
         setLoadingProduct(true);
         setError("");
 
-        const response = await fetch(apiUrl(`/products/${productId}`));
-        const data = await response.json();
+        const { response, data } = await fetchApiJson(`/products/${productId}`);
 
         if (!response.ok) {
           throw new Error(data?.message || "Failed to load product");
@@ -166,8 +244,7 @@ function Checkout() {
   useEffect(() => {
     const loadPricing = async () => {
       try {
-        const response = await fetch(apiUrl("/settings/checkout-pricing"));
-        const data = await response.json();
+        const { response, data } = await fetchApiJson("/settings/checkout-pricing");
 
         if (!response.ok) {
           return;
@@ -195,8 +272,7 @@ function Checkout() {
 
     const loadSavedAddress = async () => {
       try {
-        const response = await fetch(apiUrl(`/auth/profile/${encodeURIComponent(email)}`));
-        const data = await response.json();
+        const { response, data } = await fetchApiJson(`/auth/profile/${encodeURIComponent(email)}`);
 
         if (!response.ok) {
           return;
@@ -306,7 +382,7 @@ function Checkout() {
       setSavingAddress(true);
       setError("");
 
-      const response = await fetch(apiUrl(`/auth/profile/${encodeURIComponent(email)}`), {
+      const { response, data } = await fetchApiJson(`/auth/profile/${encodeURIComponent(email)}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -316,8 +392,6 @@ function Checkout() {
           address: finalAddress,
         }),
       });
-
-      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to save address");
@@ -416,7 +490,7 @@ function Checkout() {
       setError("");
       setNotice("");
 
-      const response = await fetch(apiUrl("/orders"), {
+      const { response, data } = await fetchApiJson("/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -430,8 +504,6 @@ function Checkout() {
           paymentOption: "cod",
         }),
       });
-
-      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to place order");
@@ -453,7 +525,7 @@ function Checkout() {
       setError("");
       setNotice("Verifying payment...");
 
-      const response = await fetch(apiUrl("/payment/verify"), {
+      const { response, data } = await fetchApiJson("/payment/verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -466,8 +538,6 @@ function Checkout() {
           razorpaySignature: payload.razorpay_signature,
         }),
       });
-
-      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data?.message || "Payment verification failed");
@@ -506,7 +576,7 @@ function Checkout() {
       setError("");
       setNotice("Initiating secure payment...");
 
-      const createResponse = await fetch(apiUrl("/payment/orders"), {
+      const { response: createResponse, data: createData } = await fetchApiJson("/payment/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -521,8 +591,6 @@ function Checkout() {
           amount: Number(payableAmount.toFixed(2)),
         }),
       });
-
-      const createData = await createResponse.json();
 
       if (!createResponse.ok) {
         throw new Error(createData?.message || "Failed to initiate payment");
