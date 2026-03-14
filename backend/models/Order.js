@@ -137,6 +137,22 @@ const orderSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    gatewayOrderId: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true,
+    },
+    gatewayPaymentId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    gatewaySignature: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     paymentApp: {
       type: String,
       default: "",

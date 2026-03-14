@@ -447,41 +447,20 @@ function Checkout() {
     }
   };
 
-  const markGatewayFailure = async (razorpayOrderId, reason) => {
-    try {
-      if (!razorpayOrderId || !email) {
-        return;
-      }
-
-      await fetch(apiUrl("/orders/payment/mark-failed"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          razorpayOrderId,
-          reason,
-        }),
-      });
-    } catch {
-      // ignore failure logging errors
-    }
-  };
-
-  const verifyGatewayPaymentAndPlaceOrder = async (payload, gatewayOrderId) => {
+  const verifyGatewayPaymentAndPlaceOrder = async (payload, internalOrderId) => {
     try {
       setProcessingPayment(true);
       setError("");
       setNotice("Verifying payment...");
 
-      const response = await fetch(apiUrl("/orders/payment/verify-and-place"), {
+      const response = await fetch(apiUrl("/payment/verify"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email,
+          internalOrderId,
           razorpayOrderId: payload.razorpay_order_id,
           razorpayPaymentId: payload.razorpay_payment_id,
           razorpaySignature: payload.razorpay_signature,
@@ -502,7 +481,6 @@ function Checkout() {
       const message = verifyError.message || "Payment verification failed";
       setError(message);
       setNotice("");
-      await markGatewayFailure(gatewayOrderId, message);
       window.alert(`Payment Failed: ${message}`);
     } finally {
       setProcessingPayment(false);
@@ -521,12 +499,14 @@ function Checkout() {
       return;
     }
 
+    const payableAmount = paymentOption === "half" ? expectedHalfAmount : totalPrice;
+
     try {
       setGatewayLoading(true);
       setError("");
       setNotice("Initiating secure payment...");
 
-      const createResponse = await fetch(apiUrl("/orders/payment/create"), {
+      const createResponse = await fetch(apiUrl("/payment/orders"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -538,6 +518,7 @@ function Checkout() {
           address: finalAddress,
           phone: contactPhone.trim(),
           paymentOption,
+          amount: Number(payableAmount.toFixed(2)),
         }),
       });
 
@@ -553,14 +534,19 @@ function Checkout() {
         throw new Error("Unable to load payment gateway. Please try again.");
       }
 
-      const gatewayOrderId = createData?.checkout?.orderId;
+      const gatewayOrderId = createData?.order?.id;
+      const internalOrderId = createData?.internalOrderId;
+
+      if (!gatewayOrderId || !internalOrderId) {
+        throw new Error("Invalid order response from payment gateway");
+      }
 
       const options = {
-        key: createData?.checkout?.key,
-        amount: createData?.checkout?.amount,
-        currency: createData?.checkout?.currency || "INR",
-        name: createData?.checkout?.name || "Apna Furniture House",
-        description: createData?.checkout?.description || "Secure payment",
+        key: createData?.key,
+        amount: createData?.order?.amount,
+        currency: createData?.order?.currency || "INR",
+        name: createData?.name || "Apna Furniture House",
+        description: createData?.description || "Secure payment",
         order_id: gatewayOrderId,
         prefill: {
           name: createData?.prefill?.name || "Customer",
@@ -571,14 +557,13 @@ function Checkout() {
           color: "#0284c7",
         },
         handler: (paymentPayload) => {
-          verifyGatewayPaymentAndPlaceOrder(paymentPayload, gatewayOrderId);
+          verifyGatewayPaymentAndPlaceOrder(paymentPayload, internalOrderId);
         },
         modal: {
-          ondismiss: async () => {
+          ondismiss: () => {
             setGatewayLoading(false);
             setNotice("");
             setError("Payment cancelled");
-            await markGatewayFailure(gatewayOrderId, "Payment cancelled by user");
             window.alert("Payment Failed: Payment was cancelled.");
           },
         },
@@ -595,7 +580,6 @@ function Checkout() {
         setGatewayLoading(false);
         setNotice("");
         setError(reason);
-        await markGatewayFailure(gatewayOrderId, reason);
         window.alert(`Payment Failed: ${reason}`);
       });
 
