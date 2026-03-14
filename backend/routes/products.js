@@ -232,7 +232,7 @@ const didUserPurchaseProduct = async (email, productId) => {
   const purchasedOrder = await Order.findOne({
     userEmail: normalizeEmail(email),
     productId,
-    status: { $ne: "Cancelled" },
+    status: "Delivered",
   }).select("_id");
 
   return Boolean(purchasedOrder);
@@ -514,7 +514,7 @@ router.post("/:id/rate", async (req, res) => {
     const canRate = await didUserPurchaseProduct(email, req.params.id);
 
     if (!canRate) {
-      return res.status(403).json({ message: "You can rate this product only after purchase" });
+      return res.status(403).json({ message: "You can rate this product only after delivery" });
     }
 
     const product = await Product.findById(req.params.id);
@@ -620,7 +620,7 @@ router.post("/:id/review", upload.array("reviewImages", 5), async (req, res) => 
     const canRate = await didUserPurchaseProduct(email, req.params.id);
 
     if (!canRate) {
-      return res.status(403).json({ message: "You can review this product only after purchase" });
+      return res.status(403).json({ message: "You can review this product only after delivery" });
     }
 
     const product = await Product.findById(req.params.id);

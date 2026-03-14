@@ -178,7 +178,7 @@ function ProductPage() {
         }
 
         if (!ratingInfo.canRate) {
-            setRatingError("You can rate this product only after purchasing it.");
+            setRatingError("You can rate this product only after delivery.");
             return;
         }
 
@@ -374,7 +374,7 @@ function ProductPage() {
                                     <p className="text-xs" style={{ color: "#6080a0" }}>
                                         {ratingInfo.hasRated
                                             ? "You have already rated this product. You can update your rating."
-                                            : "You purchased this product. Add your rating."}
+                                            : "Your order for this product was delivered. Add your rating."}
                                     </p>
 
                                     <StarRating
@@ -403,7 +403,7 @@ function ProductPage() {
                                 </div>
                             ) : (
                                 <p className="mt-3 rounded-lg px-3 py-2 text-xs" style={{ background: "rgba(240,248,255,0.78)", color: "#6080a0" }}>
-                                    You can rate this product only after purchasing it.
+                                    You can rate this product only after delivery.
                                 </p>
                             )
                         ) : (
@@ -422,7 +422,7 @@ function ProductPage() {
             <div className="glass rounded-2xl p-5">
                 <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>Customer Reviews & Ratings</h2>
 
-                {/* Review Form - Only for users who purchased */}
+                {/* Review Form - Only for users with delivered orders */}
                 {isLoggedIn && ratingInfo.canRate && (
                     <div className="mt-4">
                         <ReviewForm productId={id} email={email} onReviewSubmitted={() => {}} />

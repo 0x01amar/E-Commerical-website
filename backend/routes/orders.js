@@ -1,13 +1,17 @@
 const express = require("express");
+const crypto = require("crypto");
+const Razorpay = require("razorpay");
 const nodemailer = require("nodemailer");
 const Order = require("../models/Order");
+const PaymentAttempt = require("../models/PaymentAttempt");
+const CheckoutSetting = require("../models/CheckoutSetting");
 const Product = require("../models/Product");
 const User = require("../models/User");
 
 const router = express.Router();
 
-const TAX_RATE = 0.08;
-const SHIPPING_CHARGE = 79;
+const DEFAULT_TAX_RATE = 0.08;
+const DEFAULT_SHIPPING_CHARGE = 79;
 
 const ORDER_STATUSES = [
   "Order Placed",
@@ -20,9 +24,7 @@ const ORDER_STATUSES = [
 ];
 
 const normalizeEmail = (email = "") => String(email).trim().toLowerCase();
-
 const trimString = (value = "") => String(value || "").trim();
-
 const asTwoDecimals = (value = 0) => Number(Number(value || 0).toFixed(2));
 
 const isAdminKeyValid = (adminKey = "") => {
@@ -30,14 +32,40 @@ const isAdminKeyValid = (adminKey = "") => {
   return Boolean(configuredAdminKey) && adminKey === configuredAdminKey;
 };
 
-const calculatePricing = (unitPrice, quantity) => {
+const getCheckoutPricingSettings = async () => {
+  let settings = await CheckoutSetting.findOne({ key: "default" });
+
+  if (!settings) {
+    settings = await CheckoutSetting.create({
+      key: "default",
+      taxRate: DEFAULT_TAX_RATE,
+      shippingCharge: DEFAULT_SHIPPING_CHARGE,
+    });
+  }
+
+  return {
+    taxRate: Number(settings.taxRate ?? DEFAULT_TAX_RATE),
+    shippingCharge: Number(settings.shippingCharge ?? DEFAULT_SHIPPING_CHARGE),
+  };
+};
+
+const calculatePricing = (unitPrice, quantity, pricingSettings = {}) => {
+  const taxRate = Number.isFinite(Number(pricingSettings.taxRate))
+    ? Number(pricingSettings.taxRate)
+    : DEFAULT_TAX_RATE;
+
+  const configuredShippingCharge = Number.isFinite(Number(pricingSettings.shippingCharge))
+    ? Number(pricingSettings.shippingCharge)
+    : DEFAULT_SHIPPING_CHARGE;
+
   const subtotal = asTwoDecimals(Number(unitPrice || 0) * Number(quantity || 0));
-  const taxAmount = asTwoDecimals(subtotal * TAX_RATE);
-  const shippingCharge = subtotal > 0 ? SHIPPING_CHARGE : 0;
+  const taxAmount = asTwoDecimals(subtotal * taxRate);
+  const shippingCharge = subtotal > 0 ? asTwoDecimals(configuredShippingCharge) : 0;
   const totalAmount = asTwoDecimals(subtotal + taxAmount + shippingCharge);
   const exactHalf = asTwoDecimals(totalAmount / 2);
 
   return {
+    taxRate,
     subtotal,
     taxAmount,
     shippingCharge,
@@ -49,6 +77,7 @@ const calculatePricing = (unitPrice, quantity) => {
 const addressToObject = (address = {}) => {
   if (typeof address === "string") {
     const trimmed = trimString(address);
+
     return {
       line1: trimmed,
       landmark: "",
@@ -105,19 +134,45 @@ const validateAddress = (address = {}) => {
   return "";
 };
 
-const paymentMetaToObject = (paymentMeta = {}) => {
-  const paymentApp = trimString(paymentMeta?.paymentApp || "");
-  const rawPaidAt = paymentMeta?.paidAt;
-  const parsedPaidAt = rawPaidAt ? new Date(rawPaidAt) : new Date();
+const getRazorpayClient = () => {
+  const keyId = trimString(process.env.RAZORPAY_KEY_ID || "");
+  const keySecret = trimString(process.env.RAZORPAY_KEY_SECRET || "");
 
-  return {
-    paymentApp,
-    paymentPaidAt: Number.isNaN(parsedPaidAt.getTime()) ? new Date() : parsedPaidAt,
-  };
+  if (!keyId || !keySecret) {
+    return null;
+  }
+
+  return new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret,
+  });
+};
+
+const buildPaymentAppLabel = (payment = {}) => {
+  const method = trimString(payment?.method).toLowerCase();
+
+  if (method === "upi") {
+    const vpa = trimString(payment?.vpa || payment?.acquirer_data?.vpa);
+    return vpa ? `UPI (${vpa})` : "UPI";
+  }
+
+  if (method === "card") {
+    return "Card";
+  }
+
+  if (method === "netbanking") {
+    return "Netbanking";
+  }
+
+  if (method === "wallet") {
+    return "Wallet";
+  }
+
+  return method ? method.toUpperCase() : "Online";
 };
 
 const formatEmailText = ({ order, paymentLabel, paidNowAmount, remainingAmount }) => {
-  const isOnlinePayment = order.paymentGateway === "upi" || ["upi", "half"].includes(order.paymentOption);
+  const isOnlinePayment = order.paymentGateway === "razorpay" || ["upi", "half"].includes(order.paymentOption);
   const paidAtDate = order.paymentPaidAt ? new Date(order.paymentPaidAt) : null;
 
   const lines = [
@@ -145,8 +200,12 @@ const formatEmailText = ({ order, paymentLabel, paidNowAmount, remainingAmount }
       lines.push(`Transaction ID: ${order.upiTransactionId}`);
     }
 
+    if (order.paymentGateway) {
+      lines.push(`Gateway: ${order.paymentGateway}`);
+    }
+
     if (order.paymentApp) {
-      lines.push(`Payment App: ${order.paymentApp}`);
+      lines.push(`Payment Method/App: ${order.paymentApp}`);
     }
 
     if (paidAtDate && !Number.isNaN(paidAtDate.getTime())) {
@@ -184,12 +243,13 @@ const sendOrderEmails = async (order) => {
   }
 
   const isHalfPayment = order.paymentOption === "half";
-  const isUpiPayment = order.paymentOption === "upi";
+  const isOnlineFullPayment = order.paymentOption === "upi";
   const paymentLabel = isHalfPayment
-    ? "Half Payment (UPI)"
-    : isUpiPayment
-      ? "Full Payment (UPI)"
+    ? "Half Payment (Verified Online)"
+    : isOnlineFullPayment
+      ? "Full Payment (Verified Online)"
       : "Cash on Delivery";
+
   const paidNowAmount = asTwoDecimals(order.paidNowAmount);
   const remainingAmount = asTwoDecimals(order.totalAmount - paidNowAmount);
   const emailText = formatEmailText({
@@ -220,82 +280,182 @@ const sendOrderEmails = async (order) => {
   };
 };
 
-router.post("/", async (req, res) => {
+const validateCheckoutRequest = async ({ email, productId, quantity, address, phone }) => {
+  if (!email) {
+    return { status: 400, message: "Email is required" };
+  }
+
+  if (!productId) {
+    return { status: 400, message: "Product is required" };
+  }
+
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return { status: 400, message: "Quantity must be at least 1" };
+  }
+
+  const user = await User.findOne({ email, isVerified: true });
+
+  if (!user) {
+    return { status: 404, message: "User not found" };
+  }
+
+  const product = await Product.findById(productId);
+
+  if (!product) {
+    return { status: 404, message: "Product not found" };
+  }
+
+  const normalizedAddress = addressToObject(address || user.address || {});
+  const addressValidationError = validateAddress(normalizedAddress);
+
+  if (addressValidationError) {
+    return { status: 400, message: addressValidationError };
+  }
+
+  const requestPhone = trimString(phone);
+  const userPhone = requestPhone || trimString(user.phone);
+
+  if (!/^\d{10}$/.test(userPhone)) {
+    return { status: 400, message: "Please provide a valid 10-digit phone number" };
+  }
+
+  return {
+    status: 200,
+    user,
+    product,
+    normalizedAddress,
+    userPhone,
+    requestPhone,
+  };
+};
+
+const createOrderFromData = async ({
+  user,
+  requestPhone,
+  userPhone,
+  email,
+  productData,
+  quantity,
+  pricing,
+  paymentOption,
+  paidNowAmount,
+  paymentStatus,
+  normalizedAddress,
+  paymentGateway,
+  paymentApp,
+  paymentPaidAt,
+  transactionId,
+}) => {
+  const order = await Order.create({
+    orderCode: `ORD-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
+    userEmail: email,
+    userName: trimString(user?.name) || trimString(productData?.userName) || "Customer",
+    userPhone,
+    productId: productData.productId,
+    productName: trimString(productData.productName),
+    productImage: trimString(productData.productImage),
+    productCategory: trimString(productData.productCategory),
+    quantity,
+    unitPrice: asTwoDecimals(productData.unitPrice),
+    subtotal: pricing.subtotal,
+    taxAmount: pricing.taxAmount,
+    shippingCharge: pricing.shippingCharge,
+    totalAmount: pricing.totalAmount,
+    paymentOption,
+    upiTransactionId: trimString(transactionId),
+    paymentGateway: trimString(paymentGateway),
+    paymentApp: trimString(paymentApp),
+    paymentPaidAt: paymentPaidAt || null,
+    paidNowAmount,
+    paymentStatus,
+    address: normalizedAddress,
+  });
+
+  if (user) {
+    user.address = normalizedAddress;
+
+    if (requestPhone && /^\d{10}$/.test(requestPhone)) {
+      user.phone = requestPhone;
+      order.userPhone = requestPhone;
+    }
+
+    await user.save();
+  }
+
+  const emailResult = await sendOrderEmails(order);
+  order.userEmailNotificationSent = emailResult.userSent;
+  order.adminEmailNotificationSent = emailResult.adminSent;
+  await order.save();
+
+  return order;
+};
+
+const markPaymentAttemptFailed = async (attempt, reason) => {
+  if (!attempt) {
+    return;
+  }
+
+  attempt.status = "failed";
+  attempt.failureReason = trimString(reason || "Payment verification failed");
+  await attempt.save();
+};
+
+router.post("/payment/create", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
     const productId = trimString(req.body?.productId);
     const quantity = Number(req.body?.quantity || 1);
-    const paymentOption = trimString(req.body?.paymentOption || "cod").toLowerCase();
-    const upiTransactionId = trimString(req.body?.upiTransactionId || "");
-    const paymentMeta = typeof req.body?.paymentMeta === "object" && req.body?.paymentMeta
-      ? req.body.paymentMeta
-      : {};
-    const isOnlinePayment = paymentOption === "upi" || paymentOption === "half";
-    const { paymentApp, paymentPaidAt } = paymentMetaToObject(paymentMeta);
+    const paymentOption = trimString(req.body?.paymentOption || "").toLowerCase();
 
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
+    if (!["upi", "half"].includes(paymentOption)) {
+      return res.status(400).json({ message: "Payment option must be upi or half" });
     }
 
-    if (!productId) {
-      return res.status(400).json({ message: "Product is required" });
+    const validation = await validateCheckoutRequest({
+      email,
+      productId,
+      quantity,
+      address: req.body?.address,
+      phone: req.body?.phone,
+    });
+
+    if (validation.status !== 200) {
+      return res.status(validation.status).json({ message: validation.message });
     }
 
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      return res.status(400).json({ message: "Quantity must be at least 1" });
+    const { user, product, normalizedAddress, userPhone, requestPhone } = validation;
+    const checkoutPricingSettings = await getCheckoutPricingSettings();
+    const pricing = calculatePricing(product.price, quantity, checkoutPricingSettings);
+
+    const amountPayable = paymentOption === "half" ? pricing.exactHalf : pricing.totalAmount;
+    const razorpay = getRazorpayClient();
+
+    if (!razorpay) {
+      return res.status(503).json({
+        message: "Online payment gateway is not configured. Please contact support.",
+      });
     }
 
-    if (!["cod", "half", "upi"].includes(paymentOption)) {
-      return res.status(400).json({ message: "Payment option must be cod, half, or upi" });
-    }
+    const receipt = `rcpt_${Date.now()}_${Math.floor(Math.random() * 900 + 100)}`;
 
-    if (isOnlinePayment && !upiTransactionId) {
-      return res.status(400).json({ message: "Payment reference is missing. Please complete payment again." });
-    }
+    const gatewayOrder = await razorpay.orders.create({
+      amount: Math.round(amountPayable * 100),
+      currency: "INR",
+      receipt,
+      notes: {
+        userEmail: email,
+        productId: String(product._id),
+        quantity: String(quantity),
+        paymentOption,
+      },
+    });
 
-    const user = await User.findOne({ email, isVerified: true });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const product = await Product.findById(productId);
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    const normalizedAddress = addressToObject(req.body?.address || user.address || {});
-    const addressValidationError = validateAddress(normalizedAddress);
-
-    if (addressValidationError) {
-      return res.status(400).json({ message: addressValidationError });
-    }
-
-    const requestPhone = trimString(req.body?.phone);
-    const userPhone = requestPhone || trimString(user.phone);
-
-    if (!/^\d{10}$/.test(userPhone)) {
-      return res.status(400).json({ message: "Please provide a valid 10-digit phone number" });
-    }
-
-    const pricing = calculatePricing(product.price, quantity);
-
-    let paidNowAmount = 0;
-    let paymentStatus = "pending";
-
-    if (paymentOption === "half") {
-      paidNowAmount = pricing.exactHalf;
-      paymentStatus = "partial";
-    } else if (paymentOption === "upi") {
-      paidNowAmount = pricing.totalAmount;
-      paymentStatus = "paid";
-    }
-
-    const order = await Order.create({
-      orderCode: `ORD-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
+    await PaymentAttempt.create({
+      gateway: "razorpay",
+      gatewayOrderId: gatewayOrder.id,
+      status: "initiated",
       userEmail: email,
-      userName: trimString(user.name) || "Customer",
+      userName: trimString(user?.name) || "Customer",
       userPhone,
       productId: product._id,
       productName: trimString(product.name),
@@ -307,34 +467,271 @@ router.post("/", async (req, res) => {
       taxAmount: pricing.taxAmount,
       shippingCharge: pricing.shippingCharge,
       totalAmount: pricing.totalAmount,
+      exactHalf: pricing.exactHalf,
+      amountPayable,
       paymentOption,
-      upiTransactionId: isOnlinePayment ? upiTransactionId : "",
-      paymentGateway: isOnlinePayment ? "upi" : "cod",
-      paymentApp: isOnlinePayment ? paymentApp : "",
-      paymentPaidAt: isOnlinePayment ? paymentPaidAt : null,
-      paidNowAmount,
-      paymentStatus,
       address: normalizedAddress,
+      currency: gatewayOrder.currency || "INR",
     });
-
-    user.address = normalizedAddress;
 
     if (requestPhone && /^\d{10}$/.test(requestPhone)) {
       user.phone = requestPhone;
-      order.userPhone = requestPhone;
+      user.address = normalizedAddress;
+      await user.save();
     }
 
-    await user.save();
+    return res.json({
+      message: "Payment initiated",
+      checkout: {
+        key: process.env.RAZORPAY_KEY_ID,
+        orderId: gatewayOrder.id,
+        amount: Number(gatewayOrder.amount || Math.round(amountPayable * 100)),
+        currency: gatewayOrder.currency || "INR",
+        name: "Apna Furniture House",
+        description: paymentOption === "half"
+          ? `Half payment for ${trimString(product.name)}`
+          : `Full payment for ${trimString(product.name)}`,
+      },
+      payable: {
+        paidNowAmount: amountPayable,
+        remainingAmount: asTwoDecimals(pricing.totalAmount - amountPayable),
+      },
+      pricing: {
+        taxRate: pricing.taxRate,
+        subtotal: pricing.subtotal,
+        taxAmount: pricing.taxAmount,
+        shippingCharge: pricing.shippingCharge,
+        totalAmount: pricing.totalAmount,
+      },
+      prefill: {
+        name: trimString(user?.name) || "Customer",
+        email,
+        contact: userPhone,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to initiate payment" });
+  }
+});
 
-    const emailResult = await sendOrderEmails(order);
+router.post("/payment/verify-and-place", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const razorpayOrderId = trimString(req.body?.razorpayOrderId);
+    const razorpayPaymentId = trimString(req.body?.razorpayPaymentId);
+    const razorpaySignature = trimString(req.body?.razorpaySignature);
 
-    order.userEmailNotificationSent = emailResult.userSent;
-    order.adminEmailNotificationSent = emailResult.adminSent;
-    await order.save();
+    if (!email || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      return res.status(400).json({ message: "Payment verification payload is incomplete" });
+    }
+
+    const attempt = await PaymentAttempt.findOne({ gatewayOrderId: razorpayOrderId });
+
+    if (!attempt) {
+      return res.status(404).json({ message: "Payment attempt not found" });
+    }
+
+    if (attempt.status === "verified" && attempt.orderId) {
+      const existingOrder = await Order.findById(attempt.orderId);
+
+      if (existingOrder) {
+        return res.json({
+          message: "Order already placed",
+          order: existingOrder,
+        });
+      }
+    }
+
+    if (attempt.userEmail !== email) {
+      return res.status(403).json({ message: "Payment does not belong to this user" });
+    }
+
+    const razorpaySecret = trimString(process.env.RAZORPAY_KEY_SECRET || "");
+
+    if (!razorpaySecret) {
+      return res.status(503).json({ message: "Payment gateway is not configured" });
+    }
+
+    const expectedSignature = crypto
+      .createHmac("sha256", razorpaySecret)
+      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+      .digest("hex");
+
+    if (expectedSignature !== razorpaySignature) {
+      await markPaymentAttemptFailed(attempt, "Invalid payment signature");
+      return res.status(400).json({ message: "Payment verification failed" });
+    }
+
+    const razorpay = getRazorpayClient();
+
+    if (!razorpay) {
+      return res.status(503).json({ message: "Payment gateway is not configured" });
+    }
+
+    const payment = await razorpay.payments.fetch(razorpayPaymentId);
+
+    if (!payment || trimString(payment.order_id) !== razorpayOrderId) {
+      await markPaymentAttemptFailed(attempt, "Payment/order mismatch");
+      return res.status(400).json({ message: "Payment verification failed" });
+    }
+
+    const paymentStatus = trimString(payment.status).toLowerCase();
+
+    if (!["captured", "authorized"].includes(paymentStatus)) {
+      await markPaymentAttemptFailed(attempt, `Payment status is ${paymentStatus || "unknown"}`);
+      return res.status(400).json({ message: "Payment was not successful" });
+    }
+
+    const expectedAmountPaise = Math.round(Number(attempt.amountPayable || 0) * 100);
+
+    if (Number(payment.amount || 0) !== expectedAmountPaise) {
+      await markPaymentAttemptFailed(attempt, "Paid amount mismatch");
+      return res.status(400).json({ message: "Payment amount mismatch" });
+    }
+
+    const user = await User.findOne({ email: attempt.userEmail, isVerified: true });
+
+    if (!user) {
+      await markPaymentAttemptFailed(attempt, "Verified user not found");
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const order = await createOrderFromData({
+      user,
+      requestPhone: attempt.userPhone,
+      userPhone: attempt.userPhone,
+      email: attempt.userEmail,
+      productData: {
+        productId: attempt.productId,
+        productName: attempt.productName,
+        productImage: attempt.productImage,
+        productCategory: attempt.productCategory,
+        unitPrice: attempt.unitPrice,
+      },
+      quantity: Number(attempt.quantity || 1),
+      pricing: {
+        subtotal: asTwoDecimals(attempt.subtotal),
+        taxAmount: asTwoDecimals(attempt.taxAmount),
+        shippingCharge: asTwoDecimals(attempt.shippingCharge),
+        totalAmount: asTwoDecimals(attempt.totalAmount),
+      },
+      paymentOption: attempt.paymentOption,
+      paidNowAmount: asTwoDecimals(attempt.amountPayable),
+      paymentStatus: attempt.paymentOption === "half" ? "partial" : "paid",
+      normalizedAddress: addressToObject(attempt.address || {}),
+      paymentGateway: "razorpay",
+      paymentApp: buildPaymentAppLabel(payment),
+      paymentPaidAt: payment?.created_at ? new Date(Number(payment.created_at) * 1000) : new Date(),
+      transactionId: razorpayPaymentId,
+    });
+
+    attempt.status = "verified";
+    attempt.paymentId = razorpayPaymentId;
+    attempt.paymentSignature = razorpaySignature;
+    attempt.paymentMethod = trimString(payment?.method);
+    attempt.paymentApp = buildPaymentAppLabel(payment);
+    attempt.paymentPaidAt = payment?.created_at ? new Date(Number(payment.created_at) * 1000) : new Date();
+    attempt.failureReason = "";
+    attempt.orderId = order._id;
+    await attempt.save();
+
+    return res.json({
+      message: "Payment verified and order placed",
+      order,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to verify payment" });
+  }
+});
+
+router.post("/payment/mark-failed", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const razorpayOrderId = trimString(req.body?.razorpayOrderId);
+    const reason = trimString(req.body?.reason || "Payment failed or cancelled");
+
+    if (!email || !razorpayOrderId) {
+      return res.status(400).json({ message: "Email and order id are required" });
+    }
+
+    const attempt = await PaymentAttempt.findOne({
+      gatewayOrderId: razorpayOrderId,
+      userEmail: email,
+    });
+
+    if (!attempt) {
+      return res.status(404).json({ message: "Payment attempt not found" });
+    }
+
+    if (attempt.status === "verified") {
+      return res.json({ message: "Payment already verified" });
+    }
+
+    attempt.status = "failed";
+    attempt.failureReason = reason;
+    await attempt.save();
+
+    return res.json({ message: "Payment marked as failed" });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update payment status" });
+  }
+});
+
+router.post("/", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const productId = trimString(req.body?.productId);
+    const quantity = Number(req.body?.quantity || 1);
+    const paymentOption = trimString(req.body?.paymentOption || "cod").toLowerCase();
+
+    if (paymentOption !== "cod") {
+      return res.status(400).json({
+        message: "Online payments must go through the verified payment gateway flow",
+      });
+    }
+
+    const validation = await validateCheckoutRequest({
+      email,
+      productId,
+      quantity,
+      address: req.body?.address,
+      phone: req.body?.phone,
+    });
+
+    if (validation.status !== 200) {
+      return res.status(validation.status).json({ message: validation.message });
+    }
+
+    const { user, product, normalizedAddress, userPhone, requestPhone } = validation;
+    const checkoutPricingSettings = await getCheckoutPricingSettings();
+    const pricing = calculatePricing(product.price, quantity, checkoutPricingSettings);
+
+    const order = await createOrderFromData({
+      user,
+      requestPhone,
+      userPhone,
+      email,
+      productData: {
+        productId: product._id,
+        productName: trimString(product.name),
+        productImage: trimString(product.image || (Array.isArray(product.images) ? product.images[0] : "")),
+        productCategory: trimString(product.section || product.category),
+        unitPrice: product.price,
+      },
+      quantity,
+      pricing,
+      paymentOption: "cod",
+      paidNowAmount: 0,
+      paymentStatus: "pending",
+      normalizedAddress,
+      paymentGateway: "cod",
+      paymentApp: "",
+      paymentPaidAt: null,
+      transactionId: "",
+    });
 
     return res.status(201).json({
       message: "Order placed successfully",
-      expectedHalfAmount: pricing.exactHalf,
       order,
     });
   } catch (error) {

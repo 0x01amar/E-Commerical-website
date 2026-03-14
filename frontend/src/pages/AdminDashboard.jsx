@@ -22,6 +22,11 @@ const defaultSectionForm = {
   displayOrder: "",
 };
 
+const defaultPricingForm = {
+  taxRatePercent: "8",
+  shippingCharge: "79",
+};
+
 const sortSections = (items = []) => {
   return [...items].sort((first, second) => {
     const orderA = Number(first?.displayOrder || 0);
@@ -94,6 +99,7 @@ function AdminDashboard() {
 
   const [productForm, setProductForm] = useState(defaultProductForm);
   const [sectionForm, setSectionForm] = useState(defaultSectionForm);
+  const [pricingForm, setPricingForm] = useState(defaultPricingForm);
 
   const [existingImages, setExistingImages] = useState([]);
   const [newImages, setNewImages] = useState([]);
@@ -109,10 +115,13 @@ function AdminDashboard() {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sectionSaving, setSectionSaving] = useState(false);
+  const [pricingSaving, setPricingSaving] = useState(false);
   const [statusUpdatingOrderId, setStatusUpdatingOrderId] = useState("");
 
   const [error, setError] = useState("");
   const [sectionError, setSectionError] = useState("");
+  const [pricingError, setPricingError] = useState("");
+  const [pricingNotice, setPricingNotice] = useState("");
   const [ordersError, setOrdersError] = useState("");
   const [statusDrafts, setStatusDrafts] = useState({});
   const [deliveryDateDrafts, setDeliveryDateDrafts] = useState({});
@@ -135,6 +144,8 @@ function AdminDashboard() {
         setOrdersLoading(true);
         setError("");
         setSectionError("");
+        setPricingError("");
+        setPricingNotice("");
         setOrdersError("");
 
         const [productsResponse, sectionsResponse] = await Promise.all([
@@ -158,6 +169,24 @@ function AdminDashboard() {
 
         setProducts(normalizedProducts);
         setSections(normalizedSections);
+
+        try {
+          const pricingResponse = await fetch(apiUrl("/settings/checkout-pricing"));
+          const pricingData = await pricingResponse.json();
+
+          if (pricingResponse.ok) {
+            const taxPercent = Number(pricingData?.taxRate || 0) * 100;
+
+            setPricingForm({
+              taxRatePercent: Number.isFinite(taxPercent) ? String(Number(taxPercent.toFixed(2))) : defaultPricingForm.taxRatePercent,
+              shippingCharge: Number.isFinite(Number(pricingData?.shippingCharge))
+                ? String(Number(pricingData.shippingCharge).toFixed(2))
+                : defaultPricingForm.shippingCharge,
+            });
+          }
+        } catch {
+          setPricingError("Failed to load checkout pricing settings");
+        }
 
         const ordersResponse = await fetch(apiUrl("/orders/admin/all"), {
           headers: {
@@ -244,6 +273,60 @@ function AdminDashboard() {
   const resetSectionForm = () => {
     setSectionForm(defaultSectionForm);
     setEditingSectionId("");
+  };
+
+  const saveCheckoutPricing = async (event) => {
+    event.preventDefault();
+
+    const taxPercent = Number(pricingForm.taxRatePercent);
+    const shippingCharge = Number(pricingForm.shippingCharge);
+
+    if (!Number.isFinite(taxPercent) || taxPercent < 0 || taxPercent > 100) {
+      setPricingError("Tax rate must be between 0 and 100");
+      setPricingNotice("");
+      return;
+    }
+
+    if (!Number.isFinite(shippingCharge) || shippingCharge < 0) {
+      setPricingError("Shipping charge must be a non-negative number");
+      setPricingNotice("");
+      return;
+    }
+
+    try {
+      setPricingSaving(true);
+      setPricingError("");
+      setPricingNotice("");
+
+      const response = await fetch(apiUrl("/settings/checkout-pricing"), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({
+          taxRate: Number((taxPercent / 100).toFixed(4)),
+          shippingCharge: Number(shippingCharge.toFixed(2)),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to update checkout pricing settings");
+      }
+
+      const settings = data?.settings || {};
+      setPricingForm({
+        taxRatePercent: String(Number((Number(settings.taxRate || 0) * 100).toFixed(2))),
+        shippingCharge: String(Number(Number(settings.shippingCharge || 0).toFixed(2))),
+      });
+      setPricingNotice("Checkout pricing settings updated successfully");
+    } catch (saveError) {
+      setPricingError(saveError.message || "Failed to update checkout pricing settings");
+    } finally {
+      setPricingSaving(false);
+    }
   };
 
   const onAddNewImages = (event) => {
@@ -717,17 +800,63 @@ function AdminDashboard() {
 
       {error ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">{error}</p> : null}
       {sectionError ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">{sectionError}</p> : null}
+      {pricingError ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">{pricingError}</p> : null}
+      {pricingNotice ? <p className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">{pricingNotice}</p> : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_2fr]">
-        <form onSubmit={submitSection} className="glass rounded-2xl p-5">
-          <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>Manage Sections</h2>
+        <div className="space-y-6">
+          <form onSubmit={saveCheckoutPricing} className="glass rounded-2xl p-5">
+            <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>Checkout Pricing Settings</h2>
 
-          <div className="mt-4 space-y-3">
-            <input
-              placeholder="Section name (e.g. Wooden Chair)"
-              value={sectionForm.name}
-              onChange={(event) => setSectionForm((prev) => ({ ...prev, name: event.target.value }))}
-              className="input-dark w-full"
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#6080a0" }}>
+                  Tax Rate (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={pricingForm.taxRatePercent}
+                  onChange={(event) => setPricingForm((prev) => ({ ...prev, taxRatePercent: event.target.value }))}
+                  className="input-dark w-full"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#6080a0" }}>
+                  Shipping Charge (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={pricingForm.shippingCharge}
+                  onChange={(event) => setPricingForm((prev) => ({ ...prev, shippingCharge: event.target.value }))}
+                  className="input-dark w-full"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={pricingSaving}
+                className="btn-neon rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {pricingSaving ? "Saving..." : "Save Pricing"}
+              </button>
+            </div>
+          </form>
+
+          <form onSubmit={submitSection} className="glass rounded-2xl p-5">
+            <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>Manage Sections</h2>
+
+            <div className="mt-4 space-y-3">
+              <input
+                placeholder="Section name (e.g. Wooden Chair)"
+                value={sectionForm.name}
+                onChange={(event) => setSectionForm((prev) => ({ ...prev, name: event.target.value }))}
+                className="input-dark w-full"
               />
               <input
                 placeholder="Display order"
@@ -735,51 +864,52 @@ function AdminDashboard() {
                 value={sectionForm.displayOrder}
                 onChange={(event) => setSectionForm((prev) => ({ ...prev, displayOrder: event.target.value }))}
                 className="input-dark w-full"
-            />
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={sectionSaving}
-                className="btn-neon rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {sectionSaving ? "Saving..." : editingSectionId ? "Update Section" : "Add Section"}
-              </button>
-              {editingSectionId ? (
+              />
+              <div className="flex gap-2">
                 <button
-                  type="button"
-                  onClick={resetSectionForm}
-                  className="btn-ghost rounded-xl px-4 py-2 text-sm"
+                  type="submit"
+                  disabled={sectionSaving}
+                  className="btn-neon rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Cancel
+                  {sectionSaving ? "Saving..." : editingSectionId ? "Update Section" : "Add Section"}
                 </button>
-              ) : null}
+                {editingSectionId ? (
+                  <button
+                    type="button"
+                    onClick={resetSectionForm}
+                    className="btn-ghost rounded-xl px-4 py-2 text-sm"
+                  >
+                    Cancel
+                  </button>
+                ) : null}
+              </div>
             </div>
-          </div>
 
-          <div className="mt-5 space-y-2">
-            {sections.map((section) => (
+            <div className="mt-5 space-y-2">
+              {sections.map((section) => (
                 <div key={section._id || section.name} className="flex items-center justify-between rounded-xl px-3 py-2" style={{ border: "1px solid rgba(100,160,220,0.18)", background: "rgba(255,255,255,0.78)" }}>
-                <div>
+                  <div>
                     <p className="text-sm font-semibold" style={{ color: "#1a2f48" }}>{section.name}</p>
                     <p className="text-xs" style={{ color: "#6080a0" }}>Order: {Number(section.displayOrder || 0)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingSectionId(section._id || "");
+                      setSectionForm({
+                        name: section.name,
+                        displayOrder: String(section.displayOrder || 0),
+                      });
+                    }}
+                    className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
+                  >
+                    Edit
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingSectionId(section._id || "");
-                    setSectionForm({
-                      name: section.name,
-                      displayOrder: String(section.displayOrder || 0),
-                    });
-                  }}
-                  className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
-                >
-                  Edit
-                </button>
-              </div>
-            ))}
-          </div>
-        </form>
+              ))}
+            </div>
+          </form>
+        </div>
 
         <form onSubmit={submitProduct} className="glass rounded-2xl p-6">
         <h2 className="text-xl font-semibold" style={{ color: "#1a2f48" }}>

@@ -2,28 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { apiUrl, mediaUrl } from "../config/api";
 
-const TAX_RATE = 0.08;
-const SHIPPING_CHARGE = 79;
-
-const ADMIN_UPI_ID = "8405966305@axl";
-const ADMIN_UPI_NAME = "Amarnath Kumar";
-
-const UPI_APPS = [
-  { key: "phonepe", label: "PhonePe", icon: "🟣" },
-  { key: "gpay", label: "GPay", icon: "🔵" },
-  { key: "paytm", label: "Paytm", icon: "🔷" },
-  { key: "navi", label: "Navi", icon: "🟢" },
-];
-
-const PAYMENT_APP_LABELS = {
-  phonepe: "PhonePe",
-  gpay: "GPay",
-  paytm: "Paytm",
-  navi: "Navi",
-  qr: "QR",
-};
-
-const generatePaymentReference = () => `UPI-${Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
+const DEFAULT_TAX_RATE = 0.08;
+const DEFAULT_SHIPPING_CHARGE = 79;
 
 const EMPTY_ADDRESS = {
   line1: "",
@@ -89,6 +69,32 @@ const validateAddress = (address = EMPTY_ADDRESS) => {
   return "";
 };
 
+const loadRazorpayScript = async () => {
+  if (typeof window !== "undefined" && window.Razorpay) {
+    return true;
+  }
+
+  return new Promise((resolve) => {
+    const existing = document.getElementById("razorpay-checkout-js");
+
+    if (existing) {
+      existing.addEventListener("load", () => resolve(Boolean(window.Razorpay)), { once: true });
+      existing.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "razorpay-checkout-js";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+
+    document.body.appendChild(script);
+  });
+};
+
 function Checkout() {
   const { productId } = useParams();
   const location = useLocation();
@@ -101,18 +107,18 @@ function Checkout() {
   const [loadingProduct, setLoadingProduct] = useState(true);
   const [step, setStep] = useState(1);
   const [quantity, setQuantity] = useState(1);
-  const [addressMode, setAddressMode] = useState("saved"); // "saved" or "new"
+  const [addressMode, setAddressMode] = useState("saved");
   const [addressForm, setAddressForm] = useState(EMPTY_ADDRESS);
   const [savedAddress, setSavedAddress] = useState(EMPTY_ADDRESS);
   const [savedAddressText, setSavedAddressText] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [paymentOption, setPaymentOption] = useState("cod");
-  const [paymentReference, setPaymentReference] = useState("");
-  const [paymentPaidAt, setPaymentPaidAt] = useState("");
-  const [paymentApp, setPaymentApp] = useState("");
-  const [onlinePaymentStarted, setOnlinePaymentStarted] = useState(false);
-  const [upiCopied, setUpiCopied] = useState(false);
+  const [pricingSettings, setPricingSettings] = useState({
+    taxRate: DEFAULT_TAX_RATE,
+    shippingCharge: DEFAULT_SHIPPING_CHARGE,
+  });
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [gatewayLoading, setGatewayLoading] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [cartSynced, setCartSynced] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(null);
@@ -156,6 +162,31 @@ function Checkout() {
 
     loadProduct();
   }, [productId]);
+
+  useEffect(() => {
+    const loadPricing = async () => {
+      try {
+        const response = await fetch(apiUrl("/settings/checkout-pricing"));
+        const data = await response.json();
+
+        if (!response.ok) {
+          return;
+        }
+
+        setPricingSettings({
+          taxRate: Number(data?.taxRate ?? DEFAULT_TAX_RATE),
+          shippingCharge: Number(data?.shippingCharge ?? DEFAULT_SHIPPING_CHARGE),
+        });
+      } catch {
+        setPricingSettings({
+          taxRate: DEFAULT_TAX_RATE,
+          shippingCharge: DEFAULT_SHIPPING_CHARGE,
+        });
+      }
+    };
+
+    loadPricing();
+  }, []);
 
   useEffect(() => {
     if (!email) {
@@ -211,95 +242,23 @@ function Checkout() {
     setCartSynced(true);
   }, [cartSynced, mode, product]);
 
-  const subtotal = useMemo(() => {
-    return Number(product?.price || 0) * quantity;
-  }, [product?.price, quantity]);
+  const subtotal = useMemo(() => Number(product?.price || 0) * quantity, [product?.price, quantity]);
 
-  const taxAmount = useMemo(() => subtotal * TAX_RATE, [subtotal]);
-  const shippingCharge = useMemo(() => (subtotal > 0 ? SHIPPING_CHARGE : 0), [subtotal]);
+  const taxRate = useMemo(() => {
+    const parsed = Number(pricingSettings.taxRate);
+    return Number.isFinite(parsed) ? parsed : DEFAULT_TAX_RATE;
+  }, [pricingSettings.taxRate]);
+
+  const configuredShippingCharge = useMemo(() => {
+    const parsed = Number(pricingSettings.shippingCharge);
+    return Number.isFinite(parsed) ? parsed : DEFAULT_SHIPPING_CHARGE;
+  }, [pricingSettings.shippingCharge]);
+
+  const taxAmount = useMemo(() => subtotal * taxRate, [subtotal, taxRate]);
+  const shippingCharge = useMemo(() => (subtotal > 0 ? configuredShippingCharge : 0), [configuredShippingCharge, subtotal]);
   const totalPrice = useMemo(() => subtotal + taxAmount + shippingCharge, [shippingCharge, subtotal, taxAmount]);
   const expectedHalfAmount = useMemo(() => Number((totalPrice / 2).toFixed(2)), [totalPrice]);
-  const isOnlinePayment = paymentOption === "upi" || paymentOption === "half";
-  const onlinePaymentAmount = useMemo(() => {
-    return paymentOption === "half" ? expectedHalfAmount : totalPrice;
-  }, [expectedHalfAmount, paymentOption, totalPrice]);
-  const deliveryAddressText = useMemo(() => {
-    return formatAddress(addressForm);
-  }, [addressForm]);
-
-  const buildUpiLink = (appKey, amount, referenceId) => {
-    const params = [
-      `pa=${encodeURIComponent(ADMIN_UPI_ID)}`,
-      `pn=${encodeURIComponent(ADMIN_UPI_NAME)}`,
-      `am=${Number(amount || 0).toFixed(2)}`,
-      "cu=INR",
-      `tn=${encodeURIComponent(product?.name || "Furniture Order")}`,
-      `tr=${encodeURIComponent(referenceId)}`,
-    ].join("&");
-
-    if (appKey === "phonepe") {
-      return `phonepe://pay?${params}`;
-    }
-
-    if (appKey === "gpay") {
-      return `gpay://upi/pay?${params}`;
-    }
-
-    if (appKey === "paytm") {
-      return `paytmmp://pay?${params}`;
-    }
-
-    return `upi://pay?${params}`;
-  };
-
-  const startOnlinePayment = (appKey) => {
-    const nextReference = paymentReference || generatePaymentReference();
-    const paidAtIso = new Date().toISOString();
-
-    setPaymentReference(nextReference);
-    setPaymentPaidAt(paidAtIso);
-    setPaymentApp(appKey);
-    setOnlinePaymentStarted(true);
-    setError("");
-    setNotice("Payment app opened. After completing payment, tap 'Payment Completed - Place Order Now'.");
-
-    window.open(buildUpiLink(appKey, onlinePaymentAmount, nextReference), "_self");
-  };
-
-  const markQrPaymentCompleted = async () => {
-    const nextReference = paymentReference || generatePaymentReference();
-    const paidAtIso = paymentPaidAt || new Date().toISOString();
-    const paymentAppKey = paymentApp || "qr";
-
-    setPaymentReference(nextReference);
-    setPaymentPaidAt(paidAtIso);
-    setPaymentApp(paymentAppKey);
-    setOnlinePaymentStarted(true);
-    setError("");
-    setNotice("Payment successful. Placing your order...");
-
-    await handlePlaceOrder({
-      forceOnlinePayment: true,
-      transactionId: nextReference,
-      paidAtIso,
-      paymentAppKey,
-    });
-  };
-
-  useEffect(() => {
-    if (paymentOption === "cod") {
-      setPaymentReference("");
-      setPaymentPaidAt("");
-      setPaymentApp("");
-      setOnlinePaymentStarted(false);
-      return;
-    }
-
-    setPaymentReference((previous) => previous || generatePaymentReference());
-    setPaymentPaidAt("");
-    setPaymentApp("");
-    setOnlinePaymentStarted(false);
-  }, [paymentOption]);
+  const deliveryAddressText = useMemo(() => formatAddress(addressForm), [addressForm]);
 
   const moveToAddressStep = () => {
     if (quantity < 1) {
@@ -418,10 +377,10 @@ function Checkout() {
     localStorage.setItem("cartItems", JSON.stringify(nextCart));
   };
 
-  const handlePlaceOrder = async (onlineOverrides = null) => {
+  const validateCheckoutInputs = () => {
     if (!email || !product) {
       setError("Please login first");
-      return;
+      return null;
     }
 
     const normalizedAddress = normalizeAddress(addressForm);
@@ -430,42 +389,27 @@ function Checkout() {
     if (addressError) {
       setError(addressError);
       setStep(2);
-      return;
+      return null;
     }
 
     if (!/^\d{10}$/.test(contactPhone.trim())) {
       setError("Please enter a valid 10-digit phone number");
       setStep(2);
-      return;
+      return null;
     }
 
-    const finalAddress = {
+    return {
       ...normalizedAddress,
       fullAddress: formatAddress(normalizedAddress),
     };
+  };
 
-    const forceOnlinePayment = Boolean(onlineOverrides?.forceOnlinePayment);
+  const placeCodOrder = async () => {
+    const finalAddress = validateCheckoutInputs();
 
-    if (isOnlinePayment && !onlinePaymentStarted && !forceOnlinePayment) {
-      setError("Please complete payment first via PhonePe, GPay, Paytm, Navi, or QR.");
+    if (!finalAddress) {
       return;
     }
-
-    const paidNowAmount = paymentOption === "half"
-      ? expectedHalfAmount
-      : paymentOption === "upi"
-        ? totalPrice
-        : 0;
-
-    const transactionId = isOnlinePayment
-      ? onlineOverrides?.transactionId || paymentReference || generatePaymentReference()
-      : "";
-    const paidAtIso = isOnlinePayment
-      ? onlineOverrides?.paidAtIso || paymentPaidAt || new Date().toISOString()
-      : "";
-    const paymentAppLabel = isOnlinePayment
-      ? PAYMENT_APP_LABELS[onlineOverrides?.paymentAppKey || paymentApp] || "UPI"
-      : "";
 
     try {
       setProcessingPayment(true);
@@ -483,15 +427,7 @@ function Checkout() {
           quantity,
           address: finalAddress,
           phone: contactPhone.trim(),
-          paymentOption,
-          paidNowAmount,
-          upiTransactionId: transactionId,
-          paymentMeta: isOnlinePayment
-            ? {
-              paymentApp: paymentAppLabel,
-              paidAt: paidAtIso,
-            }
-            : {},
+          paymentOption: "cod",
         }),
       });
 
@@ -503,17 +439,172 @@ function Checkout() {
 
       setOrderPlaced(data?.order || null);
       syncCartAfterOrder();
-      setNotice(
-        paymentOption === "cod"
-          ? "Order placed successfully. Confirmation has been sent by email."
-          : paymentOption === "upi"
-            ? "Payment successful. Order placed successfully. Track your product in Profile."
-            : "Half payment successful. Order placed successfully. Track your product in Profile."
-      );
+      setNotice("Order placed successfully. Confirmation has been sent by email.");
     } catch (placeOrderError) {
       setError(placeOrderError.message || "Failed to place order");
     } finally {
       setProcessingPayment(false);
+    }
+  };
+
+  const markGatewayFailure = async (razorpayOrderId, reason) => {
+    try {
+      if (!razorpayOrderId || !email) {
+        return;
+      }
+
+      await fetch(apiUrl("/orders/payment/mark-failed"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          razorpayOrderId,
+          reason,
+        }),
+      });
+    } catch {
+      // ignore failure logging errors
+    }
+  };
+
+  const verifyGatewayPaymentAndPlaceOrder = async (payload, gatewayOrderId) => {
+    try {
+      setProcessingPayment(true);
+      setError("");
+      setNotice("Verifying payment...");
+
+      const response = await fetch(apiUrl("/orders/payment/verify-and-place"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          razorpayOrderId: payload.razorpay_order_id,
+          razorpayPaymentId: payload.razorpay_payment_id,
+          razorpaySignature: payload.razorpay_signature,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Payment verification failed");
+      }
+
+      setOrderPlaced(data?.order || null);
+      syncCartAfterOrder();
+      setNotice("Payment successful and verified. Order placed successfully. Track your product in Profile.");
+      window.alert("Payment successful. Your order has been placed.");
+    } catch (verifyError) {
+      const message = verifyError.message || "Payment verification failed";
+      setError(message);
+      setNotice("");
+      await markGatewayFailure(gatewayOrderId, message);
+      window.alert(`Payment Failed: ${message}`);
+    } finally {
+      setProcessingPayment(false);
+      setGatewayLoading(false);
+    }
+  };
+
+  const startVerifiedOnlinePayment = async () => {
+    if (!["upi", "half"].includes(paymentOption)) {
+      return;
+    }
+
+    const finalAddress = validateCheckoutInputs();
+
+    if (!finalAddress) {
+      return;
+    }
+
+    try {
+      setGatewayLoading(true);
+      setError("");
+      setNotice("Initiating secure payment...");
+
+      const createResponse = await fetch(apiUrl("/orders/payment/create"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          productId: product._id,
+          quantity,
+          address: finalAddress,
+          phone: contactPhone.trim(),
+          paymentOption,
+        }),
+      });
+
+      const createData = await createResponse.json();
+
+      if (!createResponse.ok) {
+        throw new Error(createData?.message || "Failed to initiate payment");
+      }
+
+      const loaded = await loadRazorpayScript();
+
+      if (!loaded || !window.Razorpay) {
+        throw new Error("Unable to load payment gateway. Please try again.");
+      }
+
+      const gatewayOrderId = createData?.checkout?.orderId;
+
+      const options = {
+        key: createData?.checkout?.key,
+        amount: createData?.checkout?.amount,
+        currency: createData?.checkout?.currency || "INR",
+        name: createData?.checkout?.name || "Apna Furniture House",
+        description: createData?.checkout?.description || "Secure payment",
+        order_id: gatewayOrderId,
+        prefill: {
+          name: createData?.prefill?.name || "Customer",
+          email: createData?.prefill?.email || email,
+          contact: createData?.prefill?.contact || contactPhone,
+        },
+        theme: {
+          color: "#0284c7",
+        },
+        handler: (paymentPayload) => {
+          verifyGatewayPaymentAndPlaceOrder(paymentPayload, gatewayOrderId);
+        },
+        modal: {
+          ondismiss: async () => {
+            setGatewayLoading(false);
+            setNotice("");
+            setError("Payment cancelled");
+            await markGatewayFailure(gatewayOrderId, "Payment cancelled by user");
+            window.alert("Payment Failed: Payment was cancelled.");
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+
+      razorpay.on("payment.failed", async (event) => {
+        const reason =
+          event?.error?.description ||
+          event?.error?.reason ||
+          "Payment failed";
+
+        setGatewayLoading(false);
+        setNotice("");
+        setError(reason);
+        await markGatewayFailure(gatewayOrderId, reason);
+        window.alert(`Payment Failed: ${reason}`);
+      });
+
+      razorpay.open();
+    } catch (startError) {
+      setGatewayLoading(false);
+      setNotice("");
+      setError(startError.message || "Failed to start payment");
+      window.alert(`Payment Failed: ${startError.message || "Failed to start payment"}`);
     }
   };
 
@@ -537,6 +628,7 @@ function Checkout() {
   }
 
   const imageUrl = mediaUrl(product.image || product.images?.[0] || "") || "https://placehold.co/600x400?text=No+Image";
+  const onlinePayAmount = paymentOption === "half" ? expectedHalfAmount : totalPrice;
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-5">
@@ -639,7 +731,7 @@ function Checkout() {
               </div>
             ) : null}
 
-              <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.80)", border: "2px solid rgba(100,160,220,0.22)" }}>
+            <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.80)", border: "2px solid rgba(100,160,220,0.22)" }}>
               <div className="flex items-center gap-3">
                 <input
                   type="radio"
@@ -782,7 +874,7 @@ function Checkout() {
                 <span>₹{subtotal.toFixed(2)}</span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm" style={{ color: "#3a5470" }}>
-                <span>Tax ({Math.round(TAX_RATE * 100)}%)</span>
+                <span>Tax ({Math.round(taxRate * 100)}%)</span>
                 <span>₹{taxAmount.toFixed(2)}</span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm" style={{ color: "#3a5470" }}>
@@ -838,7 +930,7 @@ function Checkout() {
                   onChange={(event) => setPaymentOption(event.target.value)}
                   className="mt-0.5 accent-sky-600"
                 />
-                <span>📱 Pay via UPI (PhonePe / GPay / Paytm / Navi)</span>
+                <span>📱 Full Online Payment (Verified)</span>
               </label>
               <label className="flex items-start gap-2 text-sm text-[#1a2f48]">
                 <input
@@ -849,94 +941,43 @@ function Checkout() {
                   onChange={(event) => setPaymentOption(event.target.value)}
                   className="mt-0.5 accent-sky-600"
                 />
-                <span>⚡ Half payment now, half on delivery</span>
+                <span>⚡ Half Online Payment now, half on delivery (Verified)</span>
               </label>
             </div>
 
-            {isOnlinePayment ? (
-              <div className="space-y-4 rounded-2xl p-4" style={{ border: "2px solid rgba(124,58,237,0.22)", background: "linear-gradient(135deg,rgba(237,233,254,0.60),rgba(219,234,254,0.60))" }}>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold" style={{ color: "#5b21b6" }}>
-                    Pay ₹{onlinePaymentAmount.toFixed(2)} via UPI
-                  </p>
-                  <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "rgba(124,58,237,0.14)", color: "#7c3aed" }}>
-                    {paymentOption === "half" ? "Half Payment" : "Full Payment"}
-                  </span>
-                </div>
-
-                <div>
-                  <p className="mb-2 text-xs font-medium" style={{ color: "#6d28d9" }}>Tap any UPI app to pay now:</p>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {UPI_APPS.map((app) => (
-                      <button
-                        key={app.key}
-                        type="button"
-                        onClick={() => startOnlinePayment(app.key)}
-                        className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-all active:scale-95"
-                        style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(124,58,237,0.24)", color: "#5b21b6", boxShadow: "0 2px 8px rgba(124,58,237,0.10)" }}
-                      >
-                        <span>{app.icon}</span> {app.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center gap-3 sm:flex-row">
-                  <div className="rounded-xl p-2" style={{ background: "white", border: "1.5px solid rgba(124,58,237,0.18)" }}>
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(buildUpiLink("navi", onlinePaymentAmount, paymentReference || "UPI-REFERENCE"))}`}
-                      alt="UPI QR Code"
-                      className="h-40 w-40 rounded-lg"
-                    />
-                  </div>
-
-                  <div className="flex-1 space-y-2">
-                    <p className="text-xs" style={{ color: "#6d28d9" }}>Scan with any UPI app to pay</p>
-                    <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(124,58,237,0.20)" }}>
-                      <p className="text-xs" style={{ color: "#6d28d9" }}>UPI ID:</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="flex-1 text-sm font-bold" style={{ color: "#1a2f48" }}>{ADMIN_UPI_ID}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(ADMIN_UPI_ID).then(() => {
-                              setUpiCopied(true);
-                              setTimeout(() => setUpiCopied(false), 2000);
-                            });
-                          }}
-                          className="rounded-lg px-2 py-1 text-xs font-medium transition-all"
-                          style={{ background: upiCopied ? "rgba(34,197,94,0.15)" : "rgba(124,58,237,0.12)", color: upiCopied ? "#16a34a" : "#7c3aed", border: `1px solid ${upiCopied ? "rgba(34,197,94,0.30)" : "rgba(124,58,237,0.22)"}` }}
-                        >
-                          {upiCopied ? "Copied" : "Copy"}
-                        </button>
-                      </div>
-                      <p className="mt-1 text-xs" style={{ color: "#6d28d9" }}>Name: {ADMIN_UPI_NAME}</p>
-                      <p className="mt-0.5 text-xs font-semibold" style={{ color: "#5b21b6" }}>Amount: ₹{onlinePaymentAmount.toFixed(2)}</p>
-                      <p className="mt-0.5 text-xs" style={{ color: "#6d28d9" }}>Reference: {paymentReference || "-"}</p>
-                    </div>
-                  </div>
-                </div>
-
+            {paymentOption === "cod" ? (
+              <button
+                type="button"
+                onClick={placeCodOrder}
+                disabled={processingPayment || gatewayLoading || Boolean(orderPlaced)}
+                className="w-full btn-neon rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {processingPayment ? "Processing..." : "Place Order"}
+              </button>
+            ) : (
+              <div className="rounded-xl p-4" style={{ border: "1px solid rgba(124,58,237,0.24)", background: "rgba(124,58,237,0.08)" }}>
+                <p className="text-sm font-medium" style={{ color: "#5b21b6" }}>
+                  {paymentOption === "half"
+                    ? `Pay ₹${onlinePayAmount.toFixed(2)} now. Remaining ₹${(totalPrice - onlinePayAmount).toFixed(2)} on delivery.`
+                    : `Pay ₹${onlinePayAmount.toFixed(2)} securely now.`}
+                </p>
+                <p className="mt-1 text-xs" style={{ color: "#6d28d9" }}>
+                  Order is placed automatically only after payment is verified by the gateway.
+                </p>
                 <button
                   type="button"
-                  onClick={markQrPaymentCompleted}
-                  disabled={processingPayment || Boolean(orderPlaced)}
-                  className="btn-ghost w-full rounded-xl py-2.5 text-sm"
+                  onClick={startVerifiedOnlinePayment}
+                  disabled={processingPayment || gatewayLoading || Boolean(orderPlaced)}
+                  className="mt-3 w-full btn-neon rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {processingPayment ? "Processing..." : "Payment Completed - Place Order Now"}
+                  {processingPayment
+                    ? "Verifying Payment..."
+                    : gatewayLoading
+                      ? "Opening Payment..."
+                      : `Pay ₹${onlinePayAmount.toFixed(2)} Securely`}
                 </button>
-
-                {onlinePaymentStarted ? (
-                  <p className="rounded-lg px-3 py-2 text-xs" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.26)", color: "#15803d" }}>
-                    Payment successful. You can now confirm and place the order, then track it in Profile.
-                  </p>
-                ) : (
-                  <p className="rounded-lg px-3 py-2 text-xs" style={{ background: "rgba(124,58,237,0.10)", border: "1px solid rgba(124,58,237,0.20)", color: "#6d28d9" }}>
-                    Complete payment in your UPI app, then tap the confirmation button above.
-                  </p>
-                )}
               </div>
-            ) : null}
+            )}
 
             {orderPlaced ? (
               <div className="rounded-xl p-4 text-sm" style={{ border: "1px solid rgba(2,132,199,0.20)", background: "rgba(2,132,199,0.08)" }}>
@@ -944,17 +985,6 @@ function Checkout() {
                 <p className="mt-1" style={{ color: "#3a5470" }}>Status: {orderPlaced.status}</p>
                 <p className="mt-1" style={{ color: "#3a5470" }}>Expected delivery: {orderPlaced.expectedDelivery}</p>
               </div>
-            ) : null}
-
-            {paymentOption === "cod" ? (
-              <button
-                type="button"
-                onClick={handlePlaceOrder}
-                disabled={processingPayment || Boolean(orderPlaced)}
-                  className="w-full btn-neon rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {processingPayment ? "Processing..." : "Place Order"}
-              </button>
             ) : null}
 
             {orderPlaced ? (
