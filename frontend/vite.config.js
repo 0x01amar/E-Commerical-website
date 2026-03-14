@@ -11,7 +11,7 @@ const __dirname = dirname(__filename)
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "")
 
-  const explicitBackendUrl = env.BACKEND_URL || env.VITE_BACKEND_URL || "";
+  const explicitBackendUrl = env.VITE_BACKEND_URL || "";
   const devBackendUrl = explicitBackendUrl || "http://localhost:5000";
 
   return {

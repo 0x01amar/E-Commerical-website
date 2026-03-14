@@ -227,7 +227,7 @@ const buildPaymentGatewayDiagnosis = ({
   }
 
   if (BACKEND_URL_SOURCE !== "env") {
-    message += " If frontend and backend are deployed separately, set VITE_BACKEND_URL or BACKEND_URL in the frontend environment.";
+    message += " If frontend and backend are deployed separately, set VITE_BACKEND_URL in the frontend environment.";
   }
 
   return message;

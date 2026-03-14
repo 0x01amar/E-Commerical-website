@@ -19,7 +19,7 @@ const uploadsDirectory = path.join(__dirname, "uploads");
 fs.mkdirSync(uploadsDirectory, { recursive: true });
 
 if (!fs.existsSync(envPath)) {
-  console.warn("Missing backend/.env. backend/.env.example is a template only.");
+  console.warn("Missing backend/.env file.");
 }
 
 app.use(cors());

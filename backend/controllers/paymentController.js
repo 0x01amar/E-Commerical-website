@@ -7,7 +7,7 @@ const CheckoutSetting = require("../models/CheckoutSetting");
 
 const DEFAULT_TAX_RATE = 0.08;
 const DEFAULT_SHIPPING_CHARGE = 79;
-const PAYMENT_CONFIG_ERROR_MESSAGE = "Payment gateway is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend/.env (or deployment environment variables). Do not put secrets in .env.example.";
+const PAYMENT_CONFIG_ERROR_MESSAGE = "Payment gateway is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend/.env or deployment environment variables.";
 
 const trimString = (value = "") => String(value || "").trim();
 const normalizeEmail = (email = "") => trimString(email).toLowerCase();

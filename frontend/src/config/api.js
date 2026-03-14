@@ -1,5 +1,4 @@
 const configuredBackendUrl =
-	import.meta.env.BACKEND_URL ||
 	import.meta.env.VITE_BACKEND_URL ||
 	"";
 
