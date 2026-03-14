@@ -132,6 +132,20 @@ const orderSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    paymentGateway: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    paymentApp: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    paymentPaidAt: {
+      type: Date,
+      default: null,
+    },
     paidNowAmount: {
       type: Number,
       required: true,

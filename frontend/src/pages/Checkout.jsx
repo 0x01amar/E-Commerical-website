@@ -8,6 +8,23 @@ const SHIPPING_CHARGE = 79;
 const ADMIN_UPI_ID = "8405966305@axl";
 const ADMIN_UPI_NAME = "Amarnath Kumar";
 
+const UPI_APPS = [
+  { key: "phonepe", label: "PhonePe", icon: "🟣" },
+  { key: "gpay", label: "GPay", icon: "🔵" },
+  { key: "paytm", label: "Paytm", icon: "🔷" },
+  { key: "navi", label: "Navi", icon: "🟢" },
+];
+
+const PAYMENT_APP_LABELS = {
+  phonepe: "PhonePe",
+  gpay: "GPay",
+  paytm: "Paytm",
+  navi: "Navi",
+  qr: "QR",
+};
+
+const generatePaymentReference = () => `UPI-${Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
 const EMPTY_ADDRESS = {
   line1: "",
   landmark: "",
@@ -90,8 +107,10 @@ function Checkout() {
   const [savedAddressText, setSavedAddressText] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [paymentOption, setPaymentOption] = useState("cod");
-  const [paidNowAmountInput, setPaidNowAmountInput] = useState("");
-  const [upiTransactionId, setUpiTransactionId] = useState("");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [paymentPaidAt, setPaymentPaidAt] = useState("");
+  const [paymentApp, setPaymentApp] = useState("");
+  const [onlinePaymentStarted, setOnlinePaymentStarted] = useState(false);
   const [upiCopied, setUpiCopied] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
@@ -200,9 +219,87 @@ function Checkout() {
   const shippingCharge = useMemo(() => (subtotal > 0 ? SHIPPING_CHARGE : 0), [subtotal]);
   const totalPrice = useMemo(() => subtotal + taxAmount + shippingCharge, [shippingCharge, subtotal, taxAmount]);
   const expectedHalfAmount = useMemo(() => Number((totalPrice / 2).toFixed(2)), [totalPrice]);
+  const isOnlinePayment = paymentOption === "upi" || paymentOption === "half";
+  const onlinePaymentAmount = useMemo(() => {
+    return paymentOption === "half" ? expectedHalfAmount : totalPrice;
+  }, [expectedHalfAmount, paymentOption, totalPrice]);
   const deliveryAddressText = useMemo(() => {
     return formatAddress(addressForm);
   }, [addressForm]);
+
+  const buildUpiLink = (appKey, amount, referenceId) => {
+    const params = [
+      `pa=${encodeURIComponent(ADMIN_UPI_ID)}`,
+      `pn=${encodeURIComponent(ADMIN_UPI_NAME)}`,
+      `am=${Number(amount || 0).toFixed(2)}`,
+      "cu=INR",
+      `tn=${encodeURIComponent(product?.name || "Furniture Order")}`,
+      `tr=${encodeURIComponent(referenceId)}`,
+    ].join("&");
+
+    if (appKey === "phonepe") {
+      return `phonepe://pay?${params}`;
+    }
+
+    if (appKey === "gpay") {
+      return `gpay://upi/pay?${params}`;
+    }
+
+    if (appKey === "paytm") {
+      return `paytmmp://pay?${params}`;
+    }
+
+    return `upi://pay?${params}`;
+  };
+
+  const startOnlinePayment = (appKey) => {
+    const nextReference = paymentReference || generatePaymentReference();
+    const paidAtIso = new Date().toISOString();
+
+    setPaymentReference(nextReference);
+    setPaymentPaidAt(paidAtIso);
+    setPaymentApp(appKey);
+    setOnlinePaymentStarted(true);
+    setError("");
+    setNotice("Payment app opened. After completing payment, tap 'Payment Completed - Place Order Now'.");
+
+    window.open(buildUpiLink(appKey, onlinePaymentAmount, nextReference), "_self");
+  };
+
+  const markQrPaymentCompleted = async () => {
+    const nextReference = paymentReference || generatePaymentReference();
+    const paidAtIso = paymentPaidAt || new Date().toISOString();
+    const paymentAppKey = paymentApp || "qr";
+
+    setPaymentReference(nextReference);
+    setPaymentPaidAt(paidAtIso);
+    setPaymentApp(paymentAppKey);
+    setOnlinePaymentStarted(true);
+    setError("");
+    setNotice("Payment successful. Placing your order...");
+
+    await handlePlaceOrder({
+      forceOnlinePayment: true,
+      transactionId: nextReference,
+      paidAtIso,
+      paymentAppKey,
+    });
+  };
+
+  useEffect(() => {
+    if (paymentOption === "cod") {
+      setPaymentReference("");
+      setPaymentPaidAt("");
+      setPaymentApp("");
+      setOnlinePaymentStarted(false);
+      return;
+    }
+
+    setPaymentReference((previous) => previous || generatePaymentReference());
+    setPaymentPaidAt("");
+    setPaymentApp("");
+    setOnlinePaymentStarted(false);
+  }, [paymentOption]);
 
   const moveToAddressStep = () => {
     if (quantity < 1) {
@@ -321,7 +418,7 @@ function Checkout() {
     localStorage.setItem("cartItems", JSON.stringify(nextCart));
   };
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (onlineOverrides = null) => {
     if (!email || !product) {
       setError("Please login first");
       return;
@@ -347,30 +444,28 @@ function Checkout() {
       fullAddress: formatAddress(normalizedAddress),
     };
 
-    let paidNowAmount = 0;
+    const forceOnlinePayment = Boolean(onlineOverrides?.forceOnlinePayment);
 
-    if (paymentOption === "upi") {
-      if (!upiTransactionId.trim()) {
-        setError("Please enter the UPI transaction ID after completing payment");
-        return;
-      }
+    if (isOnlinePayment && !onlinePaymentStarted && !forceOnlinePayment) {
+      setError("Please complete payment first via PhonePe, GPay, Paytm, Navi, or QR.");
+      return;
     }
 
-    if (paymentOption === "half") {
-      const parsed = Number(paidNowAmountInput);
+    const paidNowAmount = paymentOption === "half"
+      ? expectedHalfAmount
+      : paymentOption === "upi"
+        ? totalPrice
+        : 0;
 
-      if (!Number.isFinite(parsed)) {
-        setError("Please enter the half payment amount");
-        return;
-      }
-
-      if (Math.abs(parsed - expectedHalfAmount) > 0.01) {
-        setError(`Half payment must be exactly ₹${expectedHalfAmount.toFixed(2)}`);
-        return;
-      }
-
-      paidNowAmount = Number(parsed.toFixed(2));
-    }
+    const transactionId = isOnlinePayment
+      ? onlineOverrides?.transactionId || paymentReference || generatePaymentReference()
+      : "";
+    const paidAtIso = isOnlinePayment
+      ? onlineOverrides?.paidAtIso || paymentPaidAt || new Date().toISOString()
+      : "";
+    const paymentAppLabel = isOnlinePayment
+      ? PAYMENT_APP_LABELS[onlineOverrides?.paymentAppKey || paymentApp] || "UPI"
+      : "";
 
     try {
       setProcessingPayment(true);
@@ -390,17 +485,19 @@ function Checkout() {
           phone: contactPhone.trim(),
           paymentOption,
           paidNowAmount,
-          upiTransactionId: paymentOption === "upi" ? upiTransactionId.trim() : "",
+          upiTransactionId: transactionId,
+          paymentMeta: isOnlinePayment
+            ? {
+              paymentApp: paymentAppLabel,
+              paidAt: paidAtIso,
+            }
+            : {},
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        if (typeof data?.expectedHalfAmount === "number") {
-          setPaidNowAmountInput(String(data.expectedHalfAmount));
-        }
-
         throw new Error(data?.message || "Failed to place order");
       }
 
@@ -410,8 +507,8 @@ function Checkout() {
         paymentOption === "cod"
           ? "Order placed successfully. Confirmation has been sent by email."
           : paymentOption === "upi"
-            ? "UPI payment order placed! Admin will verify your transaction and confirm shortly."
-            : "Half payment order placed successfully. Confirmation has been sent by email."
+            ? "Payment successful. Order placed successfully. Track your product in Profile."
+            : "Half payment successful. Order placed successfully. Track your product in Profile."
       );
     } catch (placeOrderError) {
       setError(placeOrderError.message || "Failed to place order");
@@ -756,51 +853,49 @@ function Checkout() {
               </label>
             </div>
 
-            {paymentOption === "upi" ? (
+            {isOnlinePayment ? (
               <div className="space-y-4 rounded-2xl p-4" style={{ border: "2px solid rgba(124,58,237,0.22)", background: "linear-gradient(135deg,rgba(237,233,254,0.60),rgba(219,234,254,0.60))" }}>
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold" style={{ color: "#5b21b6" }}>Pay ₹{totalPrice.toFixed(2)} via UPI</p>
-                  <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "rgba(124,58,237,0.14)", color: "#7c3aed" }}>Secure Payment</span>
+                  <p className="text-sm font-semibold" style={{ color: "#5b21b6" }}>
+                    Pay ₹{onlinePaymentAmount.toFixed(2)} via UPI
+                  </p>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "rgba(124,58,237,0.14)", color: "#7c3aed" }}>
+                    {paymentOption === "half" ? "Half Payment" : "Full Payment"}
+                  </span>
                 </div>
 
-                {/* App Buttons */}
                 <div>
-                  <p className="mb-2 text-xs font-medium" style={{ color: "#6d28d9" }}>Tap to pay with your UPI app:</p>
+                  <p className="mb-2 text-xs font-medium" style={{ color: "#6d28d9" }}>Tap any UPI app to pay now:</p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {[
-                      { label: "PhonePe", icon: "🟣", scheme: `phonepe://pay?pa=${ADMIN_UPI_ID}&pn=${encodeURIComponent(ADMIN_UPI_NAME)}&am=${totalPrice.toFixed(2)}&cu=INR&tn=FurnitureOrder` },
-                      { label: "GPay", icon: "🔵", scheme: `gpay://upi/pay?pa=${ADMIN_UPI_ID}&pn=${encodeURIComponent(ADMIN_UPI_NAME)}&am=${totalPrice.toFixed(2)}&cu=INR&tn=FurnitureOrder` },
-                      { label: "Paytm", icon: "🔷", scheme: `paytmmp://pay?pa=${ADMIN_UPI_ID}&pn=${encodeURIComponent(ADMIN_UPI_NAME)}&am=${totalPrice.toFixed(2)}&cu=INR&tn=FurnitureOrder` },
-                      { label: "Navi", icon: "🟢", scheme: `upi://pay?pa=${ADMIN_UPI_ID}&pn=${encodeURIComponent(ADMIN_UPI_NAME)}&am=${totalPrice.toFixed(2)}&cu=INR&tn=FurnitureOrder` },
-                    ].map(({ label, icon, scheme }) => (
+                    {UPI_APPS.map((app) => (
                       <button
-                        key={label}
+                        key={app.key}
                         type="button"
-                        onClick={() => window.open(scheme, "_self")}
+                        onClick={() => startOnlinePayment(app.key)}
                         className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-all active:scale-95"
                         style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(124,58,237,0.24)", color: "#5b21b6", boxShadow: "0 2px 8px rgba(124,58,237,0.10)" }}
                       >
-                        <span>{icon}</span> {label}
+                        <span>{app.icon}</span> {app.label}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* QR Code */}
                 <div className="flex flex-col items-center gap-3 sm:flex-row">
                   <div className="rounded-xl p-2" style={{ background: "white", border: "1.5px solid rgba(124,58,237,0.18)" }}>
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`upi://pay?pa=${ADMIN_UPI_ID}&pn=${ADMIN_UPI_NAME}&am=${totalPrice.toFixed(2)}&cu=INR&tn=FurnitureOrder`)}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(buildUpiLink("navi", onlinePaymentAmount, paymentReference || "UPI-REFERENCE"))}`}
                       alt="UPI QR Code"
                       className="h-40 w-40 rounded-lg"
                     />
                   </div>
+
                   <div className="flex-1 space-y-2">
-                    <p className="text-xs" style={{ color: "#6d28d9" }}>📷 Scan with any UPI app to pay</p>
+                    <p className="text-xs" style={{ color: "#6d28d9" }}>Scan with any UPI app to pay</p>
                     <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(124,58,237,0.20)" }}>
-                      <p className="text-xs" style={{ color: "#6d28d9" }}>Pay to UPI ID:</p>
+                      <p className="text-xs" style={{ color: "#6d28d9" }}>UPI ID:</p>
                       <div className="mt-1 flex items-center gap-2">
-                        <code className="flex-1 text-sm font-bold" style={{ color: "#1a2f48" }}>{ADMIN_UPI_ID}</code>
+                        <span className="flex-1 text-sm font-bold" style={{ color: "#1a2f48" }}>{ADMIN_UPI_ID}</span>
                         <button
                           type="button"
                           onClick={() => {
@@ -812,48 +907,34 @@ function Checkout() {
                           className="rounded-lg px-2 py-1 text-xs font-medium transition-all"
                           style={{ background: upiCopied ? "rgba(34,197,94,0.15)" : "rgba(124,58,237,0.12)", color: upiCopied ? "#16a34a" : "#7c3aed", border: `1px solid ${upiCopied ? "rgba(34,197,94,0.30)" : "rgba(124,58,237,0.22)"}` }}
                         >
-                          {upiCopied ? "✓ Copied" : "Copy"}
+                          {upiCopied ? "Copied" : "Copy"}
                         </button>
                       </div>
                       <p className="mt-1 text-xs" style={{ color: "#6d28d9" }}>Name: {ADMIN_UPI_NAME}</p>
-                      <p className="mt-0.5 text-xs font-semibold" style={{ color: "#5b21b6" }}>Amount: ₹{totalPrice.toFixed(2)}</p>
+                      <p className="mt-0.5 text-xs font-semibold" style={{ color: "#5b21b6" }}>Amount: ₹{onlinePaymentAmount.toFixed(2)}</p>
+                      <p className="mt-0.5 text-xs" style={{ color: "#6d28d9" }}>Reference: {paymentReference || "-"}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Transaction ID */}
-                <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(124,58,237,0.22)" }}>
-                  <label className="mb-1 block text-sm font-medium" style={{ color: "#5b21b6" }}>
-                    ✅ After payment, enter your UPI Transaction ID / Reference No.
-                  </label>
-                  <input
-                    type="text"
-                    value={upiTransactionId}
-                    onChange={(e) => setUpiTransactionId(e.target.value)}
-                    placeholder="e.g. 419876543210 or T2412141234567"
-                    className="input-dark w-full"
-                  />
-                  <p className="mt-1 text-xs" style={{ color: "#7c3aed" }}>
-                    Find this in your payment app under &#34;Transaction History&#34;
-                  </p>
-                </div>
-              </div>
-            ) : null}
+                <button
+                  type="button"
+                  onClick={markQrPaymentCompleted}
+                  disabled={processingPayment || Boolean(orderPlaced)}
+                  className="btn-ghost w-full rounded-xl py-2.5 text-sm"
+                >
+                  {processingPayment ? "Processing..." : "Payment Completed - Place Order Now"}
+                </button>
 
-            {paymentOption === "half" ? (
-              <div className="rounded-xl p-4" style={{ border: "1px solid rgba(245,158,11,0.24)", background: "rgba(245,158,11,0.08)" }}>
-                <p className="text-sm font-medium text-amber-700">
-                  Pay exactly ₹{expectedHalfAmount.toFixed(2)} now (half of total amount)
-                </p>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={paidNowAmountInput}
-                  onChange={(event) => setPaidNowAmountInput(event.target.value)}
-                  placeholder={`Enter ₹${expectedHalfAmount.toFixed(2)}`}
-                  className="input-dark mt-3 w-full"
-                />
+                {onlinePaymentStarted ? (
+                  <p className="rounded-lg px-3 py-2 text-xs" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.26)", color: "#15803d" }}>
+                    Payment successful. You can now confirm and place the order, then track it in Profile.
+                  </p>
+                ) : (
+                  <p className="rounded-lg px-3 py-2 text-xs" style={{ background: "rgba(124,58,237,0.10)", border: "1px solid rgba(124,58,237,0.20)", color: "#6d28d9" }}>
+                    Complete payment in your UPI app, then tap the confirmation button above.
+                  </p>
+                )}
               </div>
             ) : null}
 
@@ -865,20 +946,16 @@ function Checkout() {
               </div>
             ) : null}
 
-            <button
-              type="button"
-              onClick={handlePlaceOrder}
-              disabled={processingPayment || Boolean(orderPlaced)}
-                className="w-full btn-neon rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {processingPayment
-                ? "Processing..."
-                : paymentOption === "upi"
-                  ? "✅ Confirm UPI Payment & Place Order"
-                  : paymentOption === "half"
-                    ? "Pay Now & Place Order"
-                    : "Place Order"}
-            </button>
+            {paymentOption === "cod" ? (
+              <button
+                type="button"
+                onClick={handlePlaceOrder}
+                disabled={processingPayment || Boolean(orderPlaced)}
+                  className="w-full btn-neon rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {processingPayment ? "Processing..." : "Place Order"}
+              </button>
+            ) : null}
 
             {orderPlaced ? (
               <div className="flex flex-col gap-2 sm:flex-row">

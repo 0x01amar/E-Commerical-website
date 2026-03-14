@@ -8,7 +8,6 @@ const router = express.Router();
 
 const TAX_RATE = 0.08;
 const SHIPPING_CHARGE = 79;
-const HALF_PAYMENT_TOLERANCE = 0.01;
 
 const ORDER_STATUSES = [
   "Order Placed",
@@ -106,7 +105,21 @@ const validateAddress = (address = {}) => {
   return "";
 };
 
+const paymentMetaToObject = (paymentMeta = {}) => {
+  const paymentApp = trimString(paymentMeta?.paymentApp || "");
+  const rawPaidAt = paymentMeta?.paidAt;
+  const parsedPaidAt = rawPaidAt ? new Date(rawPaidAt) : new Date();
+
+  return {
+    paymentApp,
+    paymentPaidAt: Number.isNaN(parsedPaidAt.getTime()) ? new Date() : parsedPaidAt,
+  };
+};
+
 const formatEmailText = ({ order, paymentLabel, paidNowAmount, remainingAmount }) => {
+  const isOnlinePayment = order.paymentGateway === "upi" || ["upi", "half"].includes(order.paymentOption);
+  const paidAtDate = order.paymentPaidAt ? new Date(order.paymentPaidAt) : null;
+
   const lines = [
     `Order ID: ${order.orderCode}`,
     `Customer: ${order.userName}`,
@@ -127,8 +140,19 @@ const formatEmailText = ({ order, paymentLabel, paidNowAmount, remainingAmount }
     `Remaining: ₹${remainingAmount.toFixed(2)}`,
   ];
 
-  if (order.paymentOption === "upi" && order.upiTransactionId) {
-    lines.push(`UPI Transaction ID: ${order.upiTransactionId}`);
+  if (isOnlinePayment) {
+    if (order.upiTransactionId) {
+      lines.push(`Transaction ID: ${order.upiTransactionId}`);
+    }
+
+    if (order.paymentApp) {
+      lines.push(`Payment App: ${order.paymentApp}`);
+    }
+
+    if (paidAtDate && !Number.isNaN(paidAtDate.getTime())) {
+      lines.push(`Payment Date: ${paidAtDate.toISOString().slice(0, 10)}`);
+      lines.push(`Payment Time: ${paidAtDate.toISOString().slice(11, 19)} UTC`);
+    }
   }
 
   lines.push("");
@@ -161,7 +185,11 @@ const sendOrderEmails = async (order) => {
 
   const isHalfPayment = order.paymentOption === "half";
   const isUpiPayment = order.paymentOption === "upi";
-  const paymentLabel = isHalfPayment ? "Half Payment (UPI/Online)" : isUpiPayment ? "Full UPI Payment" : "Cash on Delivery";
+  const paymentLabel = isHalfPayment
+    ? "Half Payment (UPI)"
+    : isUpiPayment
+      ? "Full Payment (UPI)"
+      : "Cash on Delivery";
   const paidNowAmount = asTwoDecimals(order.paidNowAmount);
   const remainingAmount = asTwoDecimals(order.totalAmount - paidNowAmount);
   const emailText = formatEmailText({
@@ -198,8 +226,12 @@ router.post("/", async (req, res) => {
     const productId = trimString(req.body?.productId);
     const quantity = Number(req.body?.quantity || 1);
     const paymentOption = trimString(req.body?.paymentOption || "cod").toLowerCase();
-    const paidNowAmountRaw = Number(req.body?.paidNowAmount || 0);
     const upiTransactionId = trimString(req.body?.upiTransactionId || "");
+    const paymentMeta = typeof req.body?.paymentMeta === "object" && req.body?.paymentMeta
+      ? req.body.paymentMeta
+      : {};
+    const isOnlinePayment = paymentOption === "upi" || paymentOption === "half";
+    const { paymentApp, paymentPaidAt } = paymentMetaToObject(paymentMeta);
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
@@ -217,8 +249,8 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Payment option must be cod, half, or upi" });
     }
 
-    if (paymentOption === "upi" && !upiTransactionId) {
-      return res.status(400).json({ message: "UPI transaction ID is required for UPI payment" });
+    if (isOnlinePayment && !upiTransactionId) {
+      return res.status(400).json({ message: "Payment reference is missing. Please complete payment again." });
     }
 
     const user = await User.findOne({ email, isVerified: true });
@@ -253,19 +285,11 @@ router.post("/", async (req, res) => {
     let paymentStatus = "pending";
 
     if (paymentOption === "half") {
-      paidNowAmount = asTwoDecimals(paidNowAmountRaw);
-
-      if (Math.abs(paidNowAmount - pricing.exactHalf) > HALF_PAYMENT_TOLERANCE) {
-        return res.status(400).json({
-          message: `For half payment, amount must be exactly ₹${pricing.exactHalf.toFixed(2)}`,
-          expectedHalfAmount: pricing.exactHalf,
-        });
-      }
-
+      paidNowAmount = pricing.exactHalf;
       paymentStatus = "partial";
     } else if (paymentOption === "upi") {
       paidNowAmount = pricing.totalAmount;
-      paymentStatus = "upi_pending_verification";
+      paymentStatus = "paid";
     }
 
     const order = await Order.create({
@@ -284,7 +308,10 @@ router.post("/", async (req, res) => {
       shippingCharge: pricing.shippingCharge,
       totalAmount: pricing.totalAmount,
       paymentOption,
-      upiTransactionId: paymentOption === "upi" ? upiTransactionId : "",
+      upiTransactionId: isOnlinePayment ? upiTransactionId : "",
+      paymentGateway: isOnlinePayment ? "upi" : "cod",
+      paymentApp: isOnlinePayment ? paymentApp : "",
+      paymentPaidAt: isOnlinePayment ? paymentPaidAt : null,
       paidNowAmount,
       paymentStatus,
       address: normalizedAddress,

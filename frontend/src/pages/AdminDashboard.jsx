@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import OrderTimeline, { ORDER_STATUS_STEPS } from "../components/OrderTimeline";
 import ProductCard from "../components/ProductCard";
 import StarRating from "../components/StarRating";
-import { apiUrl, mediaUrl } from "../config/api";
+import { BACKEND_URL, apiUrl, mediaUrl } from "../config/api";
 
 const defaultProductForm = {
   name: "",
@@ -37,6 +37,30 @@ const sortSections = (items = []) => {
 
 const uniqueImages = (images = []) => {
   return Array.from(new Set(images.filter(Boolean).map((imagePath) => String(imagePath).trim())));
+};
+
+const normalizeApiPath = (path = "") => (path.startsWith("/") ? path : `/${path}`);
+
+const directApiUrl = (path = "") => {
+  const normalizedPath = normalizeApiPath(path);
+  return `${BACKEND_URL}/api${normalizedPath}`;
+};
+
+const fetchApiWithFallback = async (path, options = {}) => {
+  const normalizedPath = normalizeApiPath(path);
+  const proxiedUrl = apiUrl(normalizedPath);
+
+  try {
+    return await fetch(proxiedUrl, options);
+  } catch (primaryError) {
+    const fallbackUrl = directApiUrl(normalizedPath);
+
+    if (fallbackUrl === proxiedUrl) {
+      throw primaryError;
+    }
+
+    return fetch(fallbackUrl, options);
+  }
 };
 
 function AdminDashboard() {
@@ -366,9 +390,9 @@ function AdminDashboard() {
       setSaving(true);
       setError("");
 
-      const url = editingId
-        ? apiUrl(`/products/${editingId}`)
-        : apiUrl("/products");
+      const productApiPath = editingId
+        ? `/products/${editingId}`
+        : "/products";
 
       const method = editingId ? "PUT" : "POST";
 
@@ -401,7 +425,7 @@ function AdminDashboard() {
         }
       }
 
-      const response = await fetch(url, {
+      const response = await fetchApiWithFallback(productApiPath, {
         method,
         headers: {
           "x-admin-key": adminKey,
@@ -409,7 +433,13 @@ function AdminDashboard() {
         body: formData,
       });
 
-      const data = await response.json();
+      let data = {};
+
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to save product");
@@ -436,7 +466,15 @@ function AdminDashboard() {
 
       resetForm();
     } catch (saveError) {
-      setError(saveError.message || "Failed to save product");
+      const isNetworkError =
+        saveError instanceof TypeError &&
+        /failed to fetch/i.test(String(saveError.message || ""));
+
+      setError(
+        isNetworkError
+          ? "Failed to connect to backend while saving product. Please check backend server/API URL and try again."
+          : saveError.message || "Failed to save product"
+      );
     } finally {
       setSaving(false);
     }
@@ -906,6 +944,9 @@ function AdminDashboard() {
               {orders.map((order) => {
                 const selectedStatus = statusDrafts[order._id] || order.status;
                 const imagePath = order.productImage || "";
+                const isOnlinePayment = order.paymentOption === "upi" || order.paymentOption === "half";
+                const paymentDate = order.paymentPaidAt ? new Date(order.paymentPaidAt) : null;
+                const hasPaymentDate = paymentDate && !Number.isNaN(paymentDate.getTime());
 
                 return (
                     <div key={order._id} className="rounded-xl p-4 transition" style={{ border: "1px solid rgba(100,160,220,0.22)", background: "rgba(255,255,255,0.78)" }}>
@@ -925,17 +966,29 @@ function AdminDashboard() {
                             <p className="text-xs text-[#3a5470]">Order ID: <span className="font-medium">{order.orderCode}</span></p>
                             <p className="text-xs text-[#3a5470]">Customer: {order.userName} • {order.userEmail}</p>
                             <p className="text-xs text-[#3a5470]">Qty: {order.quantity} • Total: ₹{Number(order.totalAmount || 0).toFixed(2)}</p>
-                            {order.paymentOption === "upi" ? (
-                              <div className="mt-1 rounded-lg px-2 py-1 text-xs" style={{ background: "rgba(124,58,237,0.10)", border: "1px solid rgba(124,58,237,0.22)" }}>
-                                <span className="font-medium" style={{ color: "#7c3aed" }}>📱 UPI Payment</span>
-                                {order.upiTransactionId ? (
-                                  <span style={{ color: "#5b21b6" }}> • Txn: <span className="font-semibold">{order.upiTransactionId}</span></span>
-                                ) : (
-                                  <span className="ml-1 text-rose-600">⚠ No Txn ID</span>
-                                )}
+                            {isOnlinePayment ? (
+                              <div className="mt-1 space-y-1 rounded-lg px-2 py-2 text-xs" style={{ background: "rgba(124,58,237,0.10)", border: "1px solid rgba(124,58,237,0.22)" }}>
+                                <p className="font-medium" style={{ color: "#7c3aed" }}>
+                                  📱 {order.paymentOption === "half" ? "Half UPI Payment" : "Full UPI Payment"}
+                                </p>
+                                <p style={{ color: "#5b21b6" }}>
+                                  Txn ID: <span className="font-semibold">{order.upiTransactionId || "-"}</span>
+                                </p>
+                                <p style={{ color: "#5b21b6" }}>
+                                  Paid Amount: <span className="font-semibold">₹{Number(order.paidNowAmount || 0).toFixed(2)}</span>
+                                </p>
+                                <p style={{ color: "#5b21b6" }}>
+                                  App: <span className="font-semibold">{order.paymentApp || "UPI"}</span>
+                                </p>
+                                <p style={{ color: "#5b21b6" }}>
+                                  Date: <span className="font-semibold">{hasPaymentDate ? paymentDate.toLocaleDateString() : "-"}</span>
+                                  {" • "}
+                                  Time: <span className="font-semibold">{hasPaymentDate ? paymentDate.toLocaleTimeString() : "-"}</span>
+                                </p>
+                                <p style={{ color: "#5b21b6" }}>
+                                  Payment Status: <span className="font-semibold">{order.paymentStatus || "-"}</span>
+                                </p>
                               </div>
-                            ) : order.paymentOption === "half" ? (
-                              <p className="mt-1 text-xs" style={{ color: "#b45309" }}>⚡ Half Paid: ₹{Number(order.paidNowAmount || 0).toFixed(2)}</p>
                             ) : (
                               <p className="mt-1 text-xs" style={{ color: "#059669" }}>💵 Cash on Delivery</p>
                             )}
