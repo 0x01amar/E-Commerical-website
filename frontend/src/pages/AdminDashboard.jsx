@@ -391,10 +391,10 @@ function AdminDashboard() {
       setError("");
 
       const productApiPath = editingId
-        ? `/products/${editingId}`
+        ? `/products/${editingId}/update`
         : "/products";
 
-      const method = editingId ? "PUT" : "POST";
+      const method = "POST";
 
       const formData = new FormData();
 

@@ -691,10 +691,7 @@ router.get("/:id", async (req, res) => {
 
 /* UPDATE PRODUCT */
 
-router.put("/:id", requireAdminKey, upload.fields([
-  { name: "image", maxCount: 1 },
-  { name: "images", maxCount: 25 },
-]), async (req, res) => {
+const updateProductHandler = async (req, res) => {
   let uploadedImages = [];
 
   try {
@@ -802,7 +799,15 @@ router.put("/:id", requireAdminKey, upload.fields([
     await Promise.allSettled(uploadedImages.map((imagePath) => deleteGridFSFileByPath(imagePath)));
     res.status(500).json({ message: "Failed to update product" });
   }
-});
+};
+
+const productUpdateUpload = upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "images", maxCount: 25 },
+]);
+
+router.put("/:id", requireAdminKey, productUpdateUpload, updateProductHandler);
+router.post("/:id/update", requireAdminKey, productUpdateUpload, updateProductHandler);
 
 
 /* DELETE PRODUCT */
