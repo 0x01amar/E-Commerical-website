@@ -1,7 +1,7 @@
-require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const { ObjectId } = require("mongodb");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -68,6 +68,10 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api", (_req, res) => {
   res.status(404).json({ message: "API route not found" });
 });
+
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  console.warn("Razorpay keys are missing. Online payment endpoints will return configuration errors.");
+}
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {

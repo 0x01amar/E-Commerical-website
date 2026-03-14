@@ -259,7 +259,9 @@ const createRazorpayOrder = async (req, res) => {
     const razorpay = getRazorpayClient();
 
     if (!razorpay) {
-      return res.status(503).json({ message: "Payment gateway is not configured" });
+      return res.status(503).json({
+        message: "Payment gateway is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend environment.",
+      });
     }
 
     const receipt = `rcpt_${Date.now()}_${Math.floor(Math.random() * 900 + 100)}`;
@@ -373,7 +375,9 @@ const verifyRazorpayPayment = async (req, res) => {
     const razorpaySecret = trimString(process.env.RAZORPAY_KEY_SECRET || "");
 
     if (!razorpaySecret) {
-      return res.status(503).json({ message: "Payment gateway is not configured" });
+      return res.status(503).json({
+        message: "Payment gateway is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend environment.",
+      });
     }
 
     const generatedSignature = crypto
@@ -388,7 +392,9 @@ const verifyRazorpayPayment = async (req, res) => {
     const razorpay = getRazorpayClient();
 
     if (!razorpay) {
-      return res.status(503).json({ message: "Payment gateway is not configured" });
+      return res.status(503).json({
+        message: "Payment gateway is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend environment.",
+      });
     }
 
     const payment = await razorpay.payments.fetch(razorpayPaymentId);
