@@ -83,6 +83,10 @@ const parseApiResponse = async (response) => {
   }
 };
 
+const wait = (ms) => new Promise((resolve) => {
+  setTimeout(resolve, ms);
+});
+
 function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [sections, setSections] = useState([]);
@@ -451,19 +455,55 @@ function AdminDashboard() {
 
       for (let index = 0; index < requestCandidates.length; index += 1) {
         const candidate = requestCandidates[index];
-        const response = await fetchApiWithFallback(candidate.path, {
-          method: candidate.method,
-          headers: {
-            "x-admin-key": adminKey,
-          },
-          body: formData,
-        });
+        let response = null;
 
-        data = await parseApiResponse(response);
+        for (let attempt = 1; attempt <= 3; attempt += 1) {
+          try {
+            response = await fetchApiWithFallback(candidate.path, {
+              method: candidate.method,
+              headers: {
+                "x-admin-key": adminKey,
+              },
+              body: formData,
+            });
+          } catch (requestError) {
+            const isNetworkError =
+              requestError instanceof TypeError &&
+              /failed to fetch/i.test(String(requestError.message || ""));
 
-        if (response.ok) {
-          saveSucceeded = true;
+            if (isNetworkError && attempt < 3) {
+              await wait(1200 * attempt);
+              continue;
+            }
+
+            throw requestError;
+          }
+
+          data = await parseApiResponse(response);
+
+          if (response.ok) {
+            saveSucceeded = true;
+            break;
+          }
+
+          const responseMessage = String(data?.message || "");
+          const isTransientGatewayError = [502, 503, 504].includes(response.status)
+            || /hibernate|gateway|service unavailable|temporarily unavailable/i.test(responseMessage);
+
+          if (isTransientGatewayError && attempt < 3) {
+            await wait(1200 * attempt);
+            continue;
+          }
+
           break;
+        }
+
+        if (saveSucceeded) {
+          break;
+        }
+
+        if (!response) {
+          throw new Error("Failed to save product");
         }
 
         const responseMessage = String(data?.message || "");

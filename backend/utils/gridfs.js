@@ -36,8 +36,15 @@ const uploadBufferToGridFS = ({ buffer, filename, contentType }) => {
     });
 
     uploadStream.on("error", reject);
-    uploadStream.on("finish", (file) => {
-      resolve(`/uploads/gridfs/${file._id.toString()}/${encodeURIComponent(file.filename || safeFilename)}`);
+    uploadStream.on("finish", () => {
+      const fileId = uploadStream.id;
+
+      if (!fileId) {
+        reject(new Error("GridFS upload completed without file id"));
+        return;
+      }
+
+      resolve(`/uploads/gridfs/${String(fileId)}/${encodeURIComponent(safeFilename)}`);
     });
 
     uploadStream.end(buffer);
