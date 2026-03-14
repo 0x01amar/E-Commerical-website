@@ -648,6 +648,10 @@ function Checkout() {
       }
 
       if (!response.ok) {
+        if (isPaymentGatewayConfigMessage(data?.message)) {
+          throw new Error(await diagnosePaymentGatewayConfig(verifyResult?.url));
+        }
+
         throw new Error(data?.message || "Payment verification failed");
       }
 
