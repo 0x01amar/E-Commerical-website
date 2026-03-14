@@ -124,8 +124,13 @@ const orderSchema = new mongoose.Schema(
     },
     paymentOption: {
       type: String,
-      enum: ["cod", "half"],
+      enum: ["cod", "half", "upi"],
       required: true,
+    },
+    upiTransactionId: {
+      type: String,
+      default: "",
+      trim: true,
     },
     paidNowAmount: {
       type: Number,
@@ -134,7 +139,7 @@ const orderSchema = new mongoose.Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "partial", "paid"],
+      enum: ["pending", "partial", "paid", "upi_pending_verification"],
       default: "pending",
     },
     status: {

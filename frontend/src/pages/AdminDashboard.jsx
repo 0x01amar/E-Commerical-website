@@ -925,6 +925,20 @@ function AdminDashboard() {
                             <p className="text-xs text-[#3a5470]">Order ID: <span className="font-medium">{order.orderCode}</span></p>
                             <p className="text-xs text-[#3a5470]">Customer: {order.userName} • {order.userEmail}</p>
                             <p className="text-xs text-[#3a5470]">Qty: {order.quantity} • Total: ₹{Number(order.totalAmount || 0).toFixed(2)}</p>
+                            {order.paymentOption === "upi" ? (
+                              <div className="mt-1 rounded-lg px-2 py-1 text-xs" style={{ background: "rgba(124,58,237,0.10)", border: "1px solid rgba(124,58,237,0.22)" }}>
+                                <span className="font-medium" style={{ color: "#7c3aed" }}>📱 UPI Payment</span>
+                                {order.upiTransactionId ? (
+                                  <span style={{ color: "#5b21b6" }}> • Txn: <span className="font-semibold">{order.upiTransactionId}</span></span>
+                                ) : (
+                                  <span className="ml-1 text-rose-600">⚠ No Txn ID</span>
+                                )}
+                              </div>
+                            ) : order.paymentOption === "half" ? (
+                              <p className="mt-1 text-xs" style={{ color: "#b45309" }}>⚡ Half Paid: ₹{Number(order.paidNowAmount || 0).toFixed(2)}</p>
+                            ) : (
+                              <p className="mt-1 text-xs" style={{ color: "#059669" }}>💵 Cash on Delivery</p>
+                            )}
                           <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                               <div className="rounded px-2 py-1" style={{ background: "rgba(37,99,235,0.10)", border: "1px solid rgba(37,99,235,0.20)" }}><p className="text-blue-600">📅 Placed: {new Date(order.createdAt).toLocaleDateString()}</p></div>
                               <div className="rounded px-2 py-1" style={{ background: "rgba(13,148,136,0.10)", border: "1px solid rgba(13,148,136,0.22)" }}><p className="text-teal-700">🚚 Delivery: {order.expectedDelivery}</p></div>

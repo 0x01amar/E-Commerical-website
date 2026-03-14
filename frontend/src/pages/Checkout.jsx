@@ -5,6 +5,9 @@ import { apiUrl, mediaUrl } from "../config/api";
 const TAX_RATE = 0.08;
 const SHIPPING_CHARGE = 79;
 
+const ADMIN_UPI_ID = "8405966305@axl";
+const ADMIN_UPI_NAME = "Amarnath Kumar";
+
 const EMPTY_ADDRESS = {
   line1: "",
   landmark: "",
@@ -88,6 +91,8 @@ function Checkout() {
   const [contactPhone, setContactPhone] = useState("");
   const [paymentOption, setPaymentOption] = useState("cod");
   const [paidNowAmountInput, setPaidNowAmountInput] = useState("");
+  const [upiTransactionId, setUpiTransactionId] = useState("");
+  const [upiCopied, setUpiCopied] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [cartSynced, setCartSynced] = useState(false);
@@ -344,6 +349,13 @@ function Checkout() {
 
     let paidNowAmount = 0;
 
+    if (paymentOption === "upi") {
+      if (!upiTransactionId.trim()) {
+        setError("Please enter the UPI transaction ID after completing payment");
+        return;
+      }
+    }
+
     if (paymentOption === "half") {
       const parsed = Number(paidNowAmountInput);
 
@@ -378,6 +390,7 @@ function Checkout() {
           phone: contactPhone.trim(),
           paymentOption,
           paidNowAmount,
+          upiTransactionId: paymentOption === "upi" ? upiTransactionId.trim() : "",
         }),
       });
 
@@ -396,7 +409,9 @@ function Checkout() {
       setNotice(
         paymentOption === "cod"
           ? "Order placed successfully. Confirmation has been sent by email."
-          : "Half payment order placed successfully. Confirmation has been sent by email."
+          : paymentOption === "upi"
+            ? "UPI payment order placed! Admin will verify your transaction and confirm shortly."
+            : "Half payment order placed successfully. Confirmation has been sent by email."
       );
     } catch (placeOrderError) {
       setError(placeOrderError.message || "Failed to place order");
@@ -705,6 +720,7 @@ function Checkout() {
         {step === 4 ? (
           <div className="space-y-4">
             <div className="space-y-2 rounded-xl p-4" style={{ border: "1px solid rgba(100,160,220,0.20)", background: "rgba(255,255,255,0.78)" }}>
+              <p className="mb-2 text-sm font-semibold" style={{ color: "#1a2f48" }}>Choose Payment Method</p>
               <label className="flex items-start gap-2 text-sm text-[#1a2f48]">
                 <input
                   type="radio"
@@ -714,7 +730,18 @@ function Checkout() {
                   onChange={(event) => setPaymentOption(event.target.value)}
                   className="mt-0.5 accent-sky-600"
                 />
-                <span>Cash on Delivery</span>
+                <span>💵 Cash on Delivery</span>
+              </label>
+              <label className="flex items-start gap-2 text-sm text-[#1a2f48]">
+                <input
+                  type="radio"
+                  name="paymentOption"
+                  value="upi"
+                  checked={paymentOption === "upi"}
+                  onChange={(event) => setPaymentOption(event.target.value)}
+                  className="mt-0.5 accent-sky-600"
+                />
+                <span>📱 Pay via UPI (PhonePe / GPay / Paytm / Navi)</span>
               </label>
               <label className="flex items-start gap-2 text-sm text-[#1a2f48]">
                 <input
@@ -725,9 +752,93 @@ function Checkout() {
                   onChange={(event) => setPaymentOption(event.target.value)}
                   className="mt-0.5 accent-sky-600"
                 />
-                <span>Half payment now and half after delivery</span>
+                <span>⚡ Half payment now, half on delivery</span>
               </label>
             </div>
+
+            {paymentOption === "upi" ? (
+              <div className="space-y-4 rounded-2xl p-4" style={{ border: "2px solid rgba(124,58,237,0.22)", background: "linear-gradient(135deg,rgba(237,233,254,0.60),rgba(219,234,254,0.60))" }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold" style={{ color: "#5b21b6" }}>Pay ₹{totalPrice.toFixed(2)} via UPI</p>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "rgba(124,58,237,0.14)", color: "#7c3aed" }}>Secure Payment</span>
+                </div>
+
+                {/* App Buttons */}
+                <div>
+                  <p className="mb-2 text-xs font-medium" style={{ color: "#6d28d9" }}>Tap to pay with your UPI app:</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[
+                      { label: "PhonePe", icon: "🟣", scheme: `phonepe://pay?pa=${ADMIN_UPI_ID}&pn=${encodeURIComponent(ADMIN_UPI_NAME)}&am=${totalPrice.toFixed(2)}&cu=INR&tn=FurnitureOrder` },
+                      { label: "GPay", icon: "🔵", scheme: `gpay://upi/pay?pa=${ADMIN_UPI_ID}&pn=${encodeURIComponent(ADMIN_UPI_NAME)}&am=${totalPrice.toFixed(2)}&cu=INR&tn=FurnitureOrder` },
+                      { label: "Paytm", icon: "🔷", scheme: `paytmmp://pay?pa=${ADMIN_UPI_ID}&pn=${encodeURIComponent(ADMIN_UPI_NAME)}&am=${totalPrice.toFixed(2)}&cu=INR&tn=FurnitureOrder` },
+                      { label: "Navi", icon: "🟢", scheme: `upi://pay?pa=${ADMIN_UPI_ID}&pn=${encodeURIComponent(ADMIN_UPI_NAME)}&am=${totalPrice.toFixed(2)}&cu=INR&tn=FurnitureOrder` },
+                    ].map(({ label, icon, scheme }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => window.open(scheme, "_self")}
+                        className="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-all active:scale-95"
+                        style={{ background: "rgba(255,255,255,0.92)", border: "1.5px solid rgba(124,58,237,0.24)", color: "#5b21b6", boxShadow: "0 2px 8px rgba(124,58,237,0.10)" }}
+                      >
+                        <span>{icon}</span> {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* QR Code */}
+                <div className="flex flex-col items-center gap-3 sm:flex-row">
+                  <div className="rounded-xl p-2" style={{ background: "white", border: "1.5px solid rgba(124,58,237,0.18)" }}>
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`upi://pay?pa=${ADMIN_UPI_ID}&pn=${ADMIN_UPI_NAME}&am=${totalPrice.toFixed(2)}&cu=INR&tn=FurnitureOrder`)}`}
+                      alt="UPI QR Code"
+                      className="h-40 w-40 rounded-lg"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-xs" style={{ color: "#6d28d9" }}>📷 Scan with any UPI app to pay</p>
+                    <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(124,58,237,0.20)" }}>
+                      <p className="text-xs" style={{ color: "#6d28d9" }}>Pay to UPI ID:</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <code className="flex-1 text-sm font-bold" style={{ color: "#1a2f48" }}>{ADMIN_UPI_ID}</code>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(ADMIN_UPI_ID).then(() => {
+                              setUpiCopied(true);
+                              setTimeout(() => setUpiCopied(false), 2000);
+                            });
+                          }}
+                          className="rounded-lg px-2 py-1 text-xs font-medium transition-all"
+                          style={{ background: upiCopied ? "rgba(34,197,94,0.15)" : "rgba(124,58,237,0.12)", color: upiCopied ? "#16a34a" : "#7c3aed", border: `1px solid ${upiCopied ? "rgba(34,197,94,0.30)" : "rgba(124,58,237,0.22)"}` }}
+                        >
+                          {upiCopied ? "✓ Copied" : "Copy"}
+                        </button>
+                      </div>
+                      <p className="mt-1 text-xs" style={{ color: "#6d28d9" }}>Name: {ADMIN_UPI_NAME}</p>
+                      <p className="mt-0.5 text-xs font-semibold" style={{ color: "#5b21b6" }}>Amount: ₹{totalPrice.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Transaction ID */}
+                <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(124,58,237,0.22)" }}>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: "#5b21b6" }}>
+                    ✅ After payment, enter your UPI Transaction ID / Reference No.
+                  </label>
+                  <input
+                    type="text"
+                    value={upiTransactionId}
+                    onChange={(e) => setUpiTransactionId(e.target.value)}
+                    placeholder="e.g. 419876543210 or T2412141234567"
+                    className="input-dark w-full"
+                  />
+                  <p className="mt-1 text-xs" style={{ color: "#7c3aed" }}>
+                    Find this in your payment app under &#34;Transaction History&#34;
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
             {paymentOption === "half" ? (
               <div className="rounded-xl p-4" style={{ border: "1px solid rgba(245,158,11,0.24)", background: "rgba(245,158,11,0.08)" }}>
@@ -762,9 +873,11 @@ function Checkout() {
             >
               {processingPayment
                 ? "Processing..."
-                : paymentOption === "half"
-                  ? "Pay Now & Place Order"
-                  : "Place Order"}
+                : paymentOption === "upi"
+                  ? "✅ Confirm UPI Payment & Place Order"
+                  : paymentOption === "half"
+                    ? "Pay Now & Place Order"
+                    : "Place Order"}
             </button>
 
             {orderPlaced ? (

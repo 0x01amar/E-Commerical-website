@@ -107,7 +107,7 @@ const validateAddress = (address = {}) => {
 };
 
 const formatEmailText = ({ order, paymentLabel, paidNowAmount, remainingAmount }) => {
-  return [
+  const lines = [
     `Order ID: ${order.orderCode}`,
     `Customer: ${order.userName}`,
     `Email: ${order.userEmail}`,
@@ -125,11 +125,18 @@ const formatEmailText = ({ order, paymentLabel, paidNowAmount, remainingAmount }
     `Payment Option: ${paymentLabel}`,
     `Paid Now: ₹${paidNowAmount.toFixed(2)}`,
     `Remaining: ₹${remainingAmount.toFixed(2)}`,
-    "",
-    `Delivery Address: ${order.address.fullAddress}`,
-    `Expected Delivery: ${order.expectedDelivery}`,
-    `Current Status: ${order.status}`,
-  ].join("\n");
+  ];
+
+  if (order.paymentOption === "upi" && order.upiTransactionId) {
+    lines.push(`UPI Transaction ID: ${order.upiTransactionId}`);
+  }
+
+  lines.push("");
+  lines.push(`Delivery Address: ${order.address.fullAddress}`);
+  lines.push(`Expected Delivery: ${order.expectedDelivery}`);
+  lines.push(`Current Status: ${order.status}`);
+
+  return lines.join("\n");
 };
 
 const sendOrderEmails = async (order) => {
@@ -153,7 +160,8 @@ const sendOrderEmails = async (order) => {
   }
 
   const isHalfPayment = order.paymentOption === "half";
-  const paymentLabel = isHalfPayment ? "Half Payment" : "Cash on Delivery";
+  const isUpiPayment = order.paymentOption === "upi";
+  const paymentLabel = isHalfPayment ? "Half Payment (UPI/Online)" : isUpiPayment ? "Full UPI Payment" : "Cash on Delivery";
   const paidNowAmount = asTwoDecimals(order.paidNowAmount);
   const remainingAmount = asTwoDecimals(order.totalAmount - paidNowAmount);
   const emailText = formatEmailText({
@@ -191,6 +199,7 @@ router.post("/", async (req, res) => {
     const quantity = Number(req.body?.quantity || 1);
     const paymentOption = trimString(req.body?.paymentOption || "cod").toLowerCase();
     const paidNowAmountRaw = Number(req.body?.paidNowAmount || 0);
+    const upiTransactionId = trimString(req.body?.upiTransactionId || "");
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
@@ -204,8 +213,12 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Quantity must be at least 1" });
     }
 
-    if (!["cod", "half"].includes(paymentOption)) {
-      return res.status(400).json({ message: "Payment option must be cod or half" });
+    if (!["cod", "half", "upi"].includes(paymentOption)) {
+      return res.status(400).json({ message: "Payment option must be cod, half, or upi" });
+    }
+
+    if (paymentOption === "upi" && !upiTransactionId) {
+      return res.status(400).json({ message: "UPI transaction ID is required for UPI payment" });
     }
 
     const user = await User.findOne({ email, isVerified: true });
@@ -250,6 +263,9 @@ router.post("/", async (req, res) => {
       }
 
       paymentStatus = "partial";
+    } else if (paymentOption === "upi") {
+      paidNowAmount = pricing.totalAmount;
+      paymentStatus = "upi_pending_verification";
     }
 
     const order = await Order.create({
@@ -268,6 +284,7 @@ router.post("/", async (req, res) => {
       shippingCharge: pricing.shippingCharge,
       totalAmount: pricing.totalAmount,
       paymentOption,
+      upiTransactionId: paymentOption === "upi" ? upiTransactionId : "",
       paidNowAmount,
       paymentStatus,
       address: normalizedAddress,
