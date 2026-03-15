@@ -16,9 +16,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
-    define: {
-      'import.meta.env.BACKEND_URL': JSON.stringify(explicitBackendUrl),
-    },
     server: {
       proxy: {
         '/api': {

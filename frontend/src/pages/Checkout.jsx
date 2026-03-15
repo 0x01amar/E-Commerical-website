@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { API_BASE_URL, BACKEND_URL, BACKEND_URL_SOURCE, apiUrl, mediaUrl } from "../config/api";
+import { API_BASE_URL, BACKEND_URL, BACKEND_URL_SOURCE, LOCAL_BACKEND_URL, apiUrl, mediaUrl } from "../config/api";
 
 const DEFAULT_TAX_RATE = 0.08;
 const DEFAULT_SHIPPING_CHARGE = 79;
@@ -102,6 +102,11 @@ const directApiUrl = (path = "") => {
   return `${BACKEND_URL}/api${normalizedPath}`;
 };
 
+const localApiUrl = (path = "") => {
+  const normalizedPath = normalizeApiPath(path);
+  return `${LOCAL_BACKEND_URL}/api${normalizedPath}`;
+};
+
 const readApiResponse = async (response) => {
   const rawText = await response.text();
 
@@ -174,6 +179,18 @@ const fetchApiJson = async (path, options = {}) => {
   }
 };
 
+const fetchAbsoluteApiJson = async (url, options = {}) => {
+  const response = await fetch(url, options);
+  const { data, rawText } = await readApiResponse(response);
+
+  return {
+    url,
+    response,
+    data,
+    rawText,
+  };
+};
+
 const isRouteNotFoundResponse = (response, data) => {
   const message = String(data?.message || "").toLowerCase();
 
@@ -244,6 +261,24 @@ const diagnosePaymentGatewayConfig = async (requestUrl = "") => {
     });
   } catch {
     return buildPaymentGatewayDiagnosis({ requestUrl });
+  }
+};
+
+const retryCreatePaymentOrderLocally = async (requestPayload) => {
+  if (!LOCAL_BACKEND_URL || BACKEND_URL === LOCAL_BACKEND_URL) {
+    return null;
+  }
+
+  try {
+    return await fetchAbsoluteApiJson(localApiUrl("/payment/orders"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestPayload),
+    });
+  } catch {
+    return null;
   }
 };
 
@@ -732,8 +767,8 @@ function Checkout() {
         }
       }
 
-      const createResponse = createResult?.response;
-      const createData = createResult?.data;
+      let createResponse = createResult?.response;
+      let createData = createResult?.data;
 
       if (!createResponse) {
         throw new Error("Failed to initiate payment");
@@ -741,10 +776,18 @@ function Checkout() {
 
       if (!createResponse.ok) {
         if (isPaymentGatewayConfigMessage(createData?.message)) {
-          throw new Error(await diagnosePaymentGatewayConfig(createResult?.url));
-        }
+          const localRetryResult = await retryCreatePaymentOrderLocally(requestPayload);
 
-        throw new Error(createData?.message || "Failed to initiate payment");
+          if (localRetryResult?.response?.ok) {
+            createResult = localRetryResult;
+            createResponse = localRetryResult.response;
+            createData = localRetryResult.data;
+          } else {
+            throw new Error(await diagnosePaymentGatewayConfig(createResult?.url));
+          }
+        } else {
+          throw new Error(createData?.message || "Failed to initiate payment");
+        }
       }
 
       const normalizedCheckout = toLegacyPaymentShape(createData);

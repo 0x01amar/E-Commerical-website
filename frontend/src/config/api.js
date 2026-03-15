@@ -3,7 +3,6 @@ const configuredBackendUrl =
 	"";
 
 const currentHostname = typeof window !== "undefined" ? window.location.hostname : "";
-const currentProtocol = typeof window !== "undefined" ? window.location.protocol : "http:";
 const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
 const isLikelyLocalHost =
 	["localhost", "127.0.0.1", "0.0.0.0"].includes(currentHostname) ||
@@ -11,13 +10,18 @@ const isLikelyLocalHost =
 	/^10\./.test(currentHostname) ||
 	/^172\.(1[6-9]|2\d|3[0-1])\./.test(currentHostname);
 
-const fallbackBackendUrl = configuredBackendUrl
-	|| (isLikelyLocalHost
-		? `${currentProtocol === "https:" ? "https:" : "http:"}//${currentHostname || "localhost"}:5000`
-		: currentOrigin);
+const localBackendHost = isLikelyLocalHost
+	? (currentHostname || "localhost")
+	: "localhost";
+
+export const LOCAL_BACKEND_URL = `http://${localBackendHost}:5000`;
+
+const fallbackBackendUrl = isLikelyLocalHost
+	? LOCAL_BACKEND_URL
+	: (configuredBackendUrl || currentOrigin);
 
 export const BACKEND_URL_SOURCE = configuredBackendUrl
-	? "env"
+	? (isLikelyLocalHost ? "local-preferred-over-env" : "env")
 	: isLikelyLocalHost
 		? "local-default"
 		: "current-origin-default";
