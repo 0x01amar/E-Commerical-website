@@ -4,6 +4,7 @@ import {
   API_BASE_URL,
   BACKEND_URL,
   BACKEND_URL_SOURCE,
+  IS_LOCAL_CLIENT,
   LOCAL_BACKEND_URL,
   apiUrl,
   mediaUrl,
@@ -260,6 +261,10 @@ const buildPaymentGatewayDiagnosis = ({
     message += " If frontend and backend are deployed separately, set VITE_BACKEND_URL in the frontend environment.";
   }
 
+  if (BACKEND_URL_SOURCE === "ignored-local-env-on-remote") {
+    message += " A localhost backend URL from frontend environment was ignored because this site is not running on localhost.";
+  }
+
   return message;
 };
 
@@ -278,7 +283,7 @@ const diagnosePaymentGatewayConfig = async (requestUrl = "") => {
 };
 
 const retryCreatePaymentOrderLocally = async (requestPayload) => {
-  if (!LOCAL_BACKEND_URL || BACKEND_URL === LOCAL_BACKEND_URL) {
+  if (!IS_LOCAL_CLIENT || !LOCAL_BACKEND_URL || BACKEND_URL === LOCAL_BACKEND_URL) {
     return null;
   }
 

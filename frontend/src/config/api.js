@@ -10,6 +10,16 @@ const isLikelyLocalHost =
 	/^10\./.test(currentHostname) ||
 	/^172\.(1[6-9]|2\d|3[0-1])\./.test(currentHostname);
 
+export const IS_LOCAL_CLIENT = isLikelyLocalHost;
+
+const trimmedConfiguredBackendUrl = String(configuredBackendUrl || "").trim().replace(/\/+$/, "");
+const configuredBackendLooksLocal = /^(https?:\/\/)?(localhost|127\.0\.0\.1|0\.0\.0\.0|192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/i
+	.test(trimmedConfiguredBackendUrl);
+
+const safeConfiguredBackendUrl = (!isLikelyLocalHost && configuredBackendLooksLocal)
+	? ""
+	: trimmedConfiguredBackendUrl;
+
 const localBackendHost = isLikelyLocalHost
 	? (currentHostname || "localhost")
 	: "localhost";
@@ -18,10 +28,12 @@ export const LOCAL_BACKEND_URL = `http://${localBackendHost}:5000`;
 
 const fallbackBackendUrl = isLikelyLocalHost
 	? LOCAL_BACKEND_URL
-	: (configuredBackendUrl || currentOrigin);
+	: (safeConfiguredBackendUrl || currentOrigin);
 
-export const BACKEND_URL_SOURCE = configuredBackendUrl
+export const BACKEND_URL_SOURCE = safeConfiguredBackendUrl
 	? (isLikelyLocalHost ? "local-preferred-over-env" : "env")
+	: (trimmedConfiguredBackendUrl && !isLikelyLocalHost && configuredBackendLooksLocal)
+		? "ignored-local-env-on-remote"
 	: isLikelyLocalHost
 		? "local-default"
 		: "current-origin-default";
@@ -66,7 +78,7 @@ export const isLikelyNetworkError = (error) => {
 export const resolveApiErrorMessage = (
 	error,
 	fallbackMessage = "Request failed",
-	networkMessage = "Failed to connect to backend. Please check your internet and backend server, then try again."
+	networkMessage = "Failed to connect to backend. Please check your internet/backend server. If you use ad-block/privacy extensions, allow API requests and try again."
 ) => {
 	if (isLikelyNetworkError(error)) {
 		return networkMessage;
