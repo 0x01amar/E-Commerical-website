@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiUrl } from "../config/api";
+import { apiFetchJson, resolveApiErrorMessage } from "../config/api";
 
 function AdminLogin() {
 
@@ -26,7 +26,7 @@ function AdminLogin() {
       setLoading(true);
       setError("");
 
-      const response = await fetch(apiUrl("/auth/login"), {
+      const { response, data } = await apiFetchJson("/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -39,8 +39,6 @@ function AdminLogin() {
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data?.message || "Invalid admin credentials");
       }
@@ -50,7 +48,7 @@ function AdminLogin() {
         localStorage.setItem("adminKey", adminKey.trim());
       navigate("/admin-dashboard");
     } catch (loginError) {
-      setError(loginError.message || "Invalid admin credentials");
+      setError(resolveApiErrorMessage(loginError, "Invalid admin credentials"));
     } finally {
       setLoading(false);
     }

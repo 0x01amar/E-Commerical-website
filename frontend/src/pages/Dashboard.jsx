@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import OrderTimeline from "../components/OrderTimeline";
-import { apiUrl, mediaUrl } from "../config/api";
+import { apiFetchJson, mediaUrl, resolveApiErrorMessage } from "../config/api";
 
 const EMPTY_ADDRESS = {
   line1: "",
@@ -92,8 +92,7 @@ function Dashboard() {
     const loadUser = async () => {
       try {
         setLoading(true);
-        const response = await fetch(apiUrl(`/auth/profile/${encodeURIComponent(email)}`));
-        const data = await response.json();
+        const { response, data } = await apiFetchJson(`/auth/profile/${encodeURIComponent(email)}`);
 
         if (!response.ok) {
           throw new Error(data?.message || "Failed to load profile");
@@ -111,7 +110,7 @@ function Dashboard() {
         setPhotoPreview(data?.photo || "");
         setError("");
       } catch (loadError) {
-        setError(loadError.message || "Failed to load profile");
+        setError(resolveApiErrorMessage(loadError, "Failed to load profile"));
       } finally {
         setLoading(false);
       }
@@ -130,8 +129,7 @@ function Dashboard() {
     const loadOrders = async () => {
       try {
         setOrdersLoading(true);
-        const response = await fetch(apiUrl(`/orders/my?email=${encodeURIComponent(email)}`));
-        const data = await response.json();
+        const { response, data } = await apiFetchJson(`/orders/my?email=${encodeURIComponent(email)}`);
 
         if (!response.ok) {
           throw new Error(data?.message || "Failed to load orders");
@@ -140,7 +138,7 @@ function Dashboard() {
         setOrders(Array.isArray(data) ? data : []);
         setOrdersError("");
       } catch (loadError) {
-        setOrdersError(loadError.message || "Failed to load orders");
+        setOrdersError(resolveApiErrorMessage(loadError, "Failed to load orders"));
       } finally {
         setOrdersLoading(false);
       }
@@ -192,7 +190,7 @@ function Dashboard() {
       setSaving(true);
       setError("");
 
-      const response = await fetch(apiUrl(`/auth/profile/${encodeURIComponent(email)}`), {
+      const { response, data } = await apiFetchJson(`/auth/profile/${encodeURIComponent(email)}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -208,8 +206,6 @@ function Dashboard() {
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data?.message || "Failed to update profile");
       }
@@ -222,7 +218,7 @@ function Dashboard() {
       setPhotoPreview(data?.photo || "");
       setIsEditing(false);
     } catch (updateError) {
-      setError(updateError.message || "Failed to update profile");
+      setError(resolveApiErrorMessage(updateError, "Failed to update profile"));
     } finally {
       setSaving(false);
     }

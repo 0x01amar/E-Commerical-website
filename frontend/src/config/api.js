@@ -34,9 +34,105 @@ export const API_BASE_URL = useProxyApi
 	? "/api"
 	: `${BACKEND_URL}/api`;
 
+const normalizeApiPath = (path = "") => (path.startsWith("/") ? path : `/${path}`);
+
+const buildAbsoluteApiUrl = (baseUrl = "", path = "") => {
+	const normalizedBase = String(baseUrl || "").replace(/\/+$/, "");
+	const normalizedPath = normalizeApiPath(path);
+	return `${normalizedBase}/api${normalizedPath}`;
+};
+
 export const apiUrl = (path = "") => {
-	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+	const normalizedPath = normalizeApiPath(path);
 	return `${API_BASE_URL}${normalizedPath}`;
+};
+
+const isAbsoluteUrl = (value = "") => /^(https?:)?\/\//i.test(String(value || ""));
+
+export const isLikelyNetworkError = (error) => {
+	if (!error) {
+		return false;
+	}
+
+	const message = String(error?.message || error).toLowerCase();
+
+	if (error instanceof TypeError && /failed to fetch|networkerror|load failed|fetch failed/i.test(message)) {
+		return true;
+	}
+
+	return /failed to fetch|networkerror|load failed|fetch failed|network request failed/i.test(message);
+};
+
+export const resolveApiErrorMessage = (
+	error,
+	fallbackMessage = "Request failed",
+	networkMessage = "Failed to connect to backend. Please check your internet and backend server, then try again."
+) => {
+	if (isLikelyNetworkError(error)) {
+		return networkMessage;
+	}
+
+	const explicitMessage = String(error?.message || "").trim();
+	return explicitMessage || fallbackMessage;
+};
+
+export const parseApiResponseJson = async (response) => {
+	const rawText = await response.text();
+
+	if (!rawText) {
+		return {};
+	}
+
+	try {
+		return JSON.parse(rawText);
+	} catch {
+		return {
+			message: rawText
+				.replace(/<[^>]*>/g, " ")
+				.replace(/\s+/g, " ")
+				.trim()
+				.slice(0, 300) || "Server returned an invalid response",
+		};
+	}
+};
+
+export const apiFetch = async (path, options = {}) => {
+	if (isAbsoluteUrl(path)) {
+		return fetch(path, options);
+	}
+
+	const normalizedPath = normalizeApiPath(path);
+	const primaryUrl = apiUrl(normalizedPath);
+	const backendUrl = buildAbsoluteApiUrl(BACKEND_URL, normalizedPath);
+	const localUrl = buildAbsoluteApiUrl(LOCAL_BACKEND_URL, normalizedPath);
+
+	const candidates = Array.from(new Set([
+		primaryUrl,
+		backendUrl,
+		isLikelyLocalHost ? localUrl : "",
+	].filter(Boolean)));
+
+	let lastError = null;
+
+	for (const url of candidates) {
+		try {
+			return await fetch(url, options);
+		} catch (error) {
+			lastError = error;
+		}
+	}
+
+	throw lastError || new TypeError("Failed to fetch");
+};
+
+export const apiFetchJson = async (path, options = {}) => {
+	const response = await apiFetch(path, options);
+	const data = await parseApiResponseJson(response);
+
+	return {
+		response,
+		data,
+	};
 };
 
 const normalizeMediaPath = (value = "") => {

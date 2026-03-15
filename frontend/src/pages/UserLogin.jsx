@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiUrl } from "../config/api";
+import { apiFetchJson, resolveApiErrorMessage } from "../config/api";
 
 function UserLogin() {
     const [name, setName] = useState("");
@@ -55,7 +55,7 @@ function UserLogin() {
             setError("");
             setSuccessMessage("");
 
-            const response = await fetch(apiUrl("/auth/signup/request-otp"), {
+            const { response, data } = await apiFetchJson("/auth/signup/request-otp", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -68,8 +68,6 @@ function UserLogin() {
                 }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
                 throw new Error(data?.message || "Failed to send OTP");
             }
@@ -78,7 +76,7 @@ function UserLogin() {
             setSuccessMessage("OTP sent to your email");
             setStep(2);
         } catch (sendOtpError) {
-            setError(sendOtpError.message || "Failed to send OTP");
+            setError(resolveApiErrorMessage(sendOtpError, "Failed to send OTP"));
         } finally {
             setLoading(false);
         }
@@ -95,7 +93,7 @@ function UserLogin() {
             setError("");
             setSuccessMessage("");
 
-            const response = await fetch(apiUrl("/auth/signup/verify-otp"), {
+            const { response, data } = await apiFetchJson("/auth/signup/verify-otp", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -105,8 +103,6 @@ function UserLogin() {
                     otp: otp.trim(),
                 }),
             });
-
-            const data = await response.json();
 
             if (!response.ok) {
                 throw new Error(data?.message || "OTP verification failed");
@@ -118,7 +114,7 @@ function UserLogin() {
                 navigate("/login");
             }, 1000);
         } catch (verifyError) {
-            setError(verifyError.message || "OTP verification failed");
+            setError(resolveApiErrorMessage(verifyError, "OTP verification failed"));
         } finally {
             setLoading(false);
         }

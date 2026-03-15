@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiUrl } from "../config/api";
+import { apiFetchJson, resolveApiErrorMessage } from "../config/api";
 
 function CompleteProfile(){
 
@@ -37,7 +37,7 @@ function CompleteProfile(){
 			setError("");
 			setSuccessMessage("");
 
-			const response = await fetch(apiUrl("/auth/complete-profile"), {
+			const { response, data } = await apiFetchJson("/auth/complete-profile", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -49,8 +49,6 @@ function CompleteProfile(){
 					address: address.trim(),
 				}),
 			});
-
-			const data = await response.json();
 
 			if (!response.ok) {
 				throw new Error(data?.message || "Failed to complete profile");
@@ -66,7 +64,7 @@ function CompleteProfile(){
 				navigate("/login-password");
 			}, 1200);
 		} catch (saveError) {
-			setError(saveError.message || "Failed to complete profile");
+			setError(resolveApiErrorMessage(saveError, "Failed to complete profile"));
 		} finally {
 			setLoading(false);
 		}

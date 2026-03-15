@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import OrderTimeline, { ORDER_STATUS_STEPS } from "../components/OrderTimeline";
 import ProductCard from "../components/ProductCard";
 import StarRating from "../components/StarRating";
-import { BACKEND_URL, apiUrl, mediaUrl } from "../config/api";
+import { apiFetch, apiFetchJson, mediaUrl, parseApiResponseJson, resolveApiErrorMessage } from "../config/api";
 
 const defaultProductForm = {
   name: "",
@@ -44,48 +44,12 @@ const uniqueImages = (images = []) => {
   return Array.from(new Set(images.filter(Boolean).map((imagePath) => String(imagePath).trim())));
 };
 
-const normalizeApiPath = (path = "") => (path.startsWith("/") ? path : `/${path}`);
-
-const directApiUrl = (path = "") => {
-  const normalizedPath = normalizeApiPath(path);
-  return `${BACKEND_URL}/api${normalizedPath}`;
-};
-
 const fetchApiWithFallback = async (path, options = {}) => {
-  const normalizedPath = normalizeApiPath(path);
-  const proxiedUrl = apiUrl(normalizedPath);
-
-  try {
-    return await fetch(proxiedUrl, options);
-  } catch (primaryError) {
-    const fallbackUrl = directApiUrl(normalizedPath);
-
-    if (fallbackUrl === proxiedUrl) {
-      throw primaryError;
-    }
-
-    return fetch(fallbackUrl, options);
-  }
+  return apiFetch(path, options);
 };
 
 const parseApiResponse = async (response) => {
-  const rawText = await response.text();
-
-  if (!rawText) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(rawText);
-  } catch {
-    return {
-      message: rawText
-        .replace(/<[^>]*>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 300),
-    };
-  }
+  return parseApiResponseJson(response);
 };
 
 const wait = (ms) => new Promise((resolve) => {
@@ -148,13 +112,15 @@ function AdminDashboard() {
         setPricingNotice("");
         setOrdersError("");
 
-        const [productsResponse, sectionsResponse] = await Promise.all([
-          fetch(apiUrl("/products")),
-          fetch(apiUrl("/products/sections")),
+        const [productsResult, sectionsResult] = await Promise.all([
+          apiFetchJson("/products"),
+          apiFetchJson("/products/sections"),
         ]);
 
-        const productsData = await productsResponse.json();
-        const sectionsData = await sectionsResponse.json();
+        const productsResponse = productsResult.response;
+        const sectionsResponse = sectionsResult.response;
+        const productsData = productsResult.data;
+        const sectionsData = sectionsResult.data;
 
         if (!productsResponse.ok) {
           throw new Error(productsData?.message || "Failed to load products");
@@ -171,8 +137,7 @@ function AdminDashboard() {
         setSections(normalizedSections);
 
         try {
-          const pricingResponse = await fetch(apiUrl("/settings/checkout-pricing"));
-          const pricingData = await pricingResponse.json();
+          const { response: pricingResponse, data: pricingData } = await apiFetchJson("/settings/checkout-pricing");
 
           if (pricingResponse.ok) {
             const taxPercent = Number(pricingData?.taxRate || 0) * 100;
@@ -188,13 +153,11 @@ function AdminDashboard() {
           setPricingError("Failed to load checkout pricing settings");
         }
 
-        const ordersResponse = await fetch(apiUrl("/orders/admin/all"), {
+        const { response: ordersResponse, data: ordersData } = await apiFetchJson("/orders/admin/all", {
           headers: {
             "x-admin-key": adminKey,
           },
         });
-
-        const ordersData = await ordersResponse.json();
 
         if (!ordersResponse.ok) {
           throw new Error(ordersData?.message || "Failed to load orders");
@@ -209,7 +172,7 @@ function AdminDashboard() {
           }, {})
         );
       } catch (loadError) {
-        const message = loadError.message || "Failed to load admin dashboard";
+        const message = resolveApiErrorMessage(loadError, "Failed to load admin dashboard");
         setError(message);
         setOrdersError(message);
       } finally {
@@ -298,7 +261,7 @@ function AdminDashboard() {
       setPricingError("");
       setPricingNotice("");
 
-      const response = await fetch(apiUrl("/settings/checkout-pricing"), {
+      const { response, data } = await apiFetchJson("/settings/checkout-pricing", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -309,8 +272,6 @@ function AdminDashboard() {
           shippingCharge: Number(shippingCharge.toFixed(2)),
         }),
       });
-
-      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to update checkout pricing settings");
@@ -323,7 +284,7 @@ function AdminDashboard() {
       });
       setPricingNotice("Checkout pricing settings updated successfully");
     } catch (saveError) {
-      setPricingError(saveError.message || "Failed to update checkout pricing settings");
+      setPricingError(resolveApiErrorMessage(saveError, "Failed to update checkout pricing settings"));
     } finally {
       setPricingSaving(false);
     }
@@ -432,22 +393,18 @@ function AdminDashboard() {
       setSectionSaving(true);
       setSectionError("");
 
-      const response = await fetch(
-        editingSectionId ? apiUrl(`/products/sections/${editingSectionId}`) : apiUrl("/products/sections"),
-        {
-          method: editingSectionId ? "PUT" : "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-key": adminKey,
-          },
-          body: JSON.stringify({
-            name: sectionName,
-            displayOrder: Number(sectionForm.displayOrder || 0),
-          }),
-        }
-      );
-
-      const data = await response.json();
+      const sectionPath = editingSectionId ? `/products/sections/${editingSectionId}` : "/products/sections";
+      const { response, data } = await apiFetchJson(sectionPath, {
+        method: editingSectionId ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({
+          name: sectionName,
+          displayOrder: Number(sectionForm.displayOrder || 0),
+        }),
+      });
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to save section");
@@ -471,7 +428,7 @@ function AdminDashboard() {
 
       resetSectionForm();
     } catch (saveError) {
-      setSectionError(saveError.message || "Failed to save section");
+      setSectionError(resolveApiErrorMessage(saveError, "Failed to save section"));
     } finally {
       setSectionSaving(false);
     }
@@ -636,7 +593,7 @@ function AdminDashboard() {
       setError(
         isNetworkError
           ? "Failed to connect to backend while saving product. Please check backend server/API URL and try again."
-          : saveError.message || "Failed to save product"
+          : resolveApiErrorMessage(saveError, "Failed to save product")
       );
     } finally {
       setSaving(false);
@@ -650,14 +607,12 @@ function AdminDashboard() {
         return;
       }
 
-      const response = await fetch(apiUrl(`/products/${id}`), {
+      const { response, data } = await apiFetchJson(`/products/${id}`, {
         method: "DELETE",
         headers: {
           "x-admin-key": adminKey,
         },
       });
-
-      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to delete product");
@@ -665,7 +620,7 @@ function AdminDashboard() {
 
       setProducts((prev) => prev.filter((product) => product._id !== id));
     } catch (deleteError) {
-      setError(deleteError.message || "Failed to delete product");
+      setError(resolveApiErrorMessage(deleteError, "Failed to delete product"));
     }
   };
 
@@ -708,7 +663,7 @@ function AdminDashboard() {
       setStatusUpdatingOrderId(orderId);
       setOrdersError("");
 
-      const response = await fetch(apiUrl(`/orders/${orderId}/status`), {
+      const { response, data } = await apiFetchJson(`/orders/${orderId}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -717,15 +672,13 @@ function AdminDashboard() {
         body: JSON.stringify({ status }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data?.message || "Failed to update order status");
       }
 
       setOrders((prev) => prev.map((order) => (order._id === orderId ? data.order : order)));
     } catch (updateError) {
-      setOrdersError(updateError.message || "Failed to update order status");
+      setOrdersError(resolveApiErrorMessage(updateError, "Failed to update order status"));
     } finally {
       setStatusUpdatingOrderId("");
     }
@@ -738,7 +691,7 @@ function AdminDashboard() {
       setDeliveryUpdatingOrderId(orderId);
       setOrdersError("");
 
-      const response = await fetch(apiUrl(`/orders/${orderId}/delivery-date`), {
+      const { response, data } = await apiFetchJson(`/orders/${orderId}/delivery-date`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -747,15 +700,13 @@ function AdminDashboard() {
         body: JSON.stringify({ expectedDelivery }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data?.message || "Failed to update delivery date");
       }
 
       setOrders((prev) => prev.map((order) => (order._id === orderId ? data.order : order)));
     } catch (updateError) {
-      setOrdersError(updateError.message || "Failed to update delivery date");
+      setOrdersError(resolveApiErrorMessage(updateError, "Failed to update delivery date"));
     } finally {
       setDeliveryUpdatingOrderId("");
     }

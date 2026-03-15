@@ -1,6 +1,6 @@
 import { useState } from "react";
 import StarRating from "./StarRating";
-import { apiUrl } from "../config/api";
+import { apiFetchJson, resolveApiErrorMessage } from "../config/api";
 
 function ReviewForm({ productId, email, onReviewSubmitted }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -67,15 +67,13 @@ function ReviewForm({ productId, email, onReviewSubmitted }) {
         formData.append("reviewImages", image);
       });
 
-      const response = await fetch(apiUrl(`/products/${productId}/review`), {
+      const { response, data } = await apiFetchJson(`/products/${productId}/review`, {
         method: "POST",
         headers: {
           "x-user-email": email,
         },
         body: formData,
       });
-
-      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to submit review");
@@ -92,7 +90,7 @@ function ReviewForm({ productId, email, onReviewSubmitted }) {
         onReviewSubmitted(data);
       }
     } catch (submitError) {
-      setError(submitError.message || "Failed to submit review");
+      setError(resolveApiErrorMessage(submitError, "Failed to submit review"));
     } finally {
       setIsSubmitting(false);
     }

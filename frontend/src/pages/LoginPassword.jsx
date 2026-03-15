@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { apiUrl } from "../config/api";
+import { apiFetchJson, resolveApiErrorMessage } from "../config/api";
 
 function LoginPassword(){
 
@@ -26,7 +26,7 @@ function LoginPassword(){
 			setLoading(true);
 			setError("");
 
-			const response = await fetch(apiUrl("/auth/login"), {
+			const { response, data } = await apiFetchJson("/auth/login", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -38,8 +38,6 @@ function LoginPassword(){
 				}),
 			});
 
-			const data = await response.json();
-
 			if (!response.ok) {
 				throw new Error(data?.message || "Wrong email or password");
 			}
@@ -49,7 +47,7 @@ function LoginPassword(){
 			localStorage.removeItem("adminKey");
 			navigate(location.state?.redirectTo || "/dashboard");
 		} catch (loginError) {
-			setError(loginError.message || "Wrong email or password");
+			setError(resolveApiErrorMessage(loginError, "Wrong email or password"));
 		} finally {
 			setLoading(false);
 		}

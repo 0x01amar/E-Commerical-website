@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { API_BASE_URL, BACKEND_URL, BACKEND_URL_SOURCE, LOCAL_BACKEND_URL, apiUrl, mediaUrl } from "../config/api";
+import {
+  API_BASE_URL,
+  BACKEND_URL,
+  BACKEND_URL_SOURCE,
+  LOCAL_BACKEND_URL,
+  apiUrl,
+  mediaUrl,
+  resolveApiErrorMessage,
+} from "../config/api";
 
 const DEFAULT_TAX_RATE = 0.08;
 const DEFAULT_SHIPPING_CHARGE = 79;
@@ -149,6 +157,7 @@ const fetchApiJson = async (path, options = {}) => {
   const normalizedPath = normalizeApiPath(path);
   const proxiedUrl = apiUrl(normalizedPath);
   const fallbackUrl = directApiUrl(normalizedPath);
+  const networkFallbackMessage = "Failed to connect to backend. Please check backend server and try again.";
 
   const execute = async (url) => {
     const response = await fetch(url, options);
@@ -172,10 +181,14 @@ const fetchApiJson = async (path, options = {}) => {
     return result;
   } catch (primaryError) {
     if (fallbackUrl === proxiedUrl) {
-      throw primaryError;
+      throw new Error(resolveApiErrorMessage(primaryError, "Request failed", networkFallbackMessage));
     }
 
-    return execute(fallbackUrl);
+    try {
+      return await execute(fallbackUrl);
+    } catch (fallbackError) {
+      throw new Error(resolveApiErrorMessage(fallbackError, "Request failed", networkFallbackMessage));
+    }
   }
 };
 
@@ -340,7 +353,7 @@ function Checkout() {
 
         setProduct(data);
       } catch (loadError) {
-        setError(loadError.message || "Failed to load product");
+        setError(resolveApiErrorMessage(loadError, "Failed to load product"));
       } finally {
         setLoadingProduct(false);
       }
@@ -513,7 +526,7 @@ function Checkout() {
       setAddressForm(updatedAddress);
       setStep(3);
     } catch (saveError) {
-      setError(saveError.message || "Failed to save address");
+      setError(resolveApiErrorMessage(saveError, "Failed to save address"));
     } finally {
       setSavingAddress(false);
     }
@@ -621,7 +634,7 @@ function Checkout() {
       syncCartAfterOrder();
       setNotice("Order placed successfully. Confirmation has been sent by email.");
     } catch (placeOrderError) {
-      setError(placeOrderError.message || "Failed to place order");
+      setError(resolveApiErrorMessage(placeOrderError, "Failed to place order"));
     } finally {
       setProcessingPayment(false);
     }
@@ -695,7 +708,7 @@ function Checkout() {
       setNotice("Payment successful and verified. Order placed successfully. Track your product in Profile.");
       window.alert("Payment successful. Your order has been placed.");
     } catch (verifyError) {
-      const message = verifyError.message || "Payment verification failed";
+      const message = resolveApiErrorMessage(verifyError, "Payment verification failed");
       setError(message);
       setNotice("");
       window.alert(`Payment Failed: ${message}`);
@@ -855,10 +868,11 @@ function Checkout() {
 
       razorpay.open();
     } catch (startError) {
+      const message = resolveApiErrorMessage(startError, "Failed to start payment");
       setGatewayLoading(false);
       setNotice("");
-      setError(startError.message || "Failed to start payment");
-      window.alert(`Payment Failed: ${startError.message || "Failed to start payment"}`);
+      setError(message);
+      window.alert(`Payment Failed: ${message}`);
     }
   };
 

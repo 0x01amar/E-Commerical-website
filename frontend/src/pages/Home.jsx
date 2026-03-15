@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import { apiUrl } from "../config/api";
+import { apiFetchJson, resolveApiErrorMessage } from "../config/api";
 
 function Home({ search }) {
 	const navigate = useNavigate();
@@ -21,13 +21,15 @@ function Home({ search }) {
 			try {
 				setLoading(true);
 
-				const [productResponse, sectionResponse] = await Promise.all([
-					fetch(apiUrl("/products")),
-					fetch(apiUrl("/products/sections")),
+				const [productsResult, sectionsResult] = await Promise.all([
+					apiFetchJson("/products"),
+					apiFetchJson("/products/sections"),
 				]);
 
-				const productsData = await productResponse.json();
-				const sectionsData = await sectionResponse.json();
+				const productResponse = productsResult.response;
+				const sectionResponse = sectionsResult.response;
+				const productsData = productsResult.data;
+				const sectionsData = sectionsResult.data;
 
 				if (!productResponse.ok) {
 					throw new Error(productsData?.message || "Failed to load products");
@@ -44,7 +46,7 @@ function Home({ search }) {
 				setSections(normalizedSections);
 				setError("");
 			} catch (fetchError) {
-				setError(fetchError.message || "Failed to load products");
+				setError(resolveApiErrorMessage(fetchError, "Failed to load products"));
 			} finally {
 				setLoading(false);
 			}

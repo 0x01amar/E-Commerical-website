@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { apiUrl, mediaUrl } from "../config/api";
+import { apiFetchJson, mediaUrl, resolveApiErrorMessage } from "../config/api";
 import StarRating from "../components/StarRating";
 import ReviewForm from "../components/ReviewForm";
 
@@ -48,8 +48,7 @@ function ProductPage() {
         const getProduct = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(apiUrl(`/products/${id}`));
-                const data = await response.json();
+                    const { response, data } = await apiFetchJson(`/products/${id}`);
 
                 if (!response.ok) {
                     throw new Error(data?.message || "Product not found");
@@ -66,7 +65,7 @@ function ProductPage() {
                 }));
                 setError("");
             } catch (fetchError) {
-                setError(fetchError.message || "Product not found");
+                setError(resolveApiErrorMessage(fetchError, "Product not found"));
             } finally {
                 setLoading(false);
             }
@@ -82,10 +81,7 @@ function ProductPage() {
 
         const loadCanRate = async () => {
             try {
-                const response = await fetch(
-                    apiUrl(`/products/${id}/can-rate?email=${encodeURIComponent(email)}`)
-                );
-                const data = await response.json();
+                const { response, data } = await apiFetchJson(`/products/${id}/can-rate?email=${encodeURIComponent(email)}`);
 
                 if (!response.ok) {
                     return;
@@ -192,7 +188,7 @@ function ProductPage() {
             setRatingError("");
             setRatingMessage("");
 
-            const response = await fetch(apiUrl(`/products/${id}/rate`), {
+            const { response, data } = await apiFetchJson(`/products/${id}/rate`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -203,8 +199,6 @@ function ProductPage() {
                     comment: ratingComment.trim(),
                 }),
             });
-
-            const data = await response.json();
 
             if (!response.ok) {
                 throw new Error(data?.message || "Failed to submit rating");
@@ -234,7 +228,7 @@ function ProductPage() {
 
             setRatingMessage(data?.message || "Rating submitted successfully");
         } catch (submitError) {
-            setRatingError(submitError.message || "Failed to submit rating");
+            setRatingError(resolveApiErrorMessage(submitError, "Failed to submit rating"));
         } finally {
             setRatingSubmitting(false);
         }
