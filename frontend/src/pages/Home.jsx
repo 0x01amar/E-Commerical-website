@@ -331,21 +331,21 @@ function Home({ search }) {
 						)}
 					</div>
 
-					<div className="flex flex-1 rounded-3xl border border-slate-200 bg-white shadow-sm animate-fade-in">
-						<div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-6 px-4 py-10 md:grid-cols-2 md:py-14">
-							<div className="max-w-xl space-y-4">
-								<h1 className="text-4xl font-bold leading-tight text-slate-900 md:text-5xl">
+					<div className="flex flex-1 rounded-2xl border border-slate-200 bg-white shadow-sm animate-fade-in md:rounded-3xl">
+						<div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-3 px-3 py-5 md:gap-6 md:px-4 md:py-10 lg:py-14 md:grid-cols-2">
+							<div className="max-w-xl space-y-2 md:space-y-4">
+								<h1 className="text-2xl font-bold leading-tight text-slate-900 md:text-4xl lg:text-5xl">
 									<span className="text-slate-900">MAA SHEELA </span>
 									<span className="text-amber-500">IRON ART</span>
 								</h1>
 
 								<div className="md:hidden">
-									<div className="h-62.5 w-full max-w-112.5 overflow-hidden rounded-2xl">
+									<div className="h-40 w-full max-w-96 overflow-hidden rounded-lg md:rounded-2xl">
 										<img
 											src={heroImageUrl}
 											alt="Elegant furniture showcase"
 											loading="lazy"
-											className="h-full w-full rounded-2xl object-cover shadow-lg transition-transform duration-300 hover:scale-[1.02]"
+											className="h-full w-full rounded-lg md:rounded-2xl object-cover shadow-lg transition-transform duration-300 hover:scale-[1.02]"
 											onError={(event) => {
 												event.currentTarget.src = DEFAULT_HERO_IMAGE;
 											}}
@@ -353,7 +353,7 @@ function Home({ search }) {
 									</div>
 								</div>
 
-								<h2 className="text-xl font-medium text-slate-600 md:text-2xl">
+								<h2 className="text-base font-medium text-slate-600 md:text-lg lg:text-2xl">
 									Beautiful Furniture for Modern Homes
 								</h2>
 
@@ -361,11 +361,11 @@ function Home({ search }) {
 									Premium handcrafted iron and wooden furniture designed for durability, comfort, and clean modern living.
 								</p>
 
-								<div className="mt-4 flex flex-wrap gap-3">
+								<div className="mt-4 flex flex-wrap gap-2">
 									<button
 										type="button"
 										onClick={handleShopNow}
-										className="inline-flex items-center gap-2 rounded-xl bg-blue-700 px-5 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-blue-800 hover:shadow-md"
+										className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white transition-all duration-300 hover:bg-blue-800 hover:shadow-md md:px-5 md:py-2 md:text-sm md:rounded-xl"
 									>
 										<ShoppingBagIcon className="h-4 w-4" />
 										Shop Now
@@ -373,7 +373,7 @@ function Home({ search }) {
 									<button
 										type="button"
 										onClick={() => scrollToId("all-sections")}
-										className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-all duration-300 hover:border-blue-300 hover:text-blue-700 hover:shadow-md"
+										className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all duration-300 hover:border-blue-300 hover:text-blue-700 hover:shadow-md md:px-5 md:py-2 md:text-sm md:rounded-xl"
 									>
 										<MagnifyingGlassCircleIcon className="h-5 w-5" />
 										Explore
@@ -381,7 +381,7 @@ function Home({ search }) {
 									</button>
 								</div>
 
-								<div className="mt-4 flex flex-wrap gap-2">
+							<div className="mt-4 hidden flex-wrap gap-2 md:flex">
 									{groupedSections.map((section) => {
 										const isActive = activeHeroCategory === section.name;
 
@@ -393,7 +393,7 @@ function Home({ search }) {
 													setActiveHeroCategory(section.name);
 													jumpToSection(section.name);
 												}}
-												className={`rounded-full border bg-white px-4 py-1 text-sm transition-all duration-300 hover:scale-105 hover:bg-blue-600 hover:text-white ${isActive
+												className={`rounded-full border bg-white px-3 py-1 text-xs transition-all duration-300 hover:scale-105 hover:bg-blue-600 hover:text-white md:px-4 md:py-1 md:text-sm ${isActive
 													? "border-blue-600 bg-blue-600 text-white"
 													: "border-slate-300 text-slate-700"
 												}`}
@@ -425,11 +425,11 @@ function Home({ search }) {
 				<>
 					<div id="all-sections" className="scroll-mt-28" />
 					<div className="hidden items-center justify-between sm:flex">
-						<h2 className="text-xl font-semibold sm:text-2xl" style={{ color: "#1a2f48" }}>
+						<h2 className="text-base font-semibold sm:text-lg md:text-xl" style={{ color: "#1a2f48" }}>
 							All Product Sections
 						</h2>
 						<span
-							className="rounded-full px-3 py-1 text-sm font-medium"
+							className="rounded-full px-2 py-0.5 text-xs font-medium sm:px-3 sm:py-1 sm:text-sm"
 							style={{
 								background: "rgba(2,132,199,0.08)",
 								border: "1px solid rgba(2,132,199,0.22)",
@@ -443,13 +443,13 @@ function Home({ search }) {
 			) : null}
 
 			{loading ? (
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+				<div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:gap-3 lg:grid-cols-3 xl:grid-cols-4">
 					{Array.from({ length: 8 }).map((_, index) => (
-						<div key={`skeleton-${index}`} className="overflow-hidden rounded-2xl border border-blue-100 bg-white/80 p-3 shadow-sm animate-pulse">
-							<div className="h-40 rounded-xl bg-blue-100" />
-							<div className="mt-3 h-4 w-3/4 rounded bg-blue-100" />
-							<div className="mt-2 h-4 w-1/2 rounded bg-blue-100" />
-							<div className="mt-4 h-8 w-full rounded-lg bg-blue-100" />
+						<div key={`skeleton-${index}`} className="overflow-hidden rounded-lg border border-blue-100 bg-white/80 p-2 shadow-sm animate-pulse md:rounded-2xl md:p-3">
+							<div className="h-32 rounded-lg bg-blue-100 md:h-40 md:rounded-xl" />
+							<div className="mt-2 h-3 w-3/4 rounded bg-blue-100 md:mt-3 md:h-4" />
+							<div className="mt-1.5 h-3 w-1/2 rounded bg-blue-100 md:mt-2 md:h-4" />
+							<div className="mt-2 h-6 w-full rounded-lg bg-blue-100 md:mt-4 md:h-8" />
 						</div>
 					))}
 				</div>
@@ -470,7 +470,7 @@ function Home({ search }) {
 			{!loading && !error ? (
 				hasActiveSearch ? (
 					filteredProducts.length ? (
-						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="search-results">
+						<div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:gap-3 lg:grid-cols-3 xl:grid-cols-4" id="search-results">
 							{filteredProducts.map((product) => (
 								<ProductCard
 									key={product._id}
@@ -483,29 +483,29 @@ function Home({ search }) {
 							))}
 						</div>
 					) : (
-						<div className="glass rounded-2xl p-10 text-center">
-							<p style={{ color: "#6080a0" }}>No products found for your search.</p>
+						<div className="glass rounded-lg p-5 text-center md:rounded-2xl md:p-10">
+							<p style={{ color: "#6080a0" }} className="text-sm md:text-base">No products found for your search.</p>
 						</div>
 					)
 				) : groupedSections.length ? (
-					<div className="space-y-10">
+					<div className="space-y-6 md:space-y-10">
 						{groupedSections.map((section) => {
 							const sectionId = `section-${section.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
 							return (
-								<div key={section.name} id={sectionId} className="space-y-4 scroll-mt-24">
-									<div className="flex flex-wrap items-center justify-between gap-2">
-										<div className="flex items-center gap-3">
+								<div key={section.name} id={sectionId} className="space-y-3 scroll-mt-24 md:space-y-4">
+									<div className="flex flex-wrap items-center justify-between gap-1 md:gap-2">
+										<div className="flex items-center gap-2 md:gap-3">
 											<div
-												className="h-6 w-1 rounded-full"
+												className="h-5 w-0.5 rounded-full md:h-6 md:w-1"
 												style={{ background: "linear-gradient(180deg, #0284c7, #7c3aed)" }}
 											/>
-											<h3 className="text-xl font-bold sm:text-2xl" style={{ color: "#1a2f48" }}>
+											<h3 className="text-base font-bold sm:text-lg md:text-xl lg:text-2xl" style={{ color: "#1a2f48" }}>
 												{section.name}
 											</h3>
 										</div>
 										<span
-											className="rounded-full px-3 py-1 text-xs font-semibold"
+											className="rounded-full px-2 py-0.5 text-[9px] font-semibold md:px-3 md:py-1 md:text-xs"
 											style={{
 												background: "rgba(124,58,237,0.10)",
 												border: "1px solid rgba(124,58,237,0.22)",
@@ -517,7 +517,7 @@ function Home({ search }) {
 									</div>
 
 									{section.products.length ? (
-										<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+										<div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:gap-3 lg:grid-cols-3 xl:grid-cols-4">
 											{section.products.map((product) => (
 												<ProductCard
 													key={product._id}
@@ -531,7 +531,7 @@ function Home({ search }) {
 										</div>
 									) : (
 										<div
-											className="rounded-xl p-5 text-sm"
+											className="rounded-lg p-3 text-xs md:rounded-xl md:p-5 md:text-sm"
 											style={{
 												background: "rgba(255,255,255,0.62)",
 												border: "1px dashed rgba(100,160,220,0.26)",
@@ -553,79 +553,79 @@ function Home({ search }) {
 			) : null}
 
 			{!hasActiveSearch ? (
-				<div className="glass rounded-2xl p-5 sm:p-6" id="contact-us">
-					<h2 className="text-xl font-bold sm:text-2xl" style={{ color: "#1a2f48" }}>Contact Us</h2>
-					<p className="mt-1 text-sm" style={{ color: "#6080a0" }}>
+				<div className="glass rounded-lg p-3 sm:p-4 md:rounded-2xl md:p-5 lg:p-6" id="contact-us">
+					<h2 className="text-base font-bold sm:text-lg md:text-xl lg:text-2xl" style={{ color: "#1a2f48" }}>Contact Us</h2>
+					<p className="mt-0.5 text-xs sm:text-sm md:mt-1" style={{ color: "#6080a0" }}>
 						Reach out for furniture orders, custom iron and wooden designs, bulk inquiries, and pricing details.
 					</p>
 
-					<div className="mt-5 grid grid-cols-1 items-stretch gap-6 md:grid-cols-2">
-						<div className="flex h-full flex-col gap-3">
-							<div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-white/80 p-3">
-								<PhoneIcon className="mt-0.5 h-5 w-5 text-blue-600" />
+					<div className="mt-3 grid grid-cols-1 items-stretch gap-2 md:gap-3 md:mt-5 lg:grid-cols-2">
+						<div className="flex h-full flex-col gap-2 md:gap-3">
+							<div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-white/80 p-2 md:rounded-xl md:p-3">
+								<PhoneIcon className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 md:h-5 md:w-5" />
 								<div>
-									<p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Phone Number</p>
-									<p className="text-sm text-slate-700">{siteContent.contactNumber || "Not updated yet"}</p>
+									<p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 md:text-xs">Phone Number</p>
+									<p className="text-xs text-slate-700 md:text-sm">{siteContent.contactNumber || "Not updated yet"}</p>
 								</div>
 							</div>
 
-							<div className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-white/80 p-3">
-								<ChatBubbleLeftRightIcon className="mt-0.5 h-5 w-5 text-emerald-600" />
+							<div className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-white/80 p-2 md:rounded-xl md:p-3">
+								<ChatBubbleLeftRightIcon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 md:h-5 md:w-5" />
 								<div>
-									<p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">WhatsApp Number</p>
+									<p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 md:text-xs">WhatsApp Number</p>
 									{whatsAppHref ? (
 										<a
 											href={whatsAppHref}
 											target="_blank"
 											rel="noreferrer"
-											className="text-sm font-medium text-emerald-700 underline-offset-2 hover:underline"
+											className="text-xs font-medium text-emerald-700 underline-offset-2 hover:underline md:text-sm"
 										>
 											{whatsAppDisplay || "Not updated yet"}
 										</a>
 									) : (
-										<p className="text-sm text-slate-700">Not updated yet</p>
+										<p className="text-xs text-slate-700 md:text-sm">Not updated yet</p>
 									)}
 								</div>
 							</div>
 
-							<div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-white/80 p-3">
-								<EnvelopeIcon className="mt-0.5 h-5 w-5 text-blue-600" />
+							<div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-white/80 p-2 md:rounded-xl md:p-3">
+								<EnvelopeIcon className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 md:h-5 md:w-5" />
 								<div>
-									<p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Email</p>
+									<p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 md:text-xs">Email</p>
 									{emailHref ? (
-										<a href={emailHref} className="text-sm font-medium text-blue-700 underline-offset-2 hover:underline">
+										<a href={emailHref} className="text-xs font-medium text-blue-700 underline-offset-2 hover:underline md:text-sm">
 											{siteContent.email}
 										</a>
 									) : (
-										<p className="text-sm text-slate-700">Not updated yet</p>
+										<p className="text-xs text-slate-700 md:text-sm">Not updated yet</p>
 									)}
 								</div>
 							</div>
 
-							<div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-white/80 p-3">
-								<MapPinIcon className="mt-0.5 h-5 w-5 text-blue-600" />
+							<div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-white/80 p-2 md:rounded-xl md:p-3">
+								<MapPinIcon className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 md:h-5 md:w-5" />
 								<div>
-									<p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Address</p>
-									<p className="text-sm text-slate-700">{siteContent.address || "Address not updated yet"}</p>
+									<p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 md:text-xs">Address</p>
+									<p className="text-xs text-slate-700 md:text-sm">{siteContent.address || "Address not updated yet"}</p>
 								</div>
 							</div>
 
-							<div className="flex flex-wrap gap-3 pt-1">
+							<div className="flex flex-wrap gap-1.5 pt-0.5 md:gap-2 md:pt-1">
 								{callNowHref ? (
 									<a
 										href={callNowHref}
-										className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-300 hover:scale-105 hover:bg-blue-700"
+										className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-md transition-all duration-300 hover:scale-105 hover:bg-blue-700 md:px-4 md:py-2 md:text-sm md:rounded-xl"
 									>
-										<PhoneIcon className="h-4 w-4" />
+										<PhoneIcon className="h-3 w-3 md:h-4 md:w-4" />
 										Call Now
 									</a>
 								) : (
 									<button
 										type="button"
 										disabled
-										className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600"
+										className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-600 md:px-4 md:py-2 md:text-sm md:rounded-xl"
 									>
-										<PhoneIcon className="h-4 w-4" />
+										<PhoneIcon className="h-3 w-3 md:h-4 md:w-4" />
 										Call Now
 									</button>
 								)}
@@ -635,9 +635,9 @@ function Home({ search }) {
 										href={whatsAppHref}
 										target="_blank"
 										rel="noreferrer"
-										className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-300 hover:scale-105 hover:bg-emerald-700"
+										className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-md transition-all duration-300 hover:scale-105 hover:bg-emerald-700 md:px-4 md:py-2 md:text-sm md:rounded-xl"
 									>
-										<ChatBubbleLeftRightIcon className="h-4 w-4" />
+										<ChatBubbleLeftRightIcon className="h-3 w-3 md:h-4 md:w-4" />
 										WhatsApp
 									</a>
 								) : null}
@@ -645,9 +645,9 @@ function Home({ search }) {
 								{emailHref ? (
 									<a
 										href={emailHref}
-										className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-300 hover:scale-105 hover:bg-sky-700"
+										className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-md transition-all duration-300 hover:scale-105 hover:bg-sky-700 md:px-4 md:py-2 md:text-sm md:rounded-xl"
 									>
-										<EnvelopeIcon className="h-4 w-4" />
+										<EnvelopeIcon className="h-3 w-3 md:h-4 md:w-4" />
 										Email Us
 									</a>
 								) : null}
