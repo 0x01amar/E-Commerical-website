@@ -31,6 +31,15 @@ const defaultPricingForm = {
   shippingCharge: "79",
 };
 
+const defaultSiteContentForm = {
+  shopName: "",
+  tagline: "",
+  contactNumber: "",
+  whatsAppNumber: "",
+  address: "",
+  email: "",
+};
+
 const sortSections = (items = []) => {
   return [...items].sort((first, second) => {
     const orderA = Number(first?.displayOrder || 0);
@@ -59,6 +68,11 @@ const parseApiResponse = async (response) => {
 const wait = (ms) => new Promise((resolve) => {
   setTimeout(resolve, ms);
 });
+
+const isValidPhoneNumber = (value = "") => {
+  const digits = String(value || "").replace(/\D+/g, "");
+  return digits.length >= 10 && digits.length <= 15;
+};
 
 const getOrderTimestamp = (order = {}) => {
   const source = order?.cancelledAt || order?.updatedAt || order?.createdAt;
@@ -99,6 +113,7 @@ function AdminDashboard() {
   const [productForm, setProductForm] = useState(defaultProductForm);
   const [sectionForm, setSectionForm] = useState(defaultSectionForm);
   const [pricingForm, setPricingForm] = useState(defaultPricingForm);
+  const [siteContentForm, setSiteContentForm] = useState(defaultSiteContentForm);
 
   const [existingImages, setExistingImages] = useState([]);
   const [newImages, setNewImages] = useState([]);
@@ -115,11 +130,13 @@ function AdminDashboard() {
   const [saving, setSaving] = useState(false);
   const [sectionSaving, setSectionSaving] = useState(false);
   const [pricingSaving, setPricingSaving] = useState(false);
+  const [siteContentSaving, setSiteContentSaving] = useState(false);
   const [statusUpdatingOrderId, setStatusUpdatingOrderId] = useState("");
 
   const [error, setError] = useState("");
   const [sectionError, setSectionError] = useState("");
   const [pricingError, setPricingError] = useState("");
+  const [siteContentError, setSiteContentError] = useState("");
   const [pricingNotice, setPricingNotice] = useState("");
   const [ordersError, setOrdersError] = useState("");
   const [statusDrafts, setStatusDrafts] = useState({});
@@ -154,6 +171,7 @@ function AdminDashboard() {
         setError("");
         setSectionError("");
         setPricingError("");
+        setSiteContentError("");
         setPricingNotice("");
         setOrdersError("");
 
@@ -196,6 +214,23 @@ function AdminDashboard() {
           }
         } catch {
           setPricingError("Failed to load checkout pricing settings");
+        }
+
+        try {
+          const { response: siteContentResponse, data: siteContentData } = await apiFetchJson("/site-content");
+
+          if (siteContentResponse.ok) {
+            setSiteContentForm({
+              shopName: String(siteContentData?.shopName || "").trim(),
+              tagline: String(siteContentData?.tagline || "").trim(),
+              contactNumber: String(siteContentData?.contactNumber || "").trim(),
+              whatsAppNumber: String(siteContentData?.whatsAppNumber || "").trim(),
+              address: String(siteContentData?.address || "").trim(),
+              email: String(siteContentData?.email || "").trim(),
+            });
+          }
+        } catch {
+          setSiteContentError("Failed to load top showcase/contact content");
         }
 
         const { response: ordersResponse, data: ordersData } = await apiFetchJson("/orders/admin/all", {
@@ -362,7 +397,7 @@ function AdminDashboard() {
         formData.append("heroImageUrl", heroImageUrl);
       }
 
-      const { response, data } = await apiFetch("/settings/hero-image", {
+      const { response, data } = await apiFetchJson("/settings/hero-image", {
         method: "PUT",
         body: formData,
         headers: {
@@ -382,6 +417,87 @@ function AdminDashboard() {
       showToast("Failed to update hero image", "error");
     } finally {
       setHeroImageSaving(false);
+    }
+  };
+
+  const saveSiteContent = async (event) => {
+    event.preventDefault();
+
+    const shopName = String(siteContentForm.shopName || "").trim();
+    const tagline = String(siteContentForm.tagline || "").trim();
+    const contactNumber = String(siteContentForm.contactNumber || "").trim();
+    const whatsAppNumber = String(siteContentForm.whatsAppNumber || "").trim();
+    const address = String(siteContentForm.address || "").trim();
+    const email = String(siteContentForm.email || "").trim();
+
+    if (!shopName) {
+      setSiteContentError("Shop name is required");
+      return;
+    }
+
+    if (!tagline) {
+      setSiteContentError("Tagline is required");
+      return;
+    }
+
+    if (contactNumber && !isValidPhoneNumber(contactNumber)) {
+      setSiteContentError("Contact number must contain 10 to 15 digits");
+      return;
+    }
+
+    if (whatsAppNumber && !isValidPhoneNumber(whatsAppNumber)) {
+      setSiteContentError("WhatsApp number must contain 10 to 15 digits");
+      return;
+    }
+
+    try {
+      setSiteContentSaving(true);
+      setSiteContentError("");
+
+      const { response, data } = await apiFetchJson("/site-content", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({
+          shopName,
+          tagline,
+          contactNumber,
+          whatsAppNumber,
+          address,
+          email,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to update site content");
+      }
+
+      const nextContent = data?.siteContent || {
+        shopName,
+        tagline,
+        contactNumber,
+        whatsAppNumber,
+        address,
+        email,
+      };
+
+      setSiteContentForm({
+        shopName: String(nextContent?.shopName || ""),
+        tagline: String(nextContent?.tagline || ""),
+        contactNumber: String(nextContent?.contactNumber || ""),
+        whatsAppNumber: String(nextContent?.whatsAppNumber || ""),
+        address: String(nextContent?.address || ""),
+        email: String(nextContent?.email || ""),
+      });
+
+      showToast("Top showcase and contact details updated", "success");
+    } catch (saveError) {
+      setSiteContentError(resolveApiErrorMessage(saveError, "Failed to update site content"));
+      showToast("Failed to update site content", "error");
+    } finally {
+      setSiteContentSaving(false);
     }
   };
 
@@ -1087,7 +1203,7 @@ function AdminDashboard() {
           <p style={{ color: "#3a5470" }}>Admin access required.</p>
           <button
             type="button"
-            onClick={() => navigate("/admin-login")}
+            onClick={() => navigate("/admin")}
             className="mt-4 btn-neon rounded-lg px-4 py-2 text-sm"
           >
             Go to Admin Login
@@ -1113,6 +1229,7 @@ function AdminDashboard() {
       {error ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">{error}</p> : null}
       {sectionError ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">{sectionError}</p> : null}
       {pricingError ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">{pricingError}</p> : null}
+      {siteContentError ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">{siteContentError}</p> : null}
       {pricingNotice ? <p className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">{pricingNotice}</p> : null}
 
       {cancelNotifications.length ? (
@@ -1141,6 +1258,96 @@ function AdminDashboard() {
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_2fr]">
         <div className="space-y-6">
+          <form onSubmit={saveSiteContent} className="glass rounded-2xl p-5">
+            <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>Top Showcase & Contact Content</h2>
+            <p className="mt-1 text-xs" style={{ color: "#6080a0" }}>
+              Manage top showcase details and home page contact section content.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#6080a0" }}>
+                  Shop Name
+                </label>
+                <input
+                  value={siteContentForm.shopName}
+                  onChange={(event) => setSiteContentForm((prev) => ({ ...prev, shopName: event.target.value }))}
+                  className="input-dark w-full"
+                  placeholder="Maa Sheela Iron Art"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#6080a0" }}>
+                  Tagline
+                </label>
+                <textarea
+                  value={siteContentForm.tagline}
+                  onChange={(event) => setSiteContentForm((prev) => ({ ...prev, tagline: event.target.value }))}
+                  className="input-dark min-h-20 w-full"
+                  placeholder="We provide high-quality furniture, iron works, wooden products, custom designs, and more at the best prices."
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#6080a0" }}>
+                  Contact Number
+                </label>
+                <input
+                  value={siteContentForm.contactNumber}
+                  onChange={(event) => setSiteContentForm((prev) => ({ ...prev, contactNumber: event.target.value }))}
+                  className="input-dark w-full"
+                  placeholder="9876543210"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#6080a0" }}>
+                  WhatsApp Number
+                </label>
+                <input
+                  value={siteContentForm.whatsAppNumber}
+                  onChange={(event) => setSiteContentForm((prev) => ({ ...prev, whatsAppNumber: event.target.value }))}
+                  className="input-dark w-full"
+                  placeholder="919876543210"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#6080a0" }}>
+                  Address
+                </label>
+                <textarea
+                  value={siteContentForm.address}
+                  onChange={(event) => setSiteContentForm((prev) => ({ ...prev, address: event.target.value }))}
+                  className="input-dark min-h-20 w-full"
+                  placeholder="Enter full shop address"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#6080a0" }}>
+                  Email (Optional)
+                </label>
+                <input
+                  type="email"
+                  value={siteContentForm.email}
+                  onChange={(event) => setSiteContentForm((prev) => ({ ...prev, email: event.target.value }))}
+                  className="input-dark w-full"
+                  placeholder="example@domain.com"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={siteContentSaving}
+                className="btn-neon rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {siteContentSaving ? "Saving..." : "Save Showcase & Contact"}
+              </button>
+            </div>
+          </form>
+
           <form onSubmit={saveCheckoutPricing} className="glass rounded-2xl p-5">
             <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>Checkout Pricing Settings</h2>
 

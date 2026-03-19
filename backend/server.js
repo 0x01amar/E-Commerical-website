@@ -11,6 +11,7 @@ const productRoutes = require("./routes/products");
 const orderRoutes = require("./routes/orders");
 const paymentRoutes = require("./routes/payment");
 const settingsRoutes = require("./routes/settings");
+const siteContentRoutes = require("./routes/siteContent");
 const { getGridFSBucket, setGridFSBucket } = require("./utils/gridfs");
 
 const app = express();
@@ -70,6 +71,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/site-content", siteContentRoutes);
 app.use("/api", (_req, res) => {
   res.status(404).json({ message: "API route not found" });
 });

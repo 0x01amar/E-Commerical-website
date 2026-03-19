@@ -19,6 +19,7 @@ function App() {
   const hideNavbarRoutes = [
     "/signup",
     "/login",
+    "/admin",
     "/admin-login",
   ];
 
@@ -28,7 +29,7 @@ function App() {
     <div className="min-h-screen" style={{ background: "transparent", color: "#1a2f48" }}>
       {!shouldHideNavbar && <Navbar search={search} setSearch={setSearch} />}
 
-      <main className={shouldHideNavbar ? "" : "mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"}>
+      <main className={shouldHideNavbar ? "" : "mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 md:pb-6 lg:px-8"}>
         <Routes>
           <Route path="/" element={<Home search={search} />} />
           <Route path="/product/:id" element={<ProductPage />} />
@@ -36,7 +37,8 @@ function App() {
           <Route path="/checkout/:productId" element={<Checkout />} />
           <Route path="/signup" element={<UserLogin />} />
           <Route path="/login" element={<LoginPassword />} />
-          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin-login" element={<Navigate replace to="/admin" />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/complete-profile" element={<Navigate replace to="/signup" />} />

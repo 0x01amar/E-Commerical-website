@@ -132,16 +132,6 @@ function LoginPassword(){
 						>
 							Create New Account
 						</button>
-						<button
-							type="button"
-							onClick={() => navigate("/admin-login")}
-							className="w-full rounded-lg py-2.5 text-sm font-medium transition-all duration-250"
-							style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.22)", color: "#7c3aed" }}
-							onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,58,237,0.14)"; e.currentTarget.style.boxShadow = "0 0 12px rgba(124,58,237,0.18)"; }}
-							onMouseLeave={e => { e.currentTarget.style.background = "rgba(124,58,237,0.08)"; e.currentTarget.style.boxShadow = "none"; }}
-						>
-							Admin Login
-						</button>
 					</div>
 				</div>
 			</div>
