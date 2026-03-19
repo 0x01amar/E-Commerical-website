@@ -1,7 +1,7 @@
 const SiteContent = require("../models/SiteContent");
 
 const DEFAULT_SITE_CONTENT = {
-  shopName: "Maa Sheela Iron Art",
+  shopName: "Maa Sheela Iron Arts",
   tagline: "We provide high-quality furniture, iron works, wooden products, custom designs, and more at the best prices.",
   contactNumber: "",
   whatsAppNumber: "",

@@ -10,18 +10,25 @@ const passwordPolicyRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 // -------- EMAIL TRANSPORTER --------
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
-const normalizeEmail = (email = "") => email.trim().toLowerCase();
+// Verify connection configuration
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error("TRANSPORTER CONNECTION ERROR:", error);
+  } else {
+    console.log("Email server is ready to take our messages");
+  }
+});
 
-const trimString = (value = "") => String(value || "").trim();
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+
+const trimString = (value) => String(value || "").trim();
 
 const normalizeAddress = (address = {}) => {
   if (typeof address === "string") {
@@ -75,7 +82,11 @@ const isBcryptHash = (value = "") => value.startsWith("$2a$") || value.startsWit
 
 const isAdminKeyValid = (adminKey = "") => {
   const configuredAdminKey = process.env.ADMIN_KEY || "";
-  return Boolean(configuredAdminKey) && adminKey === configuredAdminKey;
+  if (!configuredAdminKey) {
+    console.warn("WARNING: ADMIN_KEY is not set in environment variables. Admin login will be disabled.");
+    return false;
+  }
+  return adminKey === configuredAdminKey;
 };
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -165,23 +176,60 @@ router.post("/signup/request-otp", async (req, res) => {
 
     await user.save();
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Your Signup OTP",
-      text: `Hi ${name},\n\nYour OTP for signup is: ${otp}\nIt will expire in 5 minutes.\n\nIf you did not request this, please ignore this email.`,
-    });
+    // Attempt to send email but don't crash if it fails
+    let emailSent = false;
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_PASS;
+
+    try {
+      if (emailUser && emailPass) {
+        console.log(`[AUTH] Attempting to send OTP email to ${email} via ${emailUser}...`);
+        const mailOptions = {
+          from: `"Maa Sheela Iron Arts" <${emailUser}>`,
+          to: email,
+          subject: `${otp} is your verification code`,
+          text: `Hi ${name},\n\nYour OTP for signup is: ${otp}\nIt will expire in 5 minutes.\n\nIf you did not request this, please ignore this email.`,
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 8px;">
+              <h2 style="color: #1A1A1A; font-size: 24px; border-bottom: 2px solid #4A5D4E; padding-bottom: 10px;">Verification Code</h2>
+              <p style="color: #4A4A4A; font-size: 16px; line-height: 1.6;">Hi ${name},</p>
+              <p style="color: #4A4A4A; font-size: 16px; line-height: 1.6;">Thank you for joining <strong>Maa Sheela Iron Arts</strong>. Use the following code to verify your account:</p>
+              <div style="background-color: #FDFCFB; border: 1px dashed #4A5D4E; padding: 20px; text-align: center; margin: 30px 0;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4A5D4E;">${otp}</span>
+              </div>
+              <p style="color: #999; font-size: 12px;">This code will expire in 5 minutes. If you did not request this, please ignore this email.</p>
+              <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
+              <p style="text-align: center; color: #4A5D4E; font-weight: bold;">Maa Sheela Iron Arts</p>
+            </div>
+          `
+        };
+        const info = await transporter.sendMail(mailOptions);
+        console.log("[AUTH] MAIL SENT SUCCESSFULLY. MessageId:", info.messageId);
+        emailSent = true;
+      } else {
+        console.warn("[AUTH] CRITICAL: EMAIL_USER or EMAIL_PASS is missing in .env file. Email will NOT be sent.");
+      }
+    } catch (mailError) {
+      console.error("[AUTH] MAIL SENDING FAILED:", mailError.message);
+      if (mailError.message.includes("Invalid login")) {
+        console.error("[AUTH] TIP: If using Gmail, ensure you are using a 16-character 'App Password', not your regular password.");
+      }
+    }
+
+    // Log for development
+    console.log(`[AUTH] OTP for ${email} is ${otp}. Email delivered: ${emailSent}`);
 
     res.json({
-      message: "OTP sent to your email",
+      message: emailSent ? "OTP sent to your email" : "OTP generated. Check server logs if email failed.",
+      otp: emailSent ? undefined : otp // Only return OTP in response if email fails (Dev friendly)
     });
 
   } catch (err) {
 
-    console.log("SIGNUP OTP ERROR:", err);
+    console.error("SIGNUP OTP ERROR:", err);
 
     res.status(500).json({
-      message: "OTP sending failed",
+      message: "Failed to process signup request: " + (err.message || "Unknown error"),
     });
 
   }
@@ -242,8 +290,12 @@ const loginHandler = async (req, res) => {
 
   try {
 
+    if (!req.body) {
+      return res.status(400).json({ message: "Request body is missing. Ensure you are sending JSON data." });
+    }
+
     const email = normalizeEmail(req.body?.email);
-    const { password } = req.body;
+    const password = req.body?.password || "";
     const adminKey = String(req.body?.adminKey || "");
     const asAdmin = Boolean(req.body?.asAdmin);
 
@@ -251,20 +303,24 @@ const loginHandler = async (req, res) => {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
-    const user = await User.findOne({ email }).select("+password");
+    const user = await User.findOne({ email }).select("+password +isVerified");
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "User account not found with this email" });
     }
 
-    if (!user.isVerified) {
-      return res.status(403).json({ message: "Please verify signup OTP first" });
+    if (user.isVerified === false) {
+      return res.status(403).json({ message: "Account exists but email is not verified. Please verify your OTP first." });
     }
 
-    const passwordMatched = await comparePassword(password, user.password || "");
+    if (!user.password) {
+      return res.status(401).json({ message: "Account is not set up for password login. Please use OTP to reset your password." });
+    }
+
+    const passwordMatched = await comparePassword(password, user.password);
 
     if (!passwordMatched) {
-      return res.status(401).json({ message: "Wrong password" });
+      return res.status(401).json({ message: "The password you entered is incorrect" });
     }
 
     if (passwordMatched && user.password && !isBcryptHash(user.password)) {
@@ -286,7 +342,8 @@ const loginHandler = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    console.error("AUTH ROUTE ERROR:", error);
+    res.status(500).json({ message: "Server error: " + (error.message || "Unknown error") });
   }
 
 };
@@ -349,7 +406,8 @@ router.post("/complete-profile", async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    console.error("AUTH ROUTE ERROR:", error);
+    res.status(500).json({ message: "Server error: " + (error.message || "Unknown error") });
   }
 
 });
@@ -370,7 +428,8 @@ router.get("/profile/:email", async (req, res) => {
     res.json(safeUser(user));
 
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("GET PROFILE ERROR:", err);
+    res.status(500).json({ message: "Server error: " + (err.message || "Unknown error") });
   }
 
 });
@@ -420,7 +479,8 @@ router.put("/profile/:email", async (req, res) => {
     res.json(safeUser(updatedUser));
 
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("UPDATE PROFILE ERROR:", err);
+    res.status(500).json({ message: "Server error: " + (err.message || "Unknown error") });
   }
 
 });

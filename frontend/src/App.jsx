@@ -10,47 +10,34 @@ import LoginPassword from "./pages/LoginPassword";
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import Contact from "./pages/Contact";
 import ToastHost from "./components/ToastHost";
+
+import MainLayout from "./components/layout/MainLayout";
 
 function App() {
   const [search, setSearch] = useState("");
-  const location = useLocation();
-
-  const hideNavbarRoutes = [
-    "/signup",
-    "/login",
-    "/admin",
-    "/admin-login",
-  ];
-
-  const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname);
 
   return (
-    <div className="min-h-screen" style={{ background: "transparent", color: "#1a2f48" }}>
-      {!shouldHideNavbar && <Navbar search={search} setSearch={setSearch} />}
-
-      <main className={shouldHideNavbar ? "" : "mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 md:pb-6 lg:px-8"}>
-        <Routes>
-          <Route path="/" element={<Home search={search} />} />
-          <Route path="/product/:id" element={<ProductPage />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout/:productId" element={<Checkout />} />
-          <Route path="/signup" element={<UserLogin />} />
-          <Route path="/login" element={<LoginPassword />} />
-          <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/admin-login" element={<Navigate replace to="/admin" />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route path="/complete-profile" element={<Navigate replace to="/signup" />} />
-          <Route path="/login-password" element={<Navigate replace to="/login" />} />
-          <Route path="*" element={<Navigate replace to="/" />} />
-        </Routes>
-      </main>
-
+    <MainLayout search={search} setSearch={setSearch}>
+      <Routes>
+        <Route path="/" element={<Home search={search} />} />
+        <Route path="/product/:id" element={<ProductPage />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout/:productId" element={<Checkout />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/signup" element={<UserLogin />} />
+        <Route path="/login" element={<LoginPassword />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/complete-profile" element={<Navigate replace to="/signup" />} />
+        <Route path="/login-password" element={<Navigate replace to="/login" />} />
+        <Route path="*" element={<Navigate replace to="/" />} />
+      </Routes>
       <ToastHost />
-    </div>
+    </MainLayout>
   );
-
 }
 
 export default App;

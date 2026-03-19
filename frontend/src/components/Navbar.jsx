@@ -1,339 +1,195 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import {
-  HomeIcon,
   ShoppingCartIcon,
-  UserCircleIcon,
-  UserPlusIcon,
-  ArrowRightOnRectangleIcon,
-  Squares2X2Icon,
-  ClipboardDocumentListIcon,
+  UserIcon,
+  MagnifyingGlassIcon,
+  Bars3Icon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import SearchBar from "./SearchBar";
 import { apiFetchJson } from "../config/api";
+import { Button } from "./ui/button";
 
 function Navbar({ search, setSearch }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const showSearch = location.pathname === "/";
   const isLoggedIn = Boolean(localStorage.getItem("email"));
   const isAdminSession = localStorage.getItem("role") === "admin";
+  
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchCatalog, setSearchCatalog] = useState([]);
-  const [catalogLoaded, setCatalogLoaded] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
-    if (!showSearch || catalogLoaded) {
-      return;
-    }
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
+  useEffect(() => {
     const loadCatalog = async () => {
       try {
         const { response, data } = await apiFetchJson("/products");
-
-        if (!response.ok) {
-          return;
-        }
-
-        setSearchCatalog(Array.isArray(data) ? data : []);
-        setCatalogLoaded(true);
-      } catch {
-        setSearchCatalog([]);
+        if (response.ok) setSearchCatalog(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to load catalog", err);
       }
     };
-
     loadCatalog();
-  }, [catalogLoaded, showSearch]);
+  }, []);
+
+  const isHomePage = location.pathname === "/";
+  // The navbar should have light text (white) if:
+  // 1. We are on the home page
+  // 2. We haven't scrolled past the hero image
+  // 3. Search and Mobile menus are closed
+  const isLightMode = isHomePage && !isScrolled && !isSearchOpen && !isMobileMenuOpen;
+
+  const textColorClass = isLightMode ? "text-white" : "text-neutral-dark";
+  const hoverColorClass = isLightMode ? "hover:text-white/70" : "hover:text-primary";
+  const iconHoverBg = isLightMode ? "hover:bg-white/10" : "hover:bg-neutral-dark/5";
 
   const searchSuggestions = useMemo(() => {
-    const normalizedSearch = String(search || "").trim().toLowerCase();
-
-    if (!normalizedSearch) {
-      return [];
-    }
-
-    const terms = normalizedSearch.split(/\s+/).filter(Boolean);
-
+    const term = search.trim().toLowerCase();
+    if (!term) return [];
     return searchCatalog
-      .filter((product) => {
-        const text = [
-          product?.name || "",
-          product?.section || "",
-          product?.category || "",
-          product?.description || "",
-        ].join(" ").toLowerCase();
-
-        return terms.every((term) => text.includes(term));
-      })
-      .slice(0, 8)
-      .map((product) => ({
-        id: product?._id,
-        label: product?.name || "Product",
-        section: product?.section || product?.category || "General",
-      }));
+      .filter(p => 
+        p.name.toLowerCase().includes(term) || 
+        p.category?.toLowerCase().includes(term) || 
+        p.section?.toLowerCase().includes(term)
+      )
+      .slice(0, 5)
+      .map(p => ({ id: p._id, label: p.name }));
   }, [search, searchCatalog]);
 
-  const goToProfile = () => {
-    if (isAdminSession) {
-      navigate("/admin-dashboard");
-      return;
-    }
-    navigate("/dashboard");
-  };
-
-  const goToProductsSection = () => {
-    if (location.pathname !== "/") {
-      sessionStorage.setItem("scrollToProducts", "1");
-      navigate("/");
-      return;
-    }
-
-    const productsSection = document.getElementById("all-sections");
-
-    if (productsSection) {
-      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
-
-    sessionStorage.setItem("scrollToProducts", "1");
-  };
-
   return (
-    <>
-      <header
-        style={{
-          background: "rgba(255,255,255,0.94)",
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
-          borderBottom: "1px solid rgba(37,99,235,0.16)",
-          boxShadow: "0 6px 20px rgba(30,60,110,0.08)",
-        }}
-        className="sticky top-0 z-50 hidden md:block"
-      >
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            style={{
-              background: "linear-gradient(135deg, #2563eb, #3b82f6)",
-              boxShadow: "0 8px 18px rgba(37,99,235,0.28)",
-            }}
-            className="rounded-xl px-3 py-2 text-xs font-bold text-white transition-all duration-300 hover:scale-105 hover:shadow-[0_0_24px_rgba(37,99,235,0.32)] sm:px-4 sm:text-sm"
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${
+      isScrolled || isSearchOpen || isMobileMenuOpen
+        ? "bg-white/90 backdrop-blur-md shadow-sm py-2" 
+        : "bg-transparent py-6"
+    }`}>
+      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className={`flex items-center transition-colors duration-500 ${textColorClass}`}>
+          <div className="h-10 w-auto">
+            <svg className="h-full w-auto" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="40,10 75,30 75,70 40,90 5,70 5,30" fill={isLightMode ? "#FFFFFF" : "#4A5D4E"} />
+              <path d="M20 65 V35 L40 55 L60 35 V65" stroke={isLightMode ? "#4A5D4E" : "#FFFFFF"} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+              <text x="95" y="55" fontFamily="Playfair Display, serif" fontWeight="bold" fontSize="36" fill="currentColor">Maa Sheela</text>
+              <text x="95" y="82" fontFamily="Inter, sans-serif" fontWeight="bold" fontSize="14" fill="currentColor" opacity="0.6" letterSpacing="6">IRON ARTS</text>
+            </svg>
+          </div>
+        </Link>
+
+        {/* Desktop Nav */}
+        <div className="hidden md:flex items-center gap-10">
+          <button 
+            onClick={() => {
+              if (isHomePage) window.scrollTo({ top: 0, behavior: 'smooth' });
+              else navigate("/");
+            }} 
+            className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-500 ${textColorClass} ${hoverColorClass}`}
           >
-            ✦ Maa Sheela Iron Art
+            Home
           </button>
-
-          <div className="order-3 w-full md:order-2 md:flex-1">
-            {showSearch ? (
-              <SearchBar
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                suggestions={searchSuggestions}
-                onSelectSuggestion={(suggestion) => {
-                  setSearch(String(suggestion?.label || ""));
-
-                  if (location.pathname !== "/") {
-                    navigate("/");
-                  }
-                }}
-                placeholder="Search furniture, section, category..."
-              />
-            ) : null}
-          </div>
-
-          <div className="order-2 ml-auto flex items-center gap-1.5 sm:gap-2 md:order-3">
-            {!isAdminSession && (
-              <button
-                type="button"
-                onClick={() => navigate("/cart")}
-                style={{
-                  background: "rgba(37,99,235,0.08)",
-                  border: "1px solid rgba(37,99,235,0.26)",
-                  color: "#1d4ed8",
-                }}
-                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-medium transition-all duration-250 hover:scale-105 hover:bg-[rgba(37,99,235,0.14)] hover:border-[rgba(37,99,235,0.40)] hover:shadow-[0_0_15px_rgba(37,99,235,0.18)] sm:px-3 sm:text-sm"
-              >
-                <ShoppingCartIcon className="h-4 w-4" /> Cart
-              </button>
-            )}
-
-            {isLoggedIn ? (
-              <button
-                type="button"
-                onClick={goToProfile}
-                style={{
-                  background: "linear-gradient(135deg, rgba(37,99,235,0.12), rgba(59,130,246,0.10))",
-                  border: "1px solid rgba(37,99,235,0.28)",
-                  color: "#1d4ed8",
-                }}
-                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-semibold transition-all duration-250 hover:scale-105 hover:bg-[rgba(37,99,235,0.16)] hover:shadow-[0_0_15px_rgba(37,99,235,0.16)] sm:px-3 sm:text-sm"
-              >
-                <UserCircleIcon className="h-4 w-4" />
-                {isAdminSession ? "Dashboard" : "Profile"}
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => navigate("/signup")}
-                  style={{
-                    background: "linear-gradient(135deg, #2563eb, #3b82f6)",
-                    boxShadow: "0 0 12px rgba(37,99,235,0.22)",
-                    color: "#fff",
-                  }}
-                  className="rounded-lg px-2.5 py-2 text-xs font-semibold transition-all duration-250 hover:shadow-[0_0_25px_rgba(45,212,191,0.4)] hover:scale-105 sm:px-3 sm:text-sm"
-                >
-                  Sign Up
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/login")}
-                  style={{
-                    background: "linear-gradient(135deg, #2563eb, #3b82f6)",
-                    boxShadow: "0 0 12px rgba(37,99,235,0.22)",
-                    color: "#fff",
-                  }}
-                  className="rounded-lg px-2.5 py-2 text-xs font-semibold transition-all duration-250 hover:shadow-[0_0_25px_rgba(45,212,191,0.4)] hover:scale-105 sm:px-3 sm:text-sm"
-                >
-                  Login
-                </button>
-              </>
-            )}
-          </div>
+          <button onClick={() => {
+            const el = document.getElementById("collections");
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+            else navigate("/");
+          }} className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-500 ${textColorClass} ${hoverColorClass}`}>
+            Collections
+          </button>
+          <Link to="/contact" className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-500 ${textColorClass} ${hoverColorClass}`}>
+            Contact
+          </Link>
         </div>
-      </header>
 
-      <header
-        style={{
-          background: "#2874f0",
-          borderBottom: "1px solid rgba(255,255,255,0.26)",
-          boxShadow: "0 6px 20px rgba(30,64,175,0.26)",
-        }}
-        className="sticky top-0 z-50 md:hidden"
-      >
-        <div className="mx-auto max-w-7xl px-3 py-2">
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={goToProductsSection}
-              className="flex items-center gap-1 rounded-lg bg-white/20 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-white/30 transition-all"
-            >
-              <span>🛋️</span> MSI
-            </button>
-          </div>
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            className={`p-3 rounded-full transition-all duration-500 ${textColorClass} ${iconHoverBg}`}
+          >
+            <MagnifyingGlassIcon className="w-5 h-5" />
+          </button>
+          
+          {!isAdminSession && (
+            <Link to="/cart" className={`p-3 rounded-full transition-all duration-500 relative ${textColorClass} ${iconHoverBg}`}>
+              <ShoppingCartIcon className="w-5 h-5" />
+            </Link>
+          )}
 
-          {showSearch ? (
-            <div className="mt-2 rounded-lg bg-white/95 p-0.5 shadow-sm">
-              <SearchBar
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                suggestions={searchSuggestions}
-                onSelectSuggestion={(suggestion) => {
-                  setSearch(String(suggestion?.label || ""));
-
-                  if (location.pathname !== "/") {
-                    navigate("/");
-                  }
-                }}
-                placeholder="Search for products, categories..."
-              />
-            </div>
-          ) : null}
-        </div>
-      </header>
-
-      <div
-        style={{
-          background: "rgba(255,255,255,0.96)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          borderTop: "1px solid rgba(37,99,235,0.2)",
-          boxShadow: "0 -8px 24px rgba(15,23,42,0.14)",
-        }}
-        className="fixed inset-x-0 bottom-0 z-50 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 md:hidden"
-      >
-        <div className="mx-auto max-w-7xl rounded-xl border border-blue-100 bg-white/95 px-2 py-2">
-          <div className="grid grid-cols-5 items-center gap-1">
-            <button
-              type="button"
-              onClick={goToProductsSection}
-              className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-blue-800 hover:bg-blue-50 transition-colors"
-            >
-              <HomeIcon className="h-4 w-4" />
-              Home
-            </button>
-
-            {!isAdminSession ? (
-              <button
-                type="button"
-                onClick={() => navigate("/cart")}
-                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-sky-800 hover:bg-sky-50 transition-colors"
-              >
-                <ShoppingCartIcon className="h-4 w-4" />
-                Cart
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => navigate("/admin-dashboard")}
-                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-indigo-800 hover:bg-indigo-50 transition-colors"
-              >
-                <UserCircleIcon className="h-4 w-4" />
-                Admin
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={goToProductsSection}
-              className="flex flex-col items-center gap-0.5 rounded-lg bg-blue-600 px-1 py-1.5 text-[9px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
-            >
-              <Squares2X2Icon className="h-4 w-4" />
-              Categories
-            </button>
-
-            {isLoggedIn ? (
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard")}
-                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-amber-800 hover:bg-amber-50 transition-colors"
-              >
-                <ClipboardDocumentListIcon className="h-4 w-4" />
-                Orders
-              </button>
-            ) : (
-              <button
-                type="button"
+          {isLoggedIn ? (
+            <Link to={isAdminSession ? "/admin" : "/dashboard"} className={`p-3 rounded-full transition-all duration-500 ${textColorClass} ${iconHoverBg}`}>
+              <UserIcon className="w-5 h-5" />
+            </Link>
+          ) : (
+            <div className="hidden md:flex items-center gap-4 ml-4">
+              <button 
                 onClick={() => navigate("/login")}
-                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-violet-800 hover:bg-violet-50 transition-colors"
+                className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-500 ${textColorClass} ${hoverColorClass}`}
               >
-                <ArrowRightOnRectangleIcon className="h-4 w-4" />
                 Login
               </button>
-            )}
-
-            {isLoggedIn ? (
-              <button
-                type="button"
-                onClick={goToProfile}
-                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-indigo-800 hover:bg-indigo-50 transition-colors"
-              >
-                <UserCircleIcon className="h-4 w-4" />
-                Profile
-              </button>
-            ) : (
-              <button
-                type="button"
+              <Button 
+                variant={isLightMode ? "secondary" : "default"} 
+                size="sm" 
                 onClick={() => navigate("/signup")}
-                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-emerald-800 hover:bg-emerald-50 transition-colors"
+                className="transition-all duration-500 shadow-xl"
               >
-                <UserPlusIcon className="h-4 w-4" />
                 Sign Up
-              </button>
-            )}
-          </div>
+              </Button>
+            </div>
+          )}
+
+          <button className={`md:hidden p-3 transition-colors duration-500 ${textColorClass}`} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+            {isMobileMenuOpen ? <XMarkIcon className="w-6 h-6" /> : <Bars3Icon className="w-6 h-6" />}
+          </button>
         </div>
       </div>
-    </>
+
+      {/* Search Overlay */}
+      {isSearchOpen && (
+        <div className="absolute top-full left-0 w-full bg-white border-b border-neutral-dark/5 p-6 animate-in slide-in-from-top duration-500">
+          <div className="max-w-3xl mx-auto">
+            <SearchBar 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              suggestions={searchSuggestions}
+              onSelectSuggestion={(s) => {
+                setSearch(s.label);
+                setIsSearchOpen(false);
+                navigate(`/product/${s.id}`);
+              }}
+              placeholder="Search for furniture, collections..."
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-2xl p-10 flex flex-col gap-10 animate-in fade-in slide-in-from-top-4 duration-500 border-t border-neutral-dark/5">
+          <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-dark">Home</Link>
+          <button onClick={() => {
+            const el = document.getElementById("collections");
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+            setIsMobileMenuOpen(false);
+          }} className="text-xs font-bold uppercase tracking-[0.2em] text-left text-neutral-dark">Collections</button>
+          <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-dark">Contact</Link>
+          <Link to="/cart" onClick={() => setIsMobileMenuOpen(false)} className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-dark">Cart</Link>
+          <hr className="border-neutral-dark/5" />
+          {!isLoggedIn && (
+            <div className="flex flex-col gap-4">
+              <Button variant="outline" onClick={() => navigate("/login")}>Login</Button>
+              <Button variant="default" onClick={() => navigate("/signup")}>Sign Up</Button>
+            </div>
+          )}
+        </div>
+      )}
+    </nav>
   );
 }
 

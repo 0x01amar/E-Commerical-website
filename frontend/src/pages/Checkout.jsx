@@ -1,1315 +1,527 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 import {
-  API_BASE_URL,
-  BACKEND_URL,
-  BACKEND_URL_SOURCE,
-  IS_LOCAL_CLIENT,
-  LOCAL_BACKEND_URL,
   apiUrl,
   mediaUrl,
   resolveApiErrorMessage,
+  apiFetchJson
 } from "../config/api";
 import ImageLightbox from "../components/ImageLightbox";
-
-const DEFAULT_TAX_RATE = 0.08;
-const DEFAULT_SHIPPING_CHARGE = 79;
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { 
+  CheckCircleIcon, 
+  TruckIcon, 
+  CreditCardIcon, 
+  MapPinIcon,
+  ArrowLeftIcon,
+  PlusIcon,
+  MinusIcon,
+  ShoppingBagIcon
+} from "@heroicons/react/24/outline";
+import { showToast } from "../config/toast";
 
 const EMPTY_ADDRESS = {
-  line1: "",
-  landmark: "",
-  villageTown: "",
-  wardNo: "",
-  district: "",
-  state: "",
-  pincode: "",
-  fullAddress: "",
+  line1: "", landmark: "", villageTown: "", wardNo: "",
+  district: "", state: "", pincode: "", fullAddress: ""
 };
 
-const normalizeAddress = (address = {}) => {
-  if (typeof address === "string") {
-    const fullAddress = address.trim();
-
-    return {
-      ...EMPTY_ADDRESS,
-      line1: fullAddress,
-      fullAddress,
-    };
-  }
-
-  return {
-    line1: String(address?.line1 || "").trim(),
-    landmark: String(address?.landmark || "").trim(),
-    villageTown: String(address?.villageTown || "").trim(),
-    wardNo: String(address?.wardNo || "").trim(),
-    district: String(address?.district || "").trim(),
-    state: String(address?.state || "").trim(),
-    pincode: String(address?.pincode || "").trim(),
-    fullAddress: String(address?.fullAddress || "").trim(),
-  };
-};
-
-const formatAddress = (address = EMPTY_ADDRESS) => {
-  return [
-    address.line1,
-    address.landmark,
-    address.villageTown,
-    address.wardNo ? `Ward No ${address.wardNo}` : "",
-    address.district,
-    address.state,
-    address.pincode,
-  ]
-    .filter(Boolean)
-    .join(", ");
-};
-
-const validateAddress = (address = EMPTY_ADDRESS) => {
-  const requiredFields = ["line1", "villageTown", "wardNo", "district", "state", "pincode"];
-
-  for (const field of requiredFields) {
-    if (!String(address[field] || "").trim()) {
-      return "Please fill all required delivery address fields";
-    }
-  }
-
-  if (!/^\d{6}$/.test(address.pincode)) {
-    return "Pincode must be exactly 6 digits";
-  }
-
-  return "";
-};
-
-const loadRazorpayScript = async () => {
-  if (typeof window !== "undefined" && window.Razorpay) {
-    return true;
-  }
-
-  return new Promise((resolve) => {
-    const existing = document.getElementById("razorpay-checkout-js");
-
-    if (existing) {
-      existing.addEventListener("load", () => resolve(Boolean(window.Razorpay)), { once: true });
-      existing.addEventListener("error", () => resolve(false), { once: true });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "razorpay-checkout-js";
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-
-    document.body.appendChild(script);
-  });
-};
-
-const normalizeApiPath = (path = "") => (path.startsWith("/") ? path : `/${path}`);
-
-const directApiUrl = (path = "") => {
-  const normalizedPath = normalizeApiPath(path);
-  return `${BACKEND_URL}/api${normalizedPath}`;
-};
-
-const localApiUrl = (path = "") => {
-  const normalizedPath = normalizeApiPath(path);
-  return `${LOCAL_BACKEND_URL}/api${normalizedPath}`;
-};
-
-const readApiResponse = async (response) => {
-  const rawText = await response.text();
-
-  if (!rawText) {
-    return {
-      rawText,
-      data: {},
-    };
-  }
-
-  try {
-    return {
-      rawText,
-      data: JSON.parse(rawText),
-    };
-  } catch {
-    return {
-      rawText,
-      data: {
-        message: rawText
-          .replace(/<[^>]*>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 300) || "Server returned an invalid response",
-      },
-    };
-  }
-};
-
-const looksLikeHtmlResponse = (response, rawText = "") => {
-  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-  const normalizedText = String(rawText || "").trim().toLowerCase();
-
-  return contentType.includes("text/html")
-    || normalizedText.startsWith("<!doctype html")
-    || normalizedText.startsWith("<html");
-};
-
-const fetchApiJson = async (path, options = {}) => {
-  const normalizedPath = normalizeApiPath(path);
-  const proxiedUrl = apiUrl(normalizedPath);
-  const fallbackUrl = directApiUrl(normalizedPath);
-  const networkFallbackMessage = "Failed to connect to backend. Please check backend server and try again.";
-
-  const execute = async (url) => {
-    const response = await fetch(url, options);
-    const { data, rawText } = await readApiResponse(response);
-
-    return {
-      url,
-      response,
-      data,
-      rawText,
-    };
-  };
-
-  try {
-    let result = await execute(proxiedUrl);
-
-    if (looksLikeHtmlResponse(result.response, result.rawText) && fallbackUrl !== proxiedUrl) {
-      result = await execute(fallbackUrl);
-    }
-
-    return result;
-  } catch (primaryError) {
-    if (fallbackUrl === proxiedUrl) {
-      throw new Error(resolveApiErrorMessage(primaryError, "Request failed", networkFallbackMessage));
-    }
-
-    try {
-      return await execute(fallbackUrl);
-    } catch (fallbackError) {
-      throw new Error(resolveApiErrorMessage(fallbackError, "Request failed", networkFallbackMessage));
-    }
-  }
-};
-
-const fetchAbsoluteApiJson = async (url, options = {}) => {
-  const response = await fetch(url, options);
-  const { data, rawText } = await readApiResponse(response);
-
-  return {
-    url,
-    response,
-    data,
-    rawText,
-  };
-};
-
-const isRouteNotFoundResponse = (response, data) => {
-  const message = String(data?.message || "").toLowerCase();
-
-  if (response?.status !== 404) {
-    return false;
-  }
-
-  return message.includes("api route not found")
-    || message.includes("cannot post")
-    || message.includes("cannot get");
-};
-
-const toLegacyPaymentShape = (data = {}) => {
-  const gatewayOrderId = data?.order?.id || data?.checkout?.orderId || "";
-
-  return {
-    gatewayOrderId,
-    internalOrderId: data?.internalOrderId || "",
-    key: data?.key || data?.checkout?.key || "",
-    amount: data?.order?.amount ?? data?.checkout?.amount,
-    currency: data?.order?.currency || data?.checkout?.currency || "INR",
-    name: data?.name || data?.checkout?.name || "Maa Sheela Iron Art",
-    description: data?.description || data?.checkout?.description || "Secure payment",
-    prefill: data?.prefill || {},
-  };
-};
-
-const isPaymentGatewayConfigMessage = (message = "") => String(message || "").toLowerCase().includes("not configured");
-
-const buildPaymentGatewayDiagnosis = ({
-  requestUrl = "",
-  healthUrl = "",
-  healthConfigured,
-}) => {
-  const targetLabel = BACKEND_URL || API_BASE_URL || "/api";
-
-  let message = `Payment gateway is not configured on the active backend. Backend: ${targetLabel}.`;
-
-  if (requestUrl) {
-    message += ` Request: ${requestUrl}.`;
-  }
-
-  if (healthUrl) {
-    message += ` Health check: ${healthUrl}.`;
-  }
-
-  if (healthConfigured === false) {
-    message += " That backend is missing Razorpay keys.";
-  } else if (healthConfigured === true) {
-    message += " That backend reports configured=true, so the frontend may be hitting a stale or different deployment.";
-  }
-
-  if (BACKEND_URL_SOURCE !== "env") {
-    message += " If frontend and backend are deployed separately, set VITE_BACKEND_URL in the frontend environment.";
-  }
-
-  if (BACKEND_URL_SOURCE === "ignored-local-env-on-remote") {
-    message += " A localhost backend URL from frontend environment was ignored because this site is not running on localhost.";
-  }
-
-  return message;
-};
-
-const diagnosePaymentGatewayConfig = async (requestUrl = "") => {
-  try {
-    const healthResult = await fetchApiJson("/payment/health", { method: "GET" });
-
-    return buildPaymentGatewayDiagnosis({
-      requestUrl,
-      healthUrl: healthResult?.url || "",
-      healthConfigured: healthResult?.data?.configured,
-    });
-  } catch {
-    return buildPaymentGatewayDiagnosis({ requestUrl });
-  }
-};
-
-const retryCreatePaymentOrderLocally = async (requestPayload) => {
-  if (!IS_LOCAL_CLIENT || !LOCAL_BACKEND_URL || BACKEND_URL === LOCAL_BACKEND_URL) {
-    return null;
-  }
-
-  try {
-    return await fetchAbsoluteApiJson(localApiUrl("/payment/orders"), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestPayload),
-    });
-  } catch {
-    return null;
-  }
-};
+const formatAddress = (addr) => [
+  addr.line1, addr.landmark, addr.villageTown,
+  addr.wardNo ? `Ward No ${addr.wardNo}` : "",
+  addr.district, addr.state, addr.pincode
+].filter(Boolean).join(", ");
 
 function Checkout() {
   const { productId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-
   const email = localStorage.getItem("email");
   const mode = new URLSearchParams(location.search).get("mode") || "buy-now";
 
   const [product, setProduct] = useState(null);
-  const [loadingProduct, setLoadingProduct] = useState(true);
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(1);
   const [quantity, setQuantity] = useState(1);
-  const [addressMode, setAddressMode] = useState("saved");
   const [addressForm, setAddressForm] = useState(EMPTY_ADDRESS);
-  const [savedAddress, setSavedAddress] = useState(EMPTY_ADDRESS);
-  const [savedAddressText, setSavedAddressText] = useState("");
+  const [savedAddress, setSavedAddress] = useState(null);
+  const [useSavedAddress, setUseSavedAddress] = useState(false);
   const [contactPhone, setContactPhone] = useState("");
   const [paymentOption, setPaymentOption] = useState("cod");
-  const [pricingSettings, setPricingSettings] = useState({
-    taxRate: DEFAULT_TAX_RATE,
-    shippingCharge: DEFAULT_SHIPPING_CHARGE,
-  });
-  const [processingPayment, setProcessingPayment] = useState(false);
-  const [gatewayLoading, setGatewayLoading] = useState(false);
-  const [savingAddress, setSavingAddress] = useState(false);
-  const [cartSynced, setCartSynced] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(null);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [previewImage, setPreviewImage] = useState("");
 
   useEffect(() => {
-    if (email) {
-      return;
-    }
-
-    navigate("/login", {
-      replace: true,
-      state: {
-        message: "Please login first to continue",
-        redirectTo: `${location.pathname}${location.search}`,
-      },
-    });
-  }, [email, location.pathname, location.search, navigate]);
+    if (!email) navigate("/login", { state: { redirectTo: location.pathname } });
+  }, [email, navigate, location.pathname]);
 
   useEffect(() => {
-    const loadProduct = async () => {
+    const loadData = async () => {
       try {
-        setLoadingProduct(true);
-        setError("");
+        setLoading(true);
+        const [prodRes, profRes] = await Promise.all([
+          mode === "cart" ? Promise.resolve({ response: { ok: true }, data: [] }) : apiFetchJson(`/products/${productId}`),
+          apiFetchJson(`/auth/profile/${encodeURIComponent(email)}`)
+        ]);
 
-        const { response, data } = await fetchApiJson(`/products/${productId}`);
-
-        if (!response.ok) {
-          throw new Error(data?.message || "Failed to load product");
-        }
-
-        setProduct(data);
-      } catch (loadError) {
-        setError(resolveApiErrorMessage(loadError, "Failed to load product"));
-      } finally {
-        setLoadingProduct(false);
-      }
-    };
-
-    loadProduct();
-  }, [productId]);
-
-  useEffect(() => {
-    const loadPricing = async () => {
-      try {
-        const { response, data } = await fetchApiJson("/settings/checkout-pricing");
-
-        if (!response.ok) {
-          return;
-        }
-
-        setPricingSettings({
-          taxRate: Number(data?.taxRate ?? DEFAULT_TAX_RATE),
-          shippingCharge: Number(data?.shippingCharge ?? DEFAULT_SHIPPING_CHARGE),
-        });
-      } catch {
-        setPricingSettings({
-          taxRate: DEFAULT_TAX_RATE,
-          shippingCharge: DEFAULT_SHIPPING_CHARGE,
-        });
-      }
-    };
-
-    loadPricing();
-  }, []);
-
-  useEffect(() => {
-    if (!email) {
-      return;
-    }
-
-    const loadSavedAddress = async () => {
-      try {
-        const { response, data } = await fetchApiJson(`/auth/profile/${encodeURIComponent(email)}`);
-
-        if (!response.ok) {
-          return;
-        }
-
-        const profileAddress = normalizeAddress(data?.address || data?.addressText || {});
-        const formatted = profileAddress.fullAddress || formatAddress(profileAddress);
-
-        setSavedAddress(profileAddress);
-        setSavedAddressText(formatted);
-
-        if (formatted) {
-          setAddressForm(profileAddress);
-        } else {
-          setAddressForm(EMPTY_ADDRESS);
-        }
-
-        if (data?.phone) {
-          setContactPhone(String(data.phone));
-        }
-      } catch {
-        setSavedAddress(EMPTY_ADDRESS);
-        setSavedAddressText("");
-        setAddressForm(EMPTY_ADDRESS);
-      }
-    };
-
-    loadSavedAddress();
-  }, [email]);
-
-  useEffect(() => {
-    if (!product || mode !== "cart" || cartSynced) {
-      return;
-    }
-
-    const existingCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
-    const existingItem = existingCart.find((item) => item._id === product._id);
-
-    if (existingItem) {
-      setQuantity(Math.max(1, Number(existingItem.quantity || 1)));
-    }
-
-    setCartSynced(true);
-  }, [cartSynced, mode, product]);
-
-  const subtotal = useMemo(() => Number(product?.price || 0) * quantity, [product?.price, quantity]);
-
-  const globalTaxRate = useMemo(() => {
-    const parsed = Number(pricingSettings.taxRate);
-    return Number.isFinite(parsed) ? parsed : DEFAULT_TAX_RATE;
-  }, [pricingSettings.taxRate]);
-
-  const globalShippingCharge = useMemo(() => {
-    const parsed = Number(pricingSettings.shippingCharge);
-    return Number.isFinite(parsed) ? parsed : DEFAULT_SHIPPING_CHARGE;
-  }, [pricingSettings.shippingCharge]);
-
-  const productTaxRate = useMemo(() => {
-    const parsed = Number(product?.taxRate);
-    return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : null;
-  }, [product?.taxRate]);
-
-  const productShippingCharge = useMemo(() => {
-    const parsed = Number(product?.shippingCharge);
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-  }, [product?.shippingCharge]);
-
-  const effectiveTaxRate = productTaxRate !== null ? productTaxRate : globalTaxRate;
-  const effectiveShippingCharge = productShippingCharge !== null ? productShippingCharge : globalShippingCharge;
-
-  const taxAmount = useMemo(() => subtotal * effectiveTaxRate, [subtotal, effectiveTaxRate]);
-  const shippingCharge = useMemo(() => (subtotal > 0 ? effectiveShippingCharge : 0), [effectiveShippingCharge, subtotal]);
-  const totalPrice = useMemo(() => subtotal + taxAmount + shippingCharge, [shippingCharge, subtotal, taxAmount]);
-  const expectedHalfAmount = useMemo(() => Number((totalPrice / 2).toFixed(2)), [totalPrice]);
-  const deliveryAddressText = useMemo(() => formatAddress(addressForm), [addressForm]);
-
-  const moveToAddressStep = () => {
-    if (quantity < 1) {
-      setError("Quantity must be at least 1");
-      return;
-    }
-
-    setError("");
-    setNotice("");
-    setStep(2);
-  };
-
-  const setAddressField = (field, value) => {
-    setAddressForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const saveAddressAndNext = async () => {
-    if (!email) {
-      setError("Please login first");
-      return;
-    }
-
-    const normalizedAddress = normalizeAddress(addressForm);
-    const addressError = validateAddress(normalizedAddress);
-
-    if (addressError) {
-      setError(addressError);
-      return;
-    }
-
-    if (!/^\d{10}$/.test(contactPhone.trim())) {
-      setError("Please enter a valid 10-digit phone number");
-      return;
-    }
-
-    const finalAddress = {
-      ...normalizedAddress,
-      fullAddress: formatAddress(normalizedAddress),
-    };
-
-    try {
-      setSavingAddress(true);
-      setError("");
-
-      const { response, data } = await fetchApiJson(`/auth/profile/${encodeURIComponent(email)}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phone: contactPhone.trim(),
-          address: finalAddress,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to save address");
-      }
-
-      const updatedAddress = normalizeAddress(data?.address || finalAddress);
-      const updatedAddressText = updatedAddress.fullAddress || formatAddress(updatedAddress);
-
-      setSavedAddress(updatedAddress);
-      setSavedAddressText(updatedAddressText);
-      setAddressForm(updatedAddress);
-      setStep(3);
-    } catch (saveError) {
-      setError(resolveApiErrorMessage(saveError, "Failed to save address"));
-    } finally {
-      setSavingAddress(false);
-    }
-  };
-
-  const continueToPayment = () => {
-    if (!deliveryAddressText) {
-      setError("Please add delivery address first");
-      return;
-    }
-
-    setError("");
-    setNotice("");
-    setStep(4);
-  };
-
-  const syncCartAfterOrder = () => {
-    if (mode !== "cart" || !product) {
-      return;
-    }
-
-    const existingCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
-    const nextCart = existingCart
-      .map((item) => {
-        if (item._id !== product._id) {
-          return item;
-        }
-
-        const currentQuantity = Number(item.quantity || 1);
-        const nextQuantity = currentQuantity - quantity;
-
-        if (nextQuantity <= 0) {
-          return null;
-        }
-
-        return {
-          ...item,
-          quantity: nextQuantity,
-        };
-      })
-      .filter(Boolean);
-
-    localStorage.setItem("cartItems", JSON.stringify(nextCart));
-  };
-
-  const validateCheckoutInputs = () => {
-    if (!email || !product) {
-      setError("Please login first");
-      return null;
-    }
-
-    const normalizedAddress = normalizeAddress(addressForm);
-    const addressError = validateAddress(normalizedAddress);
-
-    if (addressError) {
-      setError(addressError);
-      setStep(2);
-      return null;
-    }
-
-    if (!/^\d{10}$/.test(contactPhone.trim())) {
-      setError("Please enter a valid 10-digit phone number");
-      setStep(2);
-      return null;
-    }
-
-    return {
-      ...normalizedAddress,
-      fullAddress: formatAddress(normalizedAddress),
-    };
-  };
-
-  const placeCodOrder = async () => {
-    const finalAddress = validateCheckoutInputs();
-
-    if (!finalAddress) {
-      return;
-    }
-
-    try {
-      setProcessingPayment(true);
-      setError("");
-      setNotice("");
-
-      const { response, data } = await fetchApiJson("/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          productId: product._id,
-          quantity,
-          address: finalAddress,
-          phone: contactPhone.trim(),
-          paymentOption: "cod",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to place order");
-      }
-
-      setOrderPlaced(data?.order || null);
-      syncCartAfterOrder();
-      setNotice("Order placed successfully. Confirmation has been sent by email.");
-    } catch (placeOrderError) {
-      setError(resolveApiErrorMessage(placeOrderError, "Failed to place order"));
-    } finally {
-      setProcessingPayment(false);
-    }
-  };
-
-  const verifyGatewayPaymentAndPlaceOrder = async (payload, verificationContext = {}) => {
-    try {
-      setProcessingPayment(true);
-      setError("");
-      setNotice("Verifying payment...");
-
-      const hasInternalOrderId = Boolean(verificationContext?.internalOrderId);
-      const candidatePaths = hasInternalOrderId
-        ? ["/payment/verify", "/orders/payment/verify-and-place"]
-        : ["/orders/payment/verify-and-place"];
-
-      let verifyResult = null;
-
-      for (const path of candidatePaths) {
-        const requestBody = path === "/payment/verify"
-          ? {
-            email,
-            internalOrderId: verificationContext.internalOrderId,
-            razorpayOrderId: payload.razorpay_order_id,
-            razorpayPaymentId: payload.razorpay_payment_id,
-            razorpaySignature: payload.razorpay_signature,
+        if (mode === "cart") {
+          const items = JSON.parse(localStorage.getItem("cartItems") || "[]");
+          if (items.length === 0) {
+            showToast("Your cart is empty", "error");
+            navigate("/cart");
+            return;
           }
-          : {
+          setCartItems(items);
+        } else if (prodRes.response.ok) {
+          setProduct(prodRes.data);
+        }
+
+        if (profRes.response.ok) {
+          const addr = profRes.data.address || EMPTY_ADDRESS;
+          const hasSaved = Boolean(addr.line1 && addr.pincode);
+          if (hasSaved) {
+            setSavedAddress(addr);
+            setUseSavedAddress(true);
+            setAddressForm(addr);
+          } else {
+            setAddressForm(EMPTY_ADDRESS);
+          }
+          setContactPhone(profRes.data.phone || "");
+        }
+      } catch (err) {
+        showToast("Failed to load checkout data", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (email) loadData();
+  }, [productId, email, mode, navigate]);
+
+  const subtotal = useMemo(() => {
+    if (mode === "cart") {
+      return cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
+    }
+    return (product?.price || 0) * quantity;
+  }, [mode, cartItems, product, quantity]);
+  const shipping = subtotal > 10000 ? 0 : 500;
+  const total = subtotal + shipping;
+
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePlaceOrder = async () => {
+    try {
+      setProcessing(true);
+      
+      const payload = mode === "cart" 
+        ? {
             email,
-            razorpayOrderId: payload.razorpay_order_id,
-            razorpayPaymentId: payload.razorpay_payment_id,
-            razorpaySignature: payload.razorpay_signature,
+            items: cartItems.map(item => ({ productId: item._id, quantity: item.quantity })),
+            address: { ...addressForm, fullAddress: formatAddress(addressForm) },
+            phone: contactPhone,
+            paymentOption: paymentOption === 'online' ? 'upi' : 'cod',
+            isCartOrder: true
+          }
+        : {
+            email,
+            productId: product?._id,
+            quantity,
+            address: { ...addressForm, fullAddress: formatAddress(addressForm) },
+            phone: contactPhone,
+            paymentOption: paymentOption === 'online' ? 'upi' : 'cod'
           };
 
-        const current = await fetchApiJson(path, {
+      // Case 1: Cash on Delivery
+      if (paymentOption === 'cod') {
+        const { response, data } = await apiFetchJson("/orders", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify(payload)
         });
 
-        verifyResult = current;
-
-        if (current.response.ok) {
-          break;
-        }
-
-        if (!isRouteNotFoundResponse(current.response, current.data)) {
-          break;
-        }
-      }
-
-      const response = verifyResult?.response;
-      const data = verifyResult?.data;
-
-      if (!response) {
-        throw new Error("Payment verification failed");
-      }
-
-      if (!response.ok) {
-        if (isPaymentGatewayConfigMessage(data?.message)) {
-          throw new Error(await diagnosePaymentGatewayConfig(verifyResult?.url));
-        }
-
-        throw new Error(data?.message || "Payment verification failed");
-      }
-
-      setOrderPlaced(data?.order || null);
-      syncCartAfterOrder();
-      setNotice("Payment successful and verified. Order placed successfully. Track your product in Profile.");
-      window.alert("Payment successful. Your order has been placed.");
-    } catch (verifyError) {
-      const message = resolveApiErrorMessage(verifyError, "Payment verification failed");
-      setError(message);
-      setNotice("");
-      window.alert(`Payment Failed: ${message}`);
-    } finally {
-      setProcessingPayment(false);
-      setGatewayLoading(false);
-    }
-  };
-
-  const startVerifiedOnlinePayment = async () => {
-    if (!["upi", "half"].includes(paymentOption)) {
-      return;
-    }
-
-    const finalAddress = validateCheckoutInputs();
-
-    if (!finalAddress) {
-      return;
-    }
-
-    const payableAmount = paymentOption === "half" ? expectedHalfAmount : totalPrice;
-
-    try {
-      setGatewayLoading(true);
-      setError("");
-      setNotice("Initiating secure payment...");
-
-      const requestPayload = {
-        email,
-        productId: product._id,
-        quantity,
-        address: finalAddress,
-        phone: contactPhone.trim(),
-        paymentOption,
-        amount: Number(payableAmount.toFixed(2)),
-      };
-
-      const createCandidates = ["/payment/orders", "/orders/payment/create"];
-      let createResult = null;
-
-      for (const path of createCandidates) {
-        const bodyPayload = path === "/orders/payment/create"
-          ? {
-            email: requestPayload.email,
-            productId: requestPayload.productId,
-            quantity: requestPayload.quantity,
-            address: requestPayload.address,
-            phone: requestPayload.phone,
-            paymentOption: requestPayload.paymentOption,
-          }
-          : requestPayload;
-
-        const current = await fetchApiJson(path, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(bodyPayload),
-        });
-
-        createResult = current;
-
-        if (current.response.ok) {
-          break;
-        }
-
-        if (!isRouteNotFoundResponse(current.response, current.data)) {
-          break;
-        }
-      }
-
-      let createResponse = createResult?.response;
-      let createData = createResult?.data;
-
-      if (!createResponse) {
-        throw new Error("Failed to initiate payment");
-      }
-
-      if (!createResponse.ok) {
-        if (isPaymentGatewayConfigMessage(createData?.message)) {
-          const localRetryResult = await retryCreatePaymentOrderLocally(requestPayload);
-
-          if (localRetryResult?.response?.ok) {
-            createResult = localRetryResult;
-            createResponse = localRetryResult.response;
-            createData = localRetryResult.data;
-          } else {
-            throw new Error(await diagnosePaymentGatewayConfig(createResult?.url));
-          }
+        if (response.ok) {
+          if (mode === "cart") localStorage.removeItem("cartItems");
+          setOrderPlaced(data.order || data.orders?.[0]);
+          setStep(4);
+          showToast("Order placed successfully!", "success");
         } else {
-          throw new Error(createData?.message || "Failed to initiate payment");
+          showToast(data.message || "Failed to place order", "error");
         }
+        return;
       }
 
-      const normalizedCheckout = toLegacyPaymentShape(createData);
-
-      if (!normalizedCheckout.key) {
-        throw new Error("Payment gateway key was not returned by the backend. Check the active backend payment configuration.");
+      // Case 2: Online Payment (Razorpay)
+      const res = await loadRazorpay();
+      if (!res) {
+        showToast("Razorpay SDK failed to load. Are you online?", "error");
+        setProcessing(false);
+        return;
       }
 
-      const loaded = await loadRazorpayScript();
+      const { response: orderRes, data: orderData } = await apiFetchJson("/payment/orders", {
+        method: "POST",
+        body: JSON.stringify({
+          ...payload,
+          paymentOption: 'upi' // Razorpay controller expects 'upi' or 'half'
+        })
+      });
 
-      if (!loaded || !window.Razorpay) {
-        throw new Error("Unable to load payment gateway. Please try again.");
-      }
-
-      const gatewayOrderId = normalizedCheckout.gatewayOrderId;
-      const internalOrderId = normalizedCheckout.internalOrderId;
-
-      if (!gatewayOrderId) {
-        throw new Error("Invalid order response from payment gateway");
+      if (!orderRes.ok) {
+        showToast(orderData.message || "Failed to initiate payment", "error");
+        return;
       }
 
       const options = {
-        key: normalizedCheckout.key,
-        amount: normalizedCheckout.amount,
-        currency: normalizedCheckout.currency || "INR",
-        name: normalizedCheckout.name || "Maa Sheela Iron Art",
-        description: normalizedCheckout.description || "Secure payment",
-        order_id: gatewayOrderId,
-        prefill: {
-          name: normalizedCheckout?.prefill?.name || "Customer",
-          email: normalizedCheckout?.prefill?.email || email,
-          contact: normalizedCheckout?.prefill?.contact || contactPhone,
+        key: orderData.key,
+        amount: orderData.order.amount,
+        currency: orderData.order.currency,
+        name: orderData.name,
+        description: orderData.description,
+        order_id: orderData.order.id,
+        handler: async (response) => {
+          try {
+            setProcessing(true);
+            const { response: verifyRes, data: verifyData } = await apiFetchJson("/payment/verify", {
+              method: "POST",
+              body: JSON.stringify({
+                email,
+                internalOrderId: orderData.internalOrderId,
+                internalOrderIds: orderData.internalOrderIds,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              })
+            });
+
+            if (verifyRes.ok) {
+              if (mode === "cart") localStorage.removeItem("cartItems");
+              setOrderPlaced(verifyData.order);
+              setStep(4);
+              showToast("Payment successful & Order placed!", "success");
+            } else {
+              showToast(verifyData.message || "Payment verification failed", "error");
+            }
+          } catch (err) {
+            showToast("Error verifying payment", "error");
+          } finally {
+            setProcessing(false);
+          }
         },
-        theme: {
-          color: "#0284c7",
-        },
-        handler: (paymentPayload) => {
-          verifyGatewayPaymentAndPlaceOrder(paymentPayload, {
-            internalOrderId,
-          });
-        },
+        prefill: orderData.prefill,
+        theme: { color: "#4A5D4E" },
         modal: {
           ondismiss: () => {
-            setGatewayLoading(false);
-            setNotice("");
-            setError("Payment cancelled");
-            window.alert("Payment Failed: Payment was cancelled.");
-          },
-        },
+            setProcessing(false);
+            showToast("Payment cancelled", "info");
+          }
+        }
       };
 
-      const razorpay = new window.Razorpay(options);
+      const rzp = new window.Razorpay(options);
+      rzp.open();
 
-      razorpay.on("payment.failed", async (event) => {
-        const reason =
-          event?.error?.description ||
-          event?.error?.reason ||
-          "Payment failed";
-
-        setGatewayLoading(false);
-        setNotice("");
-        setError(reason);
-        window.alert(`Payment Failed: ${reason}`);
-      });
-
-      razorpay.open();
-    } catch (startError) {
-      const message = resolveApiErrorMessage(startError, "Failed to start payment");
-      setGatewayLoading(false);
-      setNotice("");
-      setError(message);
-      window.alert(`Payment Failed: ${message}`);
+    } catch (err) {
+      showToast("An error occurred", "error");
+    } finally {
+      if (paymentOption === 'cod') setProcessing(false);
     }
   };
 
-  if (loadingProduct) {
-    return <p className="p-6" style={{ color: "#0284c7" }}>Loading checkout...</p>;
-  }
+  if (loading) return <div className="py-32 text-center font-heading text-xl">Preparing your checkout...</div>;
+  if (mode !== "cart" && !product) return <div className="py-32 text-center">Product not found.</div>;
+  if (mode === "cart" && cartItems.length === 0) return null;
 
-  if (!product) {
-    return (
-      <div className="space-y-4 p-6">
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-600">{error || "Product not found"}</p>
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="btn-ghost rounded-lg px-4 py-2 text-sm"
-        >
-          Back to Home
-        </button>
-      </div>
-    );
-  }
-
-  const imageUrl = mediaUrl(product.image || product.images?.[0] || "") || "https://placehold.co/600x400?text=No+Image";
-  const onlinePayAmount = paymentOption === "half" ? expectedHalfAmount : totalPrice;
+  const steps = [
+    { id: 1, name: "Review", icon: ShoppingBagIcon },
+    { id: 2, name: "Delivery", icon: MapPinIcon },
+    { id: 3, name: "Payment", icon: CreditCardIcon },
+    { id: 4, name: "Success", icon: CheckCircleIcon }
+  ];
 
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-5">
-      <button
-        type="button"
-        onClick={() => navigate(`/product/${product._id}`)}
-        className="btn-ghost rounded-lg px-4 py-2 text-sm"
-      >
-        ← Back to product
-      </button>
-
-      <div className="glass rounded-2xl p-4 sm:p-6">
-        <div className="mb-4 flex flex-wrap gap-2">
-          {["Quantity", "Address", "Summary", "Payment"].map((label, index) => {
-            const active = step === index + 1;
-
-            return (
-              <span
-                key={label}
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${active ? "text-white" : "text-[#6080a0]"}`}
-                style={active ? { background: "linear-gradient(135deg,#0284c7,#7c3aed)", boxShadow: "0 10px 20px rgba(2,132,199,0.16)" } : { background: "rgba(255,255,255,0.82)", border: "1px solid rgba(100,160,220,0.22)" }}
-              >
-                {index + 1}. {label}
-              </span>
-            );
-          })}
-        </div>
-
-        {error ? <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p> : null}
-        {notice ? <p className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700">{notice}</p> : null}
-
-        {step === 1 ? (
-          <div className="space-y-5">
-            <div className="flex flex-col gap-4 rounded-xl p-4 sm:flex-row" style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.20)" }}>
-              <img
-                src={imageUrl}
-                alt={product.name}
-                className="h-36 w-full cursor-zoom-in rounded-xl object-cover sm:h-28 sm:w-36"
-                onClick={() => setPreviewImage(imageUrl)}
-                onError={e => { e.currentTarget.src = "https://placehold.co/200x150?text=No+Image"; }}
-              />
-              <div className="flex-1 space-y-1">
-                <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>{product.name}</h2>
-                <p className="text-sm" style={{ color: "#6080a0" }}>{product.category}</p>
-                <p className="text-xl font-bold" style={{ color: "#0284c7" }}>₹{Number(product.price || 0).toFixed(2)}</p>
-              </div>
+    <div className="max-w-5xl mx-auto px-6 space-y-12 pb-20 pt-24">
+      {/* Progress Bar */}
+      <div className="flex justify-between items-center max-w-2xl mx-auto relative">
+        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-neutral-dark/5 -translate-y-1/2 z-0" />
+        {steps.map((s) => (
+          <div key={s.id} className="relative z-10 flex flex-col items-center gap-2">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
+              step >= s.id ? "bg-primary border-primary text-white" : "bg-white border-neutral-dark/10 text-neutral-dark/20"
+            }`}>
+              <s.icon className="w-5 h-5" />
             </div>
-
-            <div className="space-y-3">
-              <p className="text-sm font-medium" style={{ color: "#1a2f48" }}>Choose Quantity</p>
-              <div className="inline-flex items-center gap-2 rounded-xl p-2" style={{ border: "1px solid rgba(100,160,220,0.22)", background: "rgba(255,255,255,0.82)" }}>
-                <button
-                  type="button"
-                  onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                  className="h-9 w-9 rounded-lg text-lg transition"
-                  style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(100,160,220,0.24)", color: "#2d5a8e" }}
-                >
-                  -
-                </button>
-                <span className="w-10 text-center text-base font-semibold" style={{ color: "#1a2f48" }}>{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity((prev) => prev + 1)}
-                  className="h-9 w-9 rounded-lg text-lg transition"
-                  style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(100,160,220,0.24)", color: "#2d5a8e" }}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={moveToAddressStep}
-              className="btn-neon w-full rounded-xl py-3 text-sm"
-            >
-              Next
-            </button>
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${
+              step >= s.id ? "text-primary" : "text-neutral-dark/20"
+            }`}>{s.name}</span>
           </div>
-        ) : null}
-
-        {step === 2 ? (
-          <div className="space-y-4">
-            {savedAddressText ? (
-              <div className="rounded-2xl p-4" style={{ background: "rgba(240,248,255,0.82)", border: "2px solid rgba(2,132,199,0.18)" }}>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="radio"
-                      id="use-saved"
-                      name="addressMode"
-                      value="saved"
-                      checked={addressMode === "saved"}
-                      onChange={(e) => {
-                        setAddressMode(e.target.value);
-                        setAddressForm(savedAddress);
-                      }}
-                      className="mt-1"
-                    />
-                    <label htmlFor="use-saved">
-                      <p className="text-sm font-semibold" style={{ color: "#1a2f48" }}>Use Saved Address</p>
-                      <p className="mt-1 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.85)", color: "#3a5470" }}>📍 {savedAddressText}</p>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.80)", border: "2px solid rgba(100,160,220,0.22)" }}>
-              <div className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  id="use-new"
-                  name="addressMode"
-                  value="new"
-                  checked={addressMode === "new"}
-                  onChange={(e) => {
-                    setAddressMode(e.target.value);
-                    setAddressForm(EMPTY_ADDRESS);
-                  }}
-                  className="mt-1"
-                />
-                <label htmlFor="use-new" className="text-sm font-semibold text-[#1a2f48]">
-                  Enter New Address
-                </label>
-              </div>
-            </div>
-
-            {addressMode === "new" && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Address Line *</label>
-                  <input
-                    value={addressForm.line1}
-                    onChange={(event) => setAddressField("line1", event.target.value)}
-                    placeholder="House no, street, locality"
-                    className="input-dark w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Village/Town *</label>
-                  <input
-                    value={addressForm.villageTown}
-                    onChange={(event) => setAddressField("villageTown", event.target.value)}
-                    className="input-dark w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Ward No *</label>
-                  <input
-                    value={addressForm.wardNo}
-                    onChange={(event) => setAddressField("wardNo", event.target.value)}
-                    className="input-dark w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">District *</label>
-                  <input
-                    value={addressForm.district}
-                    onChange={(event) => setAddressField("district", event.target.value)}
-                    className="input-dark w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">State *</label>
-                  <input
-                    value={addressForm.state}
-                    onChange={(event) => setAddressField("state", event.target.value)}
-                    className="input-dark w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Pincode *</label>
-                  <input
-                    value={addressForm.pincode}
-                    maxLength={6}
-                    onChange={(event) =>
-                      setAddressField("pincode", event.target.value.replace(/[^0-9]/g, ""))
-                    }
-                    className="input-dark w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Landmark</label>
-                  <input
-                    value={addressForm.landmark}
-                    onChange={(event) => setAddressField("landmark", event.target.value)}
-                    className="input-dark w-full"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-[#3a5470]">Phone Number *</label>
-                  <input
-                    value={contactPhone}
-                    maxLength={10}
-                    onChange={(event) => setContactPhone(event.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="10-digit mobile number"
-                    className="input-dark w-full"
-                  />
-                </div>
-              </div>
-            )}
-
-            {addressMode === "saved" && savedAddressText && (
-              <div className="rounded-lg p-4" style={{ background: "rgba(2,132,199,0.08)", border: "2px solid rgba(2,132,199,0.18)" }}>
-                <p className="text-sm font-medium text-sky-700">✓ Using saved address</p>
-                <p className="mt-2 text-sm" style={{ color: "#3a5470" }}>{contactPhone}</p>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="btn-ghost rounded-xl px-4 py-3 text-sm"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={saveAddressAndNext}
-                disabled={savingAddress}
-                className="flex-1 btn-neon rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {savingAddress ? "Saving..." : "Save & Next"}
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {step === 3 ? (
-          <div className="space-y-4">
-            <div className="rounded-xl p-4" style={{ border: "1px solid rgba(100,160,220,0.20)", background: "rgba(255,255,255,0.78)" }}>
-              <p className="text-sm" style={{ color: "#6080a0" }}>Delivery Address</p>
-              <p className="mt-1 text-sm font-medium" style={{ color: "#1a2f48" }}>{deliveryAddressText || "-"}</p>
-              <p className="mt-2 text-sm" style={{ color: "#6080a0" }}>Phone: {contactPhone || "-"}</p>
-            </div>
-
-            <div className="rounded-xl p-4" style={{ border: "1px solid rgba(100,160,220,0.20)", background: "rgba(255,255,255,0.78)" }}>
-              <div className="flex items-center justify-between text-sm" style={{ color: "#3a5470" }}>
-                <span>Price ({quantity} × ₹{Number(product.price || 0).toFixed(2)})</span>
-                <span>₹{subtotal.toFixed(2)}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between text-sm" style={{ color: "#3a5470" }}>
-                <span>Tax ({Math.round(effectiveTaxRate * 100)}%)</span>
-                <span>₹{taxAmount.toFixed(2)}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between text-sm" style={{ color: "#3a5470" }}>
-                <span>Shipping</span>
-                <span>₹{shippingCharge.toFixed(2)}</span>
-              </div>
-              <div className="mt-3 flex items-center justify-between pt-3 text-base font-semibold" style={{ borderTop: "1px solid rgba(100,160,220,0.18)", color: "#1a2f48" }}>
-                <span>Total</span>
-                <span style={{ color: "#0284c7" }}>₹{totalPrice.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => setStep(2)}
-                className="btn-ghost rounded-xl px-4 py-3 text-sm"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={continueToPayment}
-                className="flex-1 btn-neon rounded-xl py-3 text-sm"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {step === 4 ? (
-          <div className="space-y-4">
-            <div className="space-y-2 rounded-xl p-4" style={{ border: "1px solid rgba(100,160,220,0.20)", background: "rgba(255,255,255,0.78)" }}>
-              <p className="mb-2 text-sm font-semibold" style={{ color: "#1a2f48" }}>Choose Payment Method</p>
-              <label className="flex items-start gap-2 text-sm text-[#1a2f48]">
-                <input
-                  type="radio"
-                  name="paymentOption"
-                  value="cod"
-                  checked={paymentOption === "cod"}
-                  onChange={(event) => setPaymentOption(event.target.value)}
-                  className="mt-0.5 accent-sky-600"
-                />
-                <span>💵 Cash on Delivery</span>
-              </label>
-              <label className="flex items-start gap-2 text-sm text-[#1a2f48]">
-                <input
-                  type="radio"
-                  name="paymentOption"
-                  value="upi"
-                  checked={paymentOption === "upi"}
-                  onChange={(event) => setPaymentOption(event.target.value)}
-                  className="mt-0.5 accent-sky-600"
-                />
-                <span>📱 Full Online Payment (Verified)</span>
-              </label>
-              <label className="flex items-start gap-2 text-sm text-[#1a2f48]">
-                <input
-                  type="radio"
-                  name="paymentOption"
-                  value="half"
-                  checked={paymentOption === "half"}
-                  onChange={(event) => setPaymentOption(event.target.value)}
-                  className="mt-0.5 accent-sky-600"
-                />
-                <span>⚡ Half Online Payment now, half on delivery (Verified)</span>
-              </label>
-            </div>
-
-            {paymentOption === "cod" ? (
-              <button
-                type="button"
-                onClick={placeCodOrder}
-                disabled={processingPayment || gatewayLoading || Boolean(orderPlaced)}
-                className="w-full btn-neon rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {processingPayment ? "Processing..." : "Place Order"}
-              </button>
-            ) : (
-              <div className="rounded-xl p-4" style={{ border: "1px solid rgba(124,58,237,0.24)", background: "rgba(124,58,237,0.08)" }}>
-                <p className="text-sm font-medium" style={{ color: "#5b21b6" }}>
-                  {paymentOption === "half"
-                    ? `Pay ₹${onlinePayAmount.toFixed(2)} now. Remaining ₹${(totalPrice - onlinePayAmount).toFixed(2)} on delivery.`
-                    : `Pay ₹${onlinePayAmount.toFixed(2)} securely now.`}
-                </p>
-                <p className="mt-1 text-xs" style={{ color: "#6d28d9" }}>
-                  Order is placed automatically only after payment is verified by the gateway.
-                </p>
-                <button
-                  type="button"
-                  onClick={startVerifiedOnlinePayment}
-                  disabled={processingPayment || gatewayLoading || Boolean(orderPlaced)}
-                  className="mt-3 w-full btn-neon rounded-xl py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {processingPayment
-                    ? "Verifying Payment..."
-                    : gatewayLoading
-                      ? "Opening Payment..."
-                      : `Pay ₹${onlinePayAmount.toFixed(2)} Securely`}
-                </button>
-              </div>
-            )}
-
-            {orderPlaced ? (
-              <div className="rounded-xl p-4 text-sm" style={{ border: "1px solid rgba(2,132,199,0.20)", background: "rgba(2,132,199,0.08)" }}>
-                <p className="font-semibold text-sky-700">Order placed: {orderPlaced.orderCode}</p>
-                <p className="mt-1" style={{ color: "#3a5470" }}>Status: {orderPlaced.status}</p>
-                <p className="mt-1" style={{ color: "#3a5470" }}>Expected delivery: {orderPlaced.expectedDelivery}</p>
-              </div>
-            ) : null}
-
-            {orderPlaced ? (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => navigate("/")}
-                  className="btn-ghost rounded-xl px-4 py-2.5 text-sm"
-                >
-                  Back to Home
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/dashboard")}
-                  className="btn-neon rounded-xl px-4 py-2.5 text-sm"
-                >
-                  Track in Profile
-                </button>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+        ))}
       </div>
 
-      <ImageLightbox
-        isOpen={Boolean(previewImage)}
-        imageSrc={previewImage}
-        alt={product?.name || "Checkout product preview"}
-        onClose={() => setPreviewImage("")}
-      />
-    </section>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-8">
+          {step === 1 && (
+            <Card className="p-8 space-y-8 border-none bg-white shadow-sm rounded-sm">
+              <h2 className="text-2xl font-heading font-bold">Review Your Selection</h2>
+              
+              <div className="space-y-6">
+                {mode === "cart" ? (
+                  cartItems.map(item => (
+                    <div key={item._id} className="flex gap-6 pb-6 border-b border-neutral-dark/5 last:border-0 last:pb-0">
+                      <img src={mediaUrl(item.image || item.images?.[0])} className="w-20 h-24 object-cover rounded-sm bg-neutral-cream" alt="" />
+                      <div className="flex-grow space-y-1">
+                        <h3 className="font-heading font-bold">{item.name}</h3>
+                        <p className="text-xs text-neutral-dark/40 font-body">{item.section} • Qty: {item.quantity}</p>
+                        <p className="font-body font-bold text-primary text-sm">₹{Number(item.price).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="flex gap-6">
+                      <img 
+                        src={mediaUrl(product?.image || product?.images?.[0])} 
+                        className="w-24 h-32 object-cover rounded-sm bg-neutral-cream" 
+                        alt=""
+                      />
+                      <div className="flex-grow space-y-2">
+                        <h3 className="font-heading text-lg font-bold">{product?.name}</h3>
+                        <p className="text-sm text-neutral-dark/40 font-body">{product?.section}</p>
+                        <p className="font-body font-bold text-primary">₹{Number(product?.price).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 pt-4">
+                      <span className="text-sm font-medium">Quantity</span>
+                      <div className="flex items-center border border-neutral-dark/10 rounded-sm">
+                        <button onClick={() => setQuantity(Math.max(1, quantity-1))} className="p-2"><MinusIcon className="w-4 h-4" /></button>
+                        <span className="w-12 text-center font-bold">{quantity}</span>
+                        <button onClick={() => setQuantity(quantity+1)} className="p-2"><PlusIcon className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              <Button className="w-full h-14" onClick={() => setStep(2)}>Continue to Delivery</Button>
+            </Card>
+          )}
+
+          {step === 2 && (
+            <Card className="p-8 space-y-8 border-none bg-white shadow-sm rounded-sm">
+              <h2 className="text-2xl font-heading font-bold">Delivery Details</h2>
+              
+              <div className="space-y-6">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Select Delivery Destination</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Saved Address Option */}
+                  {savedAddress && (
+                    <label className={`flex items-start gap-4 p-6 rounded-sm border-2 cursor-pointer transition-all ${
+                      useSavedAddress ? "border-primary bg-primary/5" : "border-neutral-dark/5 hover:border-neutral-dark/10"
+                    }`}>
+                      <input 
+                        type="radio" 
+                        name="addr_type" 
+                        className="mt-1 accent-primary" 
+                        checked={useSavedAddress} 
+                        onChange={() => {
+                          setUseSavedAddress(true);
+                          setAddressForm(savedAddress);
+                        }} 
+                      />
+                      <div className="space-y-2">
+                        <p className="font-heading font-bold flex items-center gap-2">
+                          <MapPinIcon className="w-4 h-4 text-primary" /> Saved Address
+                        </p>
+                        <p className="text-[11px] text-neutral-dark/60 font-body leading-relaxed line-clamp-3">
+                          {formatAddress(savedAddress)}
+                        </p>
+                      </div>
+                    </label>
+                  )}
+
+                  {/* New Address Option */}
+                  <label className={`flex items-start gap-4 p-6 rounded-sm border-2 cursor-pointer transition-all ${
+                    !useSavedAddress ? "border-primary bg-primary/5" : "border-neutral-dark/5 hover:border-neutral-dark/10"
+                  }`}>
+                    <input 
+                      type="radio" 
+                      name="addr_type" 
+                      className="mt-1 accent-primary" 
+                      checked={!useSavedAddress} 
+                      onChange={() => {
+                        setUseSavedAddress(false);
+                        setAddressForm(EMPTY_ADDRESS);
+                      }} 
+                    />
+                    <div className="space-y-2">
+                      <p className="font-heading font-bold flex items-center gap-2">
+                        <PlusIcon className="w-4 h-4 text-primary" /> New Address
+                      </p>
+                      <p className="text-[11px] text-neutral-dark/60 font-body leading-relaxed">
+                        Manually enter a different delivery destination.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {!useSavedAddress ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500 pt-4 border-t border-neutral-dark/5">
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Address Line 1</label>
+                    <Input value={addressForm.line1} onChange={e => setAddressForm({...addressForm, line1: e.target.value})} placeholder="House / Flat No, Building Name" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Village / Town</label>
+                    <Input value={addressForm.villageTown} onChange={e => setAddressForm({...addressForm, villageTown: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">District</label>
+                    <Input value={addressForm.district} onChange={e => setAddressForm({...addressForm, district: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">State</label>
+                    <Input value={addressForm.state} onChange={e => setAddressForm({...addressForm, state: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Pincode</label>
+                    <Input value={addressForm.pincode} onChange={e => setAddressForm({...addressForm, pincode: e.target.value})} maxLength={6} />
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Contact Phone</label>
+                    <Input value={contactPhone} onChange={e => setContactPhone(e.target.value)} maxLength={10} placeholder="10-digit mobile number" />
+                  </div>
+                </div>
+              ) : (
+                <div className="p-6 bg-neutral-cream rounded-sm border border-primary/10 animate-in slide-in-from-left-4 duration-500">
+                  <div className="flex items-start gap-4">
+                    <MapPinIcon className="w-6 h-6 text-primary shrink-0 mt-1" />
+                    <div className="space-y-2">
+                      <p className="font-heading font-bold text-lg text-neutral-dark">Primary Address Details</p>
+                      <p className="text-sm text-neutral-dark/60 font-body leading-relaxed max-w-md">
+                        {formatAddress(savedAddress)}
+                      </p>
+                      <div className="pt-2">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Contact Number</p>
+                        <p className="text-sm font-bold text-neutral-dark">{contactPhone}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-4 pt-4">
+                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Back</Button>
+                <Button className="flex-2 h-14" onClick={() => {
+                  if (!addressForm.line1 || !addressForm.pincode || !contactPhone) {
+                    showToast("Please complete the delivery details", "warning");
+                    return;
+                  }
+                  setStep(3);
+                }}>Proceed to Payment</Button>
+              </div>
+            </Card>
+          )}
+
+          {step === 3 && (
+            <Card className="p-8 space-y-8 border-none bg-white shadow-sm rounded-sm">
+              <h2 className="text-2xl font-heading font-bold">Payment Method</h2>
+              <div className="space-y-4">
+                {[
+                  { id: 'cod', name: 'Cash on Delivery', desc: 'Pay when your furniture arrives.' },
+                  { id: 'online', name: 'Secure Online Payment', desc: 'Pay now via UPI, Cards or NetBanking.' }
+                ].map(opt => (
+                  <label key={opt.id} className={`flex items-start gap-4 p-6 rounded-sm border-2 cursor-pointer transition-all ${
+                    paymentOption === opt.id ? "border-primary bg-primary/5" : "border-neutral-dark/5 hover:border-neutral-dark/10"
+                  }`}>
+                    <input type="radio" name="pay" className="mt-1 accent-primary" checked={paymentOption === opt.id} onChange={() => setPaymentOption(opt.id)} />
+                    <div className="space-y-1">
+                      <p className="font-heading font-bold">{opt.name}</p>
+                      <p className="text-sm text-neutral-dark/40 font-body">{opt.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="flex gap-4 pt-4">
+                <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>Back</Button>
+                <Button className="flex-2 h-14" onClick={handlePlaceOrder} disabled={processing}>
+                  {processing ? "Processing..." : `Confirm Order - ₹${total.toLocaleString()}`}
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {step === 4 && orderPlaced && (
+            <Card className="p-12 space-y-8 border-none bg-white shadow-sm rounded-sm text-center animate-in zoom-in fade-in duration-1000">
+              <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircleIcon className="w-12 h-12" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-heading font-bold">Order Confirmed!</h2>
+                <p className="text-neutral-dark/60 font-body">Order #{orderPlaced.orderCode}</p>
+              </div>
+              <p className="text-neutral-dark/70 max-w-sm mx-auto font-body">
+                Your exquisite piece is now being prepared. We've sent the confirmation details to your email.
+              </p>
+              <div className="flex flex-col gap-3 max-w-xs mx-auto pt-6">
+                <Button onClick={() => navigate("/dashboard")}>Track My Order</Button>
+                <Button variant="outline" onClick={() => navigate("/")}>Return to Gallery</Button>
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Sidebar Summary */}
+        {step < 4 && (
+          <aside className="space-y-8 animate-in fade-in slide-in-from-right duration-700">
+            <Card className="bg-neutral-cream border-none p-8 space-y-8 rounded-sm">
+              <h2 className="font-heading text-xl font-bold">Order Summary</h2>
+              <div className="space-y-4 font-body text-sm text-neutral-dark/60">
+                {mode === "cart" ? (
+                  cartItems.map(item => (
+                    <div key={item._id} className="flex justify-between italic text-[12px]">
+                      <span>{item.name} x {item.quantity}</span>
+                      <span>₹{(item.price * item.quantity).toLocaleString()}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex justify-between italic">
+                    <span>{product?.name} x {quantity}</span>
+                    <span>₹{subtotal.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>Shipping</span>
+                  <span>{shipping === 0 ? "FREE" : `₹${shipping.toLocaleString()}`}</span>
+                </div>
+                <div className="pt-4 border-t border-neutral-dark/10 flex justify-between text-lg font-bold text-neutral-dark">
+                  <span>Total</span>
+                  <span>₹{total.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="pt-6 space-y-4">
+                <div className="flex items-start gap-3">
+                  <TruckIcon className="w-5 h-5 text-primary shrink-0" />
+                  <p className="text-[10px] leading-relaxed">Fast & secure delivery to {addressForm.villageTown || 'your doorstep'}.</p>
+                </div>
+              </div>
+            </Card>
+          </aside>
+        )}
+      </div>
+
+      <ImageLightbox isOpen={!!previewImage} imageSrc={previewImage} onClose={() => setPreviewImage("")} />
+    </div>
   );
 }
 

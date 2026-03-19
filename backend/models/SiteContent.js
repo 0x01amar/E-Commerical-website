@@ -12,7 +12,7 @@ const siteContentSchema = new mongoose.Schema(
     shopName: {
       type: String,
       required: true,
-      default: "Maa Sheela Iron Art",
+      default: "Maa Sheela Iron Arts",
       trim: true,
     },
     tagline: {

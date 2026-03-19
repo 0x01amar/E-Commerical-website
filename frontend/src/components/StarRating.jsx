@@ -11,9 +11,9 @@ function StarRating({
   const fullStars = Math.round(clampedValue);
 
   const sizeClasses = {
-    sm: "text-base",
-    md: "text-lg",
-    lg: "text-2xl",
+    sm: "text-xs",
+    md: "text-base",
+    lg: "text-xl",
   };
 
   const starSizeClass = sizeClasses[size] || sizeClasses.md;
@@ -25,35 +25,21 @@ function StarRating({
           const starNumber = index + 1;
           const isFilled = starNumber <= fullStars;
 
-          if (!interactive) {
-            return (
-              <span
-                key={starNumber}
-                className={`${starSizeClass} leading-none ${isFilled ? "text-amber-500" : "text-slate-300"}`}
-                aria-hidden="true"
-              >
-                ★
-              </span>
-            );
-          }
-
           return (
-            <button
+            <span
               key={starNumber}
-              type="button"
-              onClick={() => onChange?.(starNumber)}
-              className={`${starSizeClass} leading-none transition ${isFilled ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
-              aria-label={`Rate ${starNumber} star${starNumber > 1 ? "s" : ""}`}
+              className={`${starSizeClass} leading-none ${isFilled ? "text-secondary" : "text-neutral-dark/10"}`}
+              aria-hidden="true"
             >
               ★
-            </button>
+            </span>
           );
         })}
       </div>
 
       {showValue ? (
-        <span className="text-sm font-medium text-[#6080a0]">
-          {clampedValue.toFixed(1)}{count ? ` (${count})` : ""}
+        <span className="text-xs font-bold text-neutral-dark/40 uppercase tracking-widest">
+          {clampedValue.toFixed(1)} {count ? `(${count})` : ""}
         </span>
       ) : null}
     </div>

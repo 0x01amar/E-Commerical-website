@@ -1,6 +1,19 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { apiFetchJson, resolveApiErrorMessage } from "../config/api";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { 
+    ArrowLeftIcon, 
+    ShieldCheckIcon, 
+    EnvelopeIcon, 
+    LockClosedIcon, 
+    UserIcon, 
+    EyeIcon, 
+    EyeSlashIcon 
+} from "@heroicons/react/24/outline";
+import { showToast } from "../config/toast";
 
 function UserLogin() {
     const [name, setName] = useState("");
@@ -12,71 +25,55 @@ function UserLogin() {
     const [otp, setOtp] = useState("");
     const [step, setStep] = useState(1);
     const [error, setError] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
-
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const passwordPolicyRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
     const sendOtp = async () => {
         try {
-            const normalizedEmail = email.trim().toLowerCase();
-            const trimmedName = name.trim();
-
-            if (!trimmedName) {
-                setError("Please enter your full name");
+            if (!name.trim() || !email.trim() || !password || !confirmPassword) {
+                setError("Please fill in all the required fields");
                 return;
             }
-
-            if (!normalizedEmail) {
-                setError("Please enter your email");
+            if (!emailRegex.test(email.trim())) {
+                setError("Please enter a valid email address");
                 return;
             }
-
-            if (!password || !confirmPassword) {
-                setError("Please enter password and confirm password");
-                return;
-            }
-
             if (password !== confirmPassword) {
-                setError("Password and confirm password must match");
+                setError("Passwords do not match. Please check and try again.");
                 return;
             }
-
             if (!passwordPolicyRegex.test(password)) {
-                setError(
-                    "Password must be at least 8 characters and include uppercase, number, and special character"
-                );
+                setError("Password must be at least 8 characters long and include an uppercase letter, a number, and a special character.");
                 return;
             }
 
             setLoading(true);
             setError("");
-            setSuccessMessage("");
 
             const { response, data } = await apiFetchJson("/auth/signup/request-otp", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
                 body: JSON.stringify({
-                    name: trimmedName,
-                    email: normalizedEmail,
+                    name: name.trim(),
+                    email: email.trim().toLowerCase(),
                     password,
                     confirmPassword,
                 }),
             });
 
-            if (!response.ok) {
-                throw new Error(data?.message || "Failed to send OTP");
+            if (!response.ok) throw new Error(data?.message || "Failed to send OTP");
+            
+            showToast(data.message || "OTP sent to your email", "success");
+            
+            if (data.otp) {
+                console.log("DEV MODE: OTP is", data.otp);
             }
 
-            setEmail(normalizedEmail);
-            setSuccessMessage("OTP sent to your email");
             setStep(2);
-        } catch (sendOtpError) {
-            setError(resolveApiErrorMessage(sendOtpError, "Failed to send OTP"));
+        } catch (err) {
+            setError(resolveApiErrorMessage(err, "Failed to send OTP"));
         } finally {
             setLoading(false);
         }
@@ -91,172 +88,145 @@ function UserLogin() {
 
             setLoading(true);
             setError("");
-            setSuccessMessage("");
 
             const { response, data } = await apiFetchJson("/auth/signup/verify-otp", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    email,
-                    otp: otp.trim(),
-                }),
+                body: JSON.stringify({ email: email.trim().toLowerCase(), otp: otp.trim() }),
             });
 
-            if (!response.ok) {
-                throw new Error(data?.message || "OTP verification failed");
-            }
-
-            setSuccessMessage("Signup successful. Please login.");
-
-            setTimeout(() => {
-                navigate("/login");
-            }, 1000);
-        } catch (verifyError) {
-            setError(resolveApiErrorMessage(verifyError, "OTP verification failed"));
+            if (!response.ok) throw new Error(data?.message || "OTP verification failed");
+            
+            showToast("Account verified! You can now log in.", "success");
+            navigate("/login");
+        } catch (err) {
+            setError(resolveApiErrorMessage(err, "Verification failed"));
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div
-            className="flex min-h-screen items-center justify-center px-4 py-10"
-            style={{
-                background: "radial-gradient(ellipse at 30% 20%, rgba(56,162,235,0.12) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(13,148,136,0.07) 0%, transparent 50%)",
-            }}
-        >
-            <div
-                className="w-full max-w-md rounded-3xl p-6 sm:p-8"
-                style={{
-                    background: "rgba(255,255,255,0.88)",
-                    backdropFilter: "blur(20px)",
-                    WebkitBackdropFilter: "blur(20px)",
-                    border: "1px solid rgba(100,160,220,0.32)",
-                    boxShadow: "0 8px 32px rgba(30,60,110,0.12)",
-                }}
-            >
-                <div className="mb-1 text-xs uppercase tracking-widest font-semibold" style={{ color: "#0284c7" }}>
-                    {step === 1 ? "New Account" : "OTP Verification"}
-                </div>
-                <h1 className="text-2xl font-bold" style={{ color: "#1a2f48" }}>
-                    {step === 1 ? "Create Account" : "Verify OTP"}
-                </h1>
-                <p className="mt-1 text-sm" style={{ color: "#6080a0" }}>
-                    {step === 1 ? "Sign up and verify via email OTP." : "Enter the OTP sent to your email."}
-                </p>
+        <div className="min-h-screen flex items-center justify-center bg-neutral-cream px-6 py-20 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-64 h-64 bg-primary/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-secondary/5 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl" />
 
-                {error ? (
-                    <p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626" }}>
-                        {error}
-                    </p>
-                ) : null}
-                {successMessage ? (
-                    <p className="mt-4 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)", color: "#059669" }}>
-                        {successMessage}
-                    </p>
-                ) : null}
+            <div className="w-full max-w-lg space-y-8 relative z-10">
+                <button onClick={() => navigate("/")} className="inline-flex items-center text-xs font-bold uppercase tracking-widest text-primary hover:underline group">
+                    <ArrowLeftIcon className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
+                    Back to Gallery
+                </button>
 
-                {step === 1 ? (
-                    <div className="mt-5 space-y-4">
-                        <input
-                            type="text"
-                            placeholder="Full Name"
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
-                            className="input-dark"
-                        />
-                        <input
-                            type="email"
-                            placeholder="you@example.com"
-                            value={email}
-                            onChange={(event) => setEmail(event.target.value)}
-                            className="input-dark"
-                        />
-                        <div className="relative">
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                placeholder="Password"
-                                value={password}
-                                onChange={(event) => setPassword(event.target.value)}
-                                className="input-dark pr-14"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword((prev) => !prev)}
-                                className="absolute inset-y-0 right-3 text-xs font-semibold transition-colors"
-                                style={{ color: "#0284c7" }}
-                                onMouseEnter={e => e.currentTarget.style.color = "#0369a1"}
-                                onMouseLeave={e => e.currentTarget.style.color = "#0284c7"}
-                            >
-                                {showPassword ? "Hide" : "Show"}
-                            </button>
+                <Card className="border-none shadow-xl bg-white rounded-sm overflow-hidden">
+                    <div className="h-1.5 bg-primary w-full" />
+                    <CardHeader className="p-10 pb-6 space-y-4">
+                        <div className="w-12 h-12 bg-neutral-cream rounded-full flex items-center justify-center text-primary">
+                            <ShieldCheckIcon className="w-6 h-6" />
                         </div>
-                        <div className="relative">
-                            <input
-                                type={showConfirmPassword ? "text" : "password"}
-                                placeholder="Confirm Password"
-                                value={confirmPassword}
-                                onChange={(event) => setConfirmPassword(event.target.value)}
-                                className="input-dark pr-14"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowConfirmPassword((prev) => !prev)}
-                                className="absolute inset-y-0 right-3 text-xs font-semibold transition-colors"
-                                style={{ color: "#0284c7" }}
-                                onMouseEnter={e => e.currentTarget.style.color = "#0369a1"}
-                                onMouseLeave={e => e.currentTarget.style.color = "#0284c7"}
-                            >
-                                {showConfirmPassword ? "Hide" : "Show"}
-                            </button>
+                        <div className="space-y-1">
+                            <CardTitle className="text-3xl font-heading font-bold">
+                                {step === 1 ? "Sign Up for Excellence" : "Verify Your Email"}
+                            </CardTitle>
+                            <CardDescription className="text-neutral-dark/40 font-body">
+                                {step === 1 ? "Create an account to start your journey." : "We've sent a code to your inbox."}
+                            </CardDescription>
                         </div>
-                        <p className="text-xs" style={{ color: "#6080a0" }}>
-                            Min 8 chars with 1 uppercase, 1 number, 1 special character.
-                        </p>
-                        <button
-                            type="button"
-                            onClick={sendOtp}
-                            disabled={loading}
-                            className="btn-neon w-full py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? "Sending OTP..." : "Sign Up & Send OTP"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => navigate("/login")}
-                            className="btn-ghost w-full py-2.5"
-                        >
-                            Already have an account? Login
-                        </button>
-                    </div>
-                ) : (
-                    <div className="mt-5 space-y-4">
-                        <input
-                            type="text"
-                            placeholder="Enter 6-digit OTP"
-                            value={otp}
-                            onChange={(event) => setOtp(event.target.value)}
-                            className="input-dark"
-                        />
-                        <button
-                            type="button"
-                            onClick={verifyOtp}
-                            disabled={loading}
-                            className="btn-neon w-full py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? "Verifying..." : "Verify OTP"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setStep(1)}
-                            className="btn-ghost w-full py-2.5"
-                        >
-                            ← Change Signup Details
-                        </button>
-                    </div>
-                )}
+                    </CardHeader>
+
+                    <CardContent className="p-10 pt-0 space-y-6">
+                        {error && (
+                            <p className="p-4 bg-accent/5 text-accent text-xs font-bold rounded-sm border border-accent/10">
+                                {error}
+                            </p>
+                        )}
+
+                        {step === 1 ? (
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Full Name</label>
+                                    <div className="relative">
+                                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-dark/20" />
+                                        <Input className="pl-12" placeholder="John Doe" value={name} onChange={e => setName(e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Email Address</label>
+                                    <div className="relative">
+                                        <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-dark/20" />
+                                        <Input className="pl-12" placeholder="john@example.com" value={email} onChange={e => setEmail(e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Password</label>
+                                        <div className="relative">
+                                            <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-dark/20" />
+                                            <Input 
+                                                className="pl-12 pr-12" 
+                                                type={showPassword ? "text" : "password"} 
+                                                placeholder="••••••••" 
+                                                value={password} 
+                                                onChange={e => setPassword(e.target.value)} 
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-dark/20 hover:text-primary transition-colors"
+                                            >
+                                                {showPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Confirm</label>
+                                        <div className="relative">
+                                            <Input 
+                                                className="pr-12" 
+                                                type={showConfirmPassword ? "text" : "password"} 
+                                                placeholder="••••••••" 
+                                                value={confirmPassword} 
+                                                onChange={e => setConfirmPassword(e.target.value)} 
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-dark/20 hover:text-primary transition-colors"
+                                            >
+                                                {showConfirmPassword ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <Button className="w-full h-14 mt-4" onClick={sendOtp} disabled={loading}>
+                                    {loading ? "Preparing..." : "Create Account"}
+                                </Button>
+
+                                <p className="text-center text-xs text-neutral-dark/40 pt-4 font-body">
+                                    Already a member? <Link to="/login" className="text-primary font-bold hover:underline">Log in here</Link>
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40 text-center block">Enter 6-Digit OTP</label>
+                                    <Input 
+                                        className="text-center text-2xl tracking-[0.5em] h-16 font-bold" 
+                                        maxLength={6} 
+                                        placeholder="000000"
+                                        value={otp} 
+                                        onChange={e => setOtp(e.target.value)} 
+                                    />
+                                </div>
+                                <Button className="w-full h-14" onClick={verifyOtp} disabled={loading}>
+                                    {loading ? "Verifying..." : "Complete Signup"}
+                                </Button>
+                                <Button variant="ghost" className="w-full text-[10px]" onClick={() => setStep(1)}>
+                                    Change signup details
+                                </Button>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

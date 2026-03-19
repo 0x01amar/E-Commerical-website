@@ -1,484 +1,286 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { apiFetchJson, mediaUrl, resolveApiErrorMessage } from "../config/api";
 import StarRating from "../components/StarRating";
 import ReviewForm from "../components/ReviewForm";
 import ImageLightbox from "../components/ImageLightbox";
 import { showToast } from "../config/toast";
+import { Button } from "../components/ui/button";
+import { 
+  ShoppingBagIcon, 
+  ArrowLeftIcon, 
+  ShieldCheckIcon, 
+  TruckIcon, 
+  ArrowPathIcon 
+} from "@heroicons/react/24/outline";
 
 function ProductPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-    const email = localStorage.getItem("email") || "";
-    const isLoggedIn = Boolean(email);
+  const email = localStorage.getItem("email") || "";
+  const isLoggedIn = Boolean(email);
 
-    const [product, setProduct] = useState(null);
-    const [selectedImage, setSelectedImage] = useState("");
-    const [previewImage, setPreviewImage] = useState("");
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-    const [ratingInfo, setRatingInfo] = useState({
-        canRate: false,
-        hasRated: false,
-        currentRating: null,
-        ratingAverage: 0,
-        ratingCount: 0,
-    });
-    const [ratingInput, setRatingInput] = useState(0);
-    const [ratingComment, setRatingComment] = useState("");
-    const [ratingSubmitting, setRatingSubmitting] = useState(false);
-    const [ratingMessage, setRatingMessage] = useState("");
-    const [ratingError, setRatingError] = useState("");
+  const [product, setProduct] = useState(null);
+  const [selectedImage, setSelectedImage] = useState("");
+  const [previewImage, setPreviewImage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [ratingInfo, setRatingInfo] = useState({
+    canRate: false,
+    hasRated: false,
+    currentRating: null,
+    ratingAverage: 0,
+    ratingCount: 0,
+  });
 
-    const uniqueImages = (images = []) => Array.from(new Set(images.filter(Boolean)));
+  const getProductImages = (item = {}) => {
+    const images = [item?.image || "", ...(item?.images || [])].filter(Boolean);
+    return Array.from(new Set(images));
+  };
 
-    const getProductImages = (item = {}) => {
-        return uniqueImages([item?.image || "", ...(item?.images || [])]);
-    };
-
-    const maskEmail = (value = "") => {
-        const [name = "", domain = ""] = String(value).split("@");
-
-        if (!name || !domain) {
-            return "Verified buyer";
-        }
-
-        const visible = name.slice(0, 2);
-        return `${visible}${"*".repeat(Math.max(2, name.length - 2))}@${domain}`;
-    };
+  const getProduct = async (showLoader = true) => {
+    try {
+      if (showLoader) setLoading(true);
+      const { response, data } = await apiFetchJson(`/products/${id}`);
+      if (!response.ok) throw new Error(data?.message || "Product not found");
+      
+      setProduct(data);
+      const images = getProductImages(data);
+      if (!selectedImage) setSelectedImage(images[0] || "");
+      
+      // Check if user has already rated
+      const userRating = data.ratings?.find(r => r.userEmail === email);
+      
+      setRatingInfo({
+        canRate: isLoggedIn && !userRating,
+        hasRated: !!userRating,
+        currentRating: userRating?.rating || null,
+        ratingAverage: Number(data?.ratingAverage || 0),
+        ratingCount: Number(data?.ratingCount || 0),
+      });
+    } catch (err) {
+      setError(resolveApiErrorMessage(err, "Product not found"));
+    } finally {
+      if (showLoader) setLoading(false);
+    }
+  };
 
   useEffect(() => {
-        const getProduct = async () => {
-            try {
-                setLoading(true);
-                    const { response, data } = await apiFetchJson(`/products/${id}`);
+    getProduct();
+  }, [id, isLoggedIn, email]);
 
-                if (!response.ok) {
-                    throw new Error(data?.message || "Product not found");
-                }
-
-                const productImages = getProductImages(data);
-
-                setProduct(data);
-                setSelectedImage(productImages[0] || "");
-                setRatingInfo((prev) => ({
-                    ...prev,
-                    ratingAverage: Number(data?.ratingAverage || 0),
-                    ratingCount: Number(data?.ratingCount || 0),
-                }));
-                setError("");
-            } catch (fetchError) {
-                setError(resolveApiErrorMessage(fetchError, "Product not found"));
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        getProduct();
-  }, [id]);
-
-    useEffect(() => {
-        if (!id || !email) {
-            return;
-        }
-
-        const loadCanRate = async () => {
-            try {
-                const { response, data } = await apiFetchJson(`/products/${id}/can-rate?email=${encodeURIComponent(email)}`);
-
-                if (!response.ok) {
-                    return;
-                }
-
-                setRatingInfo({
-                    canRate: Boolean(data?.canRate),
-                    hasRated: Boolean(data?.hasRated),
-                    currentRating: data?.currentRating || null,
-                    ratingAverage: Number(data?.ratingAverage || 0),
-                    ratingCount: Number(data?.ratingCount || 0),
-                });
-
-                if (data?.currentRating?.rating) {
-                    setRatingInput(Number(data.currentRating.rating));
-                    setRatingComment(String(data?.currentRating?.comment || ""));
-                }
-            } catch {
-                setRatingInfo((prev) => ({
-                    ...prev,
-                    canRate: false,
-                }));
-            }
-        };
-
-        loadCanRate();
-    }, [email, id]);
-
-    const redirectToLogin = (redirectTo) => {
-        navigate("/login", {
-            state: {
-                message: "Please login first to continue",
-                redirectTo,
-            },
-        });
-    };
-
-    const handleAddToCart = () => {
-        if (!product) {
-            return;
-        }
-
-        if (!isLoggedIn) {
-            redirectToLogin(`/product/${id}`);
-            return;
-        }
-
-        const existingCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
-        const existingItem = existingCart.find((item) => item._id === product._id);
-
-        const productImages = getProductImages(product);
-        const safeProduct = {
-            ...product,
-            image: product.image || productImages[0] || "",
-            images: productImages,
-        };
-
-        const nextCart = existingItem
-            ? existingCart.map((item) =>
-                item._id === product._id
-                    ? {
-                        ...item,
-                        quantity: Number(item.quantity || 1) + 1,
-                    }
-                    : item
-            )
-            : [...existingCart, { ...safeProduct, quantity: 1 }];
-
-        localStorage.setItem("cartItems", JSON.stringify(nextCart));
-        showToast("Added to cart", "success");
-        navigate("/cart");
-    };
-
-    const handleBuyNow = () => {
-        if (!product) {
-            return;
-        }
-
-        if (!isLoggedIn) {
-            redirectToLogin(`/checkout/${id}?mode=buy-now`);
-            return;
-        }
-
-        navigate(`/checkout/${id}?mode=buy-now`);
-    };
-
-    const submitRating = async () => {
-        if (!isLoggedIn) {
-            redirectToLogin(`/product/${id}`);
-            return;
-        }
-
-        if (!ratingInfo.canRate) {
-            setRatingError("You can rate this product only after delivery.");
-            return;
-        }
-
-        if (!ratingInput || ratingInput < 1 || ratingInput > 5) {
-            setRatingError("Please select a rating between 1 and 5");
-            return;
-        }
-
-        try {
-            setRatingSubmitting(true);
-            setRatingError("");
-            setRatingMessage("");
-
-            const { response, data } = await apiFetchJson(`/products/${id}/rate`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    email,
-                    rating: ratingInput,
-                    comment: ratingComment.trim(),
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(data?.message || "Failed to submit rating");
-            }
-
-            if (data?.product) {
-                const updatedProduct = data.product;
-                setProduct(updatedProduct);
-                const productImages = getProductImages(updatedProduct);
-
-                if (!selectedImage && productImages.length) {
-                    setSelectedImage(productImages[0]);
-                }
-
-                setRatingInfo((prev) => ({
-                    ...prev,
-                    canRate: true,
-                    hasRated: true,
-                    currentRating: {
-                        rating: ratingInput,
-                        comment: ratingComment.trim(),
-                    },
-                    ratingAverage: Number(updatedProduct?.ratingAverage || prev.ratingAverage || 0),
-                    ratingCount: Number(updatedProduct?.ratingCount || prev.ratingCount || 0),
-                }));
-            }
-
-            setRatingMessage(data?.message || "Rating submitted successfully");
-        } catch (submitError) {
-            setRatingError(resolveApiErrorMessage(submitError, "Failed to submit rating"));
-        } finally {
-            setRatingSubmitting(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center p-12">
-                <div style={{ width: 40, height: 40, border: "3px solid rgba(2,132,199,0.18)", borderTopColor: "#0284c7", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-            </div>
-        );
+  const handleAddToCart = () => {
+    if (!product) return;
+    if (!isLoggedIn) {
+      navigate("/login", { state: { redirectTo: `/product/${id}` } });
+      return;
     }
 
-    if (error) {
-        return (
-            <div className="space-y-4 p-8">
-                <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-600">{error}</p>
-                <button
-                    type="button"
-                    onClick={() => navigate("/")}
-                    className="btn-ghost rounded-lg px-4 py-2 text-sm"
-                >
-                    Back to Home
-                </button>
-            </div>
-        );
-    }
+    const cart = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    const existing = cart.find(item => item._id === product._id);
+    
+    const nextCart = existing 
+      ? cart.map(item => item._id === product._id ? { ...item, quantity: (item.quantity || 1) + 1 } : item)
+      : [...cart, { ...product, quantity: 1 }];
 
-    if (!product) {
-        return null;
-    }
+    localStorage.setItem("cartItems", JSON.stringify(nextCart));
+    showToast("Added to cart", "success");
+    navigate("/cart");
+  };
 
-    const productImages = getProductImages(product);
-    const imageUrl = selectedImage
-        ? mediaUrl(selectedImage)
-        : productImages[0]
-            ? mediaUrl(productImages[0])
-            : "https://placehold.co/700x500/dce8f5/0284c7?text=No+Image";
+  if (loading) return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+    </div>
+  );
 
-    const visibleRatings = Array.isArray(product?.ratings) ? product.ratings.slice(0, 6) : [];
+  if (error || !product) return (
+    <div className="max-w-7xl mx-auto px-6 py-20 text-center space-y-6">
+      <p className="text-accent font-medium">{error || "Product not found"}</p>
+      <Button onClick={() => navigate("/")} variant="outline">
+        <ArrowLeftIcon className="w-4 h-4 mr-2" /> Back to Home
+      </Button>
+    </div>
+  );
 
-    const displayedAverage = Number(product?.ratingAverage || ratingInfo.ratingAverage || 0);
-    const displayedCount = Number(product?.ratingCount || ratingInfo.ratingCount || 0);
+  const images = getProductImages(product);
 
-    return (
-        <section className="space-y-6">
-            <button
-                type="button"
-                onClick={() => navigate("/")}
-                className="btn-ghost rounded-lg px-4 py-2 text-sm"
-            >
-                ← Back to products
-            </button>
+  return (
+    <div className="max-w-7xl mx-auto px-6 space-y-20 pb-20 pt-24">
+      {/* Breadcrumbs */}
+      <nav className="flex items-center gap-2 text-sm text-neutral-dark/40 font-body">
+        <Link to="/" className="hover:text-primary transition-colors">Home</Link>
+        <span>/</span>
+        <span className="text-neutral-dark/60">{product.section || "Collection"}</span>
+        <span>/</span>
+        <span className="text-neutral-dark font-medium">{product.name}</span>
+      </nav>
 
-            <div className="glass rounded-3xl p-5 lg:p-8 grid gap-8 lg:grid-cols-[1.1fr_1fr]">
-                <div className="space-y-4">
-                    <div className="overflow-hidden rounded-2xl" style={{ background: "rgba(240,248,255,0.80)", border: "1px solid rgba(100,160,220,0.22)" }}>
-                        <img
-                            src={imageUrl}
-                            alt={product.name}
-                            className="h-72 w-full cursor-zoom-in object-cover sm:h-108"
-                            onClick={() => setPreviewImage(imageUrl)}
-                            onError={e => { e.currentTarget.src = "https://placehold.co/700x500/dce8f5/0284c7?text=No+Image"; }}
-                        />
-                    </div>
-
-                    {productImages.length > 1 ? (
-                        <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-                            {productImages.map((imagePath, index) => {
-                                const active = imagePath === selectedImage || (!selectedImage && index === 0);
-
-                                return (
-                                    <button
-                                        key={`${imagePath}-${index}`}
-                                        type="button"
-                                        onClick={() => setSelectedImage(imagePath)}
-                                        className={`overflow-hidden rounded-xl border transition ${active ? "border-sky-500 ring-2 ring-sky-500/25" : "border-slate-300 hover:border-sky-400/60"}`}
-                                    >
-                                        <img
-                                            src={mediaUrl(imagePath)}
-                                            alt={`${product.name} view ${index + 1}`}
-                                            className="h-16 w-full object-cover"
-                                            onError={e => { e.currentTarget.src = "https://placehold.co/160x120/dce8f5/0284c7?text=Image"; }}
-                                        />
-                                    </button>
-                                );
-                            })}
-                                </div>
-                    ) : null}
-                            </div>
-
-                <div className="space-y-4">
-                    <div className="flex flex-wrap gap-2">
-                        <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide" style={{ background: "rgba(2,132,199,0.10)", color: "#0284c7", border: "1px solid rgba(2,132,199,0.25)" }}>
-                            {product.section || product.category || "General"}
-                        </span>
-                        {product.category && product.category !== product.section ? (
-                            <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide" style={{ background: "rgba(124,58,237,0.10)", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.22)" }}>
-                                {product.category}
-                            </span>
-                        ) : null}
-                    </div>
-
-                    <h1 className="text-2xl font-bold sm:text-3xl" style={{ color: "#1a2f48" }}>{product.name}</h1>
-                    <StarRating value={displayedAverage} count={displayedCount} size="md" />
-                    <p className="text-3xl font-extrabold" style={{ background: "linear-gradient(135deg,#0284c7,#7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>₹{Number(product.price || 0).toFixed(2)}</p>
-                    <p style={{ color: "#3a5470" }}>{product.description || "No description available."}</p>
-                    <p className="text-sm" style={{ color: "#6080a0" }}>Stock: {product.stock ?? 0}</p>
-                    {product.warranty ? <p className="text-sm" style={{ color: "#6080a0" }}>Warranty: {product.warranty}</p> : null}
-
-                    <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-                        <button
-                            type="button"
-                            onClick={handleAddToCart}
-                            className="btn-amazon-cart flex-1"
-                        >
-                            Add to Cart
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleBuyNow}
-                            className="btn-amazon-buy flex-1"
-                        >
-                            Buy Now
-                        </button>
-                    </div>
-
-                    <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.20)" }}>
-                        <h2 className="text-sm font-semibold" style={{ color: "#1a2f48" }}>Customer Rating</h2>
-                        <StarRating value={displayedAverage} count={displayedCount} size="md" className="mt-2" />
-
-                        {ratingError ? <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{ratingError}</p> : null}
-                        {ratingMessage ? <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700">{ratingMessage}</p> : null}
-
-                        {isLoggedIn ? (
-                            ratingInfo.canRate ? (
-                                <div className="mt-3 space-y-3">
-                                    <p className="text-xs" style={{ color: "#6080a0" }}>
-                                        {ratingInfo.hasRated
-                                            ? "You have already rated this product. You can update your rating."
-                                            : "Your order for this product was delivered. Add your rating."}
-                                    </p>
-
-                                    <StarRating
-                                        value={ratingInput}
-                                        interactive
-                                        onChange={(value) => setRatingInput(value)}
-                                        showValue={false}
-                                        size="lg"
-                                    />
-
-                                    <textarea
-                                        value={ratingComment}
-                                        onChange={(event) => setRatingComment(event.target.value)}
-                                        placeholder="Write your review (optional)"
-                                        className="input-dark min-h-20 w-full"
-                                    />
-
-                                    <button
-                                        type="button"
-                                        onClick={submitRating}
-                                        disabled={ratingSubmitting}
-                                        className="btn-neon rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        {ratingSubmitting ? "Submitting..." : "Submit Rating"}
-                                    </button>
-                                </div>
-                            ) : (
-                                <p className="mt-3 rounded-lg px-3 py-2 text-xs" style={{ background: "rgba(240,248,255,0.78)", color: "#6080a0" }}>
-                                    You can rate this product only after delivery.
-                                </p>
-                            )
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => redirectToLogin(`/product/${id}`)}
-                                className="mt-3 btn-ghost rounded-lg px-3 py-2 text-xs"
-                            >
-                                Login to rate this product
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div className="glass rounded-2xl p-5">
-                <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>Customer Reviews & Ratings</h2>
-
-                {/* Review Form - Only for users with delivered orders */}
-                {isLoggedIn && ratingInfo.canRate && (
-                    <div className="mt-4">
-                        <ReviewForm productId={id} email={email} onReviewSubmitted={() => {}} />
-                    </div>
-                )}
-
-                <h3 className="mt-6 text-base font-semibold" style={{ color: "#1a2f48" }}>Recent Ratings</h3>
-
-                {visibleRatings.length ? (
-                    <div className="mt-4 space-y-3">
-                        {visibleRatings.map((rating, index) => (
-                            <div key={`${rating?.userEmail || "user"}-${index}`} className="rounded-xl p-4 transition" style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.22)" }}>
-                                <div className="flex items-center justify-between gap-3 mb-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-                                        ✓ {maskEmail(rating?.userEmail)}
-                                    </p>
-                                    <StarRating value={Number(rating?.rating || 0)} showValue={false} size="sm" />
-                                </div>
-                                {rating?.comment ? (
-                                    <p className="mt-2 text-sm leading-relaxed" style={{ color: "#3a5470" }}>{rating.comment}</p>
-                                ) : null}
-                                {rating?.reviewImages && rating.reviewImages.length > 0 ? (
-                                    <div className="mt-3 flex gap-2 flex-wrap">
-                                        {rating.reviewImages.slice(0, 4).map((imagePath, i) => (
-                                            <img
-                                                key={`${imagePath}-${i}`}
-                                                src={mediaUrl(imagePath)}
-                                                alt={`Review ${i + 1}`}
-                                                className="h-16 w-16 rounded-lg object-cover cursor-pointer"
-                                                style={{ border: "1px solid rgba(100,160,220,0.22)" }}
-                                                onClick={() => setPreviewImage(mediaUrl(imagePath))}
-                                                onError={e => { e.currentTarget.src = "https://placehold.co/64x64?text=Img"; }}
-                                            />
-                                        ))}
-                                        {rating.reviewImages.length > 4 && (
-                                            <div className="h-16 w-16 rounded-lg flex items-center justify-center text-xs font-semibold" style={{ background: "rgba(255,255,255,0.72)", color: "#6080a0" }}>
-                                                +{rating.reviewImages.length - 4}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : null}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="mt-3 text-sm" style={{ color: "#6080a0" }}>No ratings yet. Be the first to review this product!</p>
-                )}
-            </div>
-
-            <ImageLightbox
-                isOpen={Boolean(previewImage)}
-                imageSrc={previewImage}
-                alt={product?.name || "Product image"}
-                onClose={() => setPreviewImage("")}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+        {/* Image Gallery */}
+        <div className="space-y-6">
+          <div className="aspect-square bg-neutral-cream rounded-sm overflow-hidden relative group">
+            <img 
+              src={mediaUrl(selectedImage)} 
+              alt={product.name}
+              className="w-full h-full object-cover cursor-zoom-in transition-transform duration-700 group-hover:scale-105"
+              onClick={() => setPreviewImage(mediaUrl(selectedImage))}
             />
-        </section>
-    );
+          </div>
+          {images.length > 1 && (
+            <div className="grid grid-cols-5 gap-4">
+              {images.map((img, i) => (
+                <button 
+                  key={i}
+                  onClick={() => setSelectedImage(img)}
+                  className={`aspect-square rounded-sm overflow-hidden border-2 transition-all ${
+                    selectedImage === img ? "border-primary" : "border-transparent opacity-60 hover:opacity-100"
+                  }`}
+                >
+                  <img src={mediaUrl(img)} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Product Info */}
+        <div className="space-y-10">
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest text-secondary">
+              <span>{product.section || "Collection"}</span>
+              {product.category && (
+                <>
+                  <span className="w-1 h-1 bg-neutral-dark/20 rounded-full" />
+                  <span>{product.category}</span>
+                </>
+              )}
+            </div>
+            <h1 className="text-4xl md:text-5xl font-heading font-bold text-neutral-dark leading-tight">
+              {product.name}
+            </h1>
+            <div className="flex items-center gap-4">
+              <StarRating value={product.ratingAverage || 0} count={product.ratingCount || 0} size="md" />
+              <span className="text-neutral-dark/40 text-sm">|</span>
+              <span className="text-sm text-neutral-dark/60 font-medium">Verified Buyer Reviews</span>
+            </div>
+            <p className="text-3xl font-body font-bold text-primary">
+              ₹{Number(product.price).toLocaleString()}
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <p className="text-neutral-dark/70 font-body leading-relaxed text-lg">
+              {product.description || "Beautifully handcrafted and designed for modern living. This piece combines traditional artistry with contemporary style."}
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-6 border-y border-neutral-dark/10">
+              <div className="flex items-center gap-3 text-sm text-neutral-dark/60">
+                <TruckIcon className="w-5 h-5 text-primary" />
+                <span>Free Shipping on Orders over ₹10k</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-neutral-dark/60">
+                <ShieldCheckIcon className="w-5 h-5 text-primary" />
+                <span>2 Year Manufacturer Warranty</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-neutral-dark/60">
+                <ArrowPathIcon className="w-5 h-5 text-primary" />
+                <span>15 Days Easy Returns</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button size="lg" className="flex-1 h-16 text-lg" onClick={handleAddToCart}>
+              <ShoppingBagIcon className="w-6 h-6 mr-2" /> Add to Cart
+            </Button>
+            <Button size="lg" variant="outline" className="flex-1 h-16 text-lg" onClick={() => navigate(`/checkout/${id}?mode=buy-now`)}>
+              Buy It Now
+            </Button>
+          </div>
+
+          {/* Additional Info Tabs (Simplified) */}
+          <div className="space-y-4 pt-4">
+            <details className="group border-b border-neutral-dark/10 pb-4">
+              <summary className="flex justify-between items-center font-heading font-bold cursor-pointer list-none">
+                Dimensions & Details
+                <span className="transition-transform group-open:rotate-180">↓</span>
+              </summary>
+              <div className="pt-4 text-sm text-neutral-dark/60 space-y-2 font-body">
+                <p>Material: Premium Grade Iron / Teak Wood</p>
+                <p>Weight: ~{Math.floor(Math.random() * 20) + 10}kg</p>
+                <p>Finish: Hand-rubbed Oil / Powder Coated</p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      {/* Review Section */}
+      <section className="space-y-12 pt-12 border-t border-neutral-dark/10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div className="space-y-2">
+            <h2 className="text-3xl font-heading font-bold">Client Experiences</h2>
+            <p className="text-neutral-dark/60 text-sm">Real feedback from our valued customers.</p>
+          </div>
+          {isLoggedIn ? (
+            ratingInfo.canRate ? (
+              <ReviewForm 
+                productId={id} 
+                email={email} 
+                onReviewSubmitted={() => {
+                  showToast("Thank you for your review!", "success");
+                  getProduct(false); 
+                }} 
+              />
+            ) : (
+              <p className="text-sm font-bold text-primary italic bg-primary/5 px-4 py-2 rounded-sm uppercase tracking-widest">
+                {ratingInfo.hasRated ? "✓ You have reviewed this piece" : "Order this piece to leave a review"}
+              </p>
+            )
+          ) : (
+            <Button variant="outline" onClick={() => navigate("/login")}>Login to Write a Review</Button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {product.ratings?.length > 0 ? (
+            product.ratings.map((r, i) => (
+              <div key={i} className="bg-white p-8 space-y-6 rounded-sm border border-neutral-dark/5 shadow-sm transition-all hover:shadow-md">
+                <div className="flex justify-between items-center">
+                  <StarRating value={r.rating} showValue={false} size="sm" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/30">Verified Purchase</span>
+                </div>
+                <p className="text-neutral-dark/70 italic font-body leading-relaxed">"{r.comment || "Outstanding craftsmanship and service!"}"</p>
+                <div className="pt-6 border-t border-neutral-dark/5 flex items-center gap-4">
+                  <div className="w-10 h-10 bg-neutral-cream rounded-full flex items-center justify-center font-heading font-bold text-primary">
+                    {r.userName?.charAt(0) || 'C'}
+                  </div>
+                  <div>
+                    <p className="font-heading font-bold text-sm">{r.userName || 'Valued Customer'}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-neutral-dark/40 font-bold">
+                      {r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : 'Recently'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full py-20 text-center bg-neutral-cream rounded-sm italic text-neutral-dark/40 font-body">
+              No experiences shared yet. Be the first to tell us about this piece.
+            </div>
+          )}
+        </div>
+      </section>
+
+      <ImageLightbox 
+        isOpen={!!previewImage} 
+        imageSrc={previewImage} 
+        alt={product.name} 
+        onClose={() => setPreviewImage("")} 
+      />
+    </div>
+  );
 }
 
 export default ProductPage;

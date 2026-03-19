@@ -24,19 +24,19 @@ function OrderTimeline({ status = "Order Placed", compact = false }) {
               <div key={step} className="flex flex-1 items-center">
                 <div className="flex flex-col items-center text-center">
                   <span
-                    className={`h-4 w-4 rounded-full border-2 ${isActive
+                    className={`h-3 w-3 rounded-full border-2 transition-all duration-500 ${isActive
                       ? isCancelled
-                        ? "border-rose-500 bg-rose-500"
-                        : "border-sky-500 bg-sky-500"
-                      : "border-slate-300 bg-white"
+                        ? "border-accent bg-accent"
+                        : "border-primary bg-primary shadow-[0_0_10px_rgba(74,93,78,0.3)]"
+                      : "border-neutral-dark/10 bg-white"
                       }`}
                   />
                   <span
-                    className={`mt-2 text-[10px] font-medium sm:text-xs ${isCurrent
+                    className={`mt-3 text-[10px] font-bold uppercase tracking-widest ${isCurrent
                       ? isCancelled
-                        ? "text-rose-600"
-                        : "text-sky-700"
-                      : "text-[#6080a0]"
+                        ? "text-accent"
+                        : "text-primary"
+                      : "text-neutral-dark/20"
                       }`}
                   >
                     {step}
@@ -45,9 +45,9 @@ function OrderTimeline({ status = "Order Placed", compact = false }) {
 
                 {index < ORDER_STATUS_STEPS.length - 1 ? (
                   <span
-                    className={`mx-2 h-1 flex-1 rounded-full ${isActive && !isCancelled
-                      ? "bg-sky-500"
-                      : "bg-slate-300"
+                    className={`mx-2 h-0.5 flex-1 rounded-full transition-all duration-700 ${isActive && !isCancelled && index < activeIndex
+                      ? "bg-primary"
+                      : "bg-neutral-dark/5"
                       }`}
                   />
                 ) : null}

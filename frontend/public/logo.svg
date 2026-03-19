@@ -1,0 +1,6 @@
+<svg viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="40,10 75,30 75,70 40,90 5,70 5,30" fill="#4A5D4E" />
+  <path d="M20 65 V35 L40 55 L60 35 V65" stroke="white" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="95" y="55" font-family="Playfair Display, serif" font-weight="bold" font-size="36" fill="currentColor">Maa Sheela</text>
+  <text x="95" y="82" font-family="Inter, sans-serif" font-weight="bold" font-size="14" fill="currentColor" opacity="0.6" letter-spacing="6">IRON ARTS</text>
+</svg>

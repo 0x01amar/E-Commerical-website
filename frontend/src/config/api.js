@@ -113,6 +113,14 @@ export const apiFetch = async (path, options = {}) => {
 		return fetch(path, options);
 	}
 
+	const fetchOptions = { ...options };
+	if (fetchOptions.body && !fetchOptions.headers?.["Content-Type"] && !(fetchOptions.body instanceof FormData)) {
+		fetchOptions.headers = {
+			...fetchOptions.headers,
+			"Content-Type": "application/json",
+		};
+	}
+
 	const normalizedPath = normalizeApiPath(path);
 	const primaryUrl = apiUrl(normalizedPath);
 	const backendUrl = buildAbsoluteApiUrl(BACKEND_URL, normalizedPath);
@@ -128,7 +136,7 @@ export const apiFetch = async (path, options = {}) => {
 
 	for (const url of candidates) {
 		try {
-			return await fetch(url, options);
+			return await fetch(url, fetchOptions);
 		} catch (error) {
 			lastError = error;
 		}

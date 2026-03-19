@@ -29,7 +29,7 @@ function ImageLightbox({ isOpen, imageSrc = "", alt = "Preview", onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-120 flex items-center justify-center bg-black/80 p-4 animate-fade-in"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 p-4 animate-fade-in"
       onClick={() => onClose?.()}
       role="button"
       tabIndex={0}
