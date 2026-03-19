@@ -96,9 +96,22 @@ function Dashboard() {
   const [cancelReasonDrafts, setCancelReasonDrafts] = useState({});
   const [cancellingOrderId, setCancellingOrderId] = useState("");
   const [previewImage, setPreviewImage] = useState("");
+  const [activeTab, setActiveTab] = useState("profile");
+  const [isDesktop, setIsDesktop] = useState(typeof window !== "undefined" ? window.innerWidth >= 768 : true);
 
   const email = localStorage.getItem("email");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
 
@@ -417,7 +430,37 @@ function Dashboard() {
         </p>
       ) : null}
 
-        <div className="glass rounded-2xl p-6">
+      {/* Mobile Tabs */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 flex gap-1 p-3 rounded-t-2xl" style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(10px)", borderTop: "1px solid rgba(100,160,220,0.22)", zIndex: 40 }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab("profile")}
+          className="flex-1 rounded-lg py-2.5 px-3 text-xs font-semibold transition-all duration-250"
+          style={{
+            background: activeTab === "profile" ? "rgba(2,132,199,0.15)" : "transparent",
+            border: activeTab === "profile" ? "1px solid rgba(2,132,199,0.3)" : "1px solid rgba(100,160,220,0.22)",
+            color: activeTab === "profile" ? "#0284c7" : "#3a5470",
+          }}
+        >
+          👤 Profile
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("orders")}
+          className="flex-1 rounded-lg py-2.5 px-3 text-xs font-semibold transition-all duration-250"
+          style={{
+            background: activeTab === "orders" ? "rgba(2,132,199,0.15)" : "transparent",
+            border: activeTab === "orders" ? "1px solid rgba(2,132,199,0.3)" : "1px solid rgba(100,160,220,0.22)",
+            color: activeTab === "orders" ? "#0284c7" : "#3a5470",
+          }}
+        >
+          📦 Orders
+        </button>
+      </div>
+
+      {/* Profile Section - Mobile Tab or Desktop Always */}
+      {activeTab === "profile" || isDesktop ? (
+        <div className="glass rounded-2xl p-6 md:mb-0 mb-24">
           <h2 className="text-xl font-semibold" style={{ color: "#1a2f48" }}>Profile</h2>
 
         <div
@@ -544,8 +587,11 @@ function Dashboard() {
           )}
         </div>
       </div>
+      ) : null}
 
-        <div className="glass rounded-2xl p-6">
+      {/* Orders Section - Mobile Tab or Desktop Always */}
+      {activeTab === "orders" || isDesktop ? (
+        <div className="glass rounded-2xl p-6 md:mb-0 mb-24">
           <h2 className="text-xl font-semibold" style={{ color: "#1a2f48" }}>📦 My Orders</h2>
         {ordersLoading ? (
           <div className="flex items-center gap-3 mt-4">
@@ -682,6 +728,7 @@ function Dashboard() {
           )
         ) : null}
       </div>
+      ) : null}
 
       <ImageLightbox
         isOpen={Boolean(previewImage)}
