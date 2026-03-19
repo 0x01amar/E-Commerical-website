@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import OrderTimeline from "../components/OrderTimeline";
 import { apiFetchJson, mediaUrl, resolveApiErrorMessage } from "../config/api";
+import ImageLightbox from "../components/ImageLightbox";
 
 const EMPTY_ADDRESS = {
   line1: "",
@@ -94,6 +95,7 @@ function Dashboard() {
   const [cancelReasons, setCancelReasons] = useState(DEFAULT_CANCELLATION_REASONS);
   const [cancelReasonDrafts, setCancelReasonDrafts] = useState({});
   const [cancellingOrderId, setCancellingOrderId] = useState("");
+  const [previewImage, setPreviewImage] = useState("");
 
   const email = localStorage.getItem("email");
   const navigate = useNavigate();
@@ -571,7 +573,8 @@ function Dashboard() {
                       <img
                           src={order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/160x110/dce8f5/0284c7?text=No+Image"}
                         alt={order.productName}
-                        className="h-16 w-20 rounded-lg object-cover shrink-0"
+                        className="h-16 w-20 cursor-zoom-in rounded-lg object-cover shrink-0"
+                          onClick={() => setPreviewImage(order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/600x400/dce8f5/0284c7?text=No+Image")}
                           style={{ border: "1px solid rgba(100,160,220,0.22)" }}
                           onError={(e) => { e.target.src = "https://placehold.co/160x110/dce8f5/0284c7?text=No+Image"; }}
                       />
@@ -679,6 +682,13 @@ function Dashboard() {
           )
         ) : null}
       </div>
+
+      <ImageLightbox
+        isOpen={Boolean(previewImage)}
+        imageSrc={previewImage}
+        alt="Order product preview"
+        onClose={() => setPreviewImage("")}
+      />
     </div>
   );
 

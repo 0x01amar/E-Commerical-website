@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { mediaUrl } from "../config/api";
+import ImageLightbox from "../components/ImageLightbox";
 
 function Cart() {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const email = localStorage.getItem("email");
 	const [items, setItems] = useState(() => JSON.parse(localStorage.getItem("cartItems") || "[]"));
+	const [previewImage, setPreviewImage] = useState("");
 
 	useEffect(() => {
 		if (email) {
@@ -116,7 +118,8 @@ function Cart() {
 										<img
 											src={imageUrl}
 											alt={item.name}
-											className="h-24 w-28 rounded-lg object-cover shrink-0"
+											className="h-24 w-28 cursor-zoom-in rounded-lg object-cover shrink-0"
+											onClick={() => setPreviewImage(imageUrl)}
 											style={{ border: "1px solid rgba(2,132,199,0.18)" }}
 											onError={(e) => { e.target.src = "https://placehold.co/200x150/dce8f5/0284c7?text=No+Image"; }}
 										/>
@@ -215,6 +218,13 @@ function Cart() {
 					</div>
 				</div>
 			)}
+
+			<ImageLightbox
+				isOpen={Boolean(previewImage)}
+				imageSrc={previewImage}
+				alt="Cart product preview"
+				onClose={() => setPreviewImage("")}
+			/>
 		</section>
 	);
 }

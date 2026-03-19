@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowRightIcon, MagnifyingGlassCircleIcon, ShoppingBagIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import ProductCard from "../components/ProductCard";
 import { apiFetchJson, resolveApiErrorMessage } from "../config/api";
 
@@ -9,6 +10,7 @@ function Home({ search }) {
 	const [sections, setSections] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	const [heroImageUrl, setHeroImageUrl] = useState("https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=80");
 	const isAdmin = localStorage.getItem("role") === "admin";
 
 	const normalizeSectionName = (product = {}) => {
@@ -21,15 +23,17 @@ function Home({ search }) {
 			try {
 				setLoading(true);
 
-				const [productsResult, sectionsResult] = await Promise.all([
+				const [productsResult, sectionsResult, heroResult] = await Promise.all([
 					apiFetchJson("/products"),
 					apiFetchJson("/products/sections"),
+					apiFetchJson("/settings/hero-image"),
 				]);
 
 				const productResponse = productsResult.response;
 				const sectionResponse = sectionsResult.response;
 				const productsData = productsResult.data;
 				const sectionsData = sectionsResult.data;
+				const heroData = heroResult.data;
 
 				if (!productResponse.ok) {
 					throw new Error(productsData?.message || "Failed to load products");
@@ -44,6 +48,11 @@ function Home({ search }) {
 
 				setProducts(normalizedProducts);
 				setSections(normalizedSections);
+
+				if (heroData?.heroImageUrl) {
+					setHeroImageUrl(heroData.heroImageUrl);
+				}
+
 				setError("");
 			} catch (fetchError) {
 				setError(resolveApiErrorMessage(fetchError, "Failed to load products"));
@@ -121,36 +130,83 @@ function Home({ search }) {
 		}
 	};
 
+	const scrollToId = (id) => {
+		const element = document.getElementById(id);
+
+		if (element) {
+			element.scrollIntoView({ behavior: "smooth", block: "start" });
+		}
+	};
+
+	const handleShopNow = () => {
+		const firstSection = groupedSections.find((section) => section.products.length);
+
+		if (firstSection) {
+			jumpToSection(firstSection.name);
+			return;
+		}
+
+		scrollToId("all-sections");
+	};
+
 	return (
 		<section className="space-y-8">
-			{/* Hero Banner */}
 			<div
-				className="hero-dark relative overflow-hidden p-6 sm:p-10"
+				className="relative overflow-hidden rounded-3xl border p-6 shadow-lg sm:p-8 lg:p-10 animate-fade-in"
+				style={{
+					background: "linear-gradient(135deg, #dbeafe 0%, #eff6ff 45%, #ffffff 100%)",
+					borderColor: "rgba(37,99,235,0.18)",
+				}}
 			>
-				<p
-					className="text-xs uppercase tracking-[0.3em] font-semibold sm:text-sm"
-					style={{ color: "#0284c7" }}
-				>
-          ✦ Premium Collection
-				</p>
-				<h1
-					className="mt-3 text-2xl font-bold sm:text-4xl lg:text-5xl"
-					style={{ color: "#1a2f48", lineHeight: 1.15 }}
-				>
-					Beautiful Furniture<br />
-					<span
-						style={{
-								background: "linear-gradient(135deg, #0284c7, #7c3aed)",
-							WebkitBackgroundClip: "text",
-							WebkitTextFillColor: "transparent",
-						}}
-					>
-						for Modern Homes
+<div className="grid items-center gap-8 lg:grid-cols-[1.2fr_0.95fr]">
+				<div>
+					<h1 className="text-4xl font-black leading-[1.05] text-slate-900 sm:text-6xl lg:text-7xl">
+					<span className="bg-linear-to-r from-blue-700 via-blue-600 to-blue-500 bg-clip-text text-transparent">
+						MAA SHEELA
 					</span>
-				</h1>
-				<p className="mt-4 max-w-2xl text-sm sm:text-base" style={{ color: "#3a5470" }}>
-					Explore premium wooden and iron furniture. Crafted for elegance, built to last.
-				</p>
+					<span className="block bg-linear-to-r from-blue-600 via-cyan-500 to-teal-500 bg-clip-text text-transparent">
+							</span>
+						</h1>
+
+						<p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+							Handcrafted iron and premium furniture that combines durability with modern elegance.
+							Explore curated designs built for homes that love style and strength.
+						</p>
+
+						<div className="mt-6 flex flex-wrap gap-3">
+							<button
+								type="button"
+								onClick={handleShopNow}
+								className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition-all duration-300 hover:scale-105 hover:bg-blue-700 hover:shadow-lg"
+							>
+								<ShoppingBagIcon className="h-4 w-4" />
+								Shop Now
+							</button>
+							<button
+								type="button"
+								onClick={() => scrollToId("all-sections")}
+								className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-md transition-all duration-300 hover:scale-105 hover:shadow-lg"
+							>
+								<MagnifyingGlassCircleIcon className="h-5 w-5" />
+								Explore
+								<ArrowRightIcon className="h-4 w-4" />
+							</button>
+						</div>
+					</div>
+
+					<div className="relative">
+						<div className="absolute -inset-4 rounded-3xl bg-blue-200/40 blur-2xl" />
+						<img
+							src={heroImageUrl}
+							alt="Elegant furniture showcase"
+							loading="lazy"
+							className="relative h-64 w-full rounded-2xl object-cover shadow-lg sm:h-80"
+							onError={(e) => {
+								e.currentTarget.src = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=80";
+							}}
+						/>
+					</div>
+				</div>
 
 				<div className="mt-6 flex flex-wrap gap-2">
 					{groupedSections.slice(0, 10).map((section) => (
@@ -158,22 +214,7 @@ function Home({ search }) {
 							key={section.name}
 							type="button"
 							onClick={() => jumpToSection(section.name)}
-							className="rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-250 hover:scale-105"
-							style={{
-								background: "rgba(2,132,199,0.08)",
-								border: "1px solid rgba(2,132,199,0.25)",
-								color: "#2d5a8e",
-							}}
-							onMouseEnter={e => {
-							e.currentTarget.style.background = "rgba(2,132,199,0.15)";
-							e.currentTarget.style.color = "#0284c7";
-							e.currentTarget.style.borderColor = "rgba(2,132,199,0.45)";
-						}}
-						onMouseLeave={e => {
-							e.currentTarget.style.background = "rgba(2,132,199,0.08)";
-							e.currentTarget.style.color = "#2d5a8e";
-							e.currentTarget.style.borderColor = "rgba(2,132,199,0.25)";
-							}}
+							className="rounded-full border border-blue-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-all duration-250 hover:scale-105 hover:shadow-md"
 						>
 							{section.name}
 						</button>
@@ -182,7 +223,7 @@ function Home({ search }) {
 			</div>
 
 			{/* Section Header */}
-			<div className="flex items-center justify-between">
+			<div id="all-sections" className="flex items-center justify-between scroll-mt-28">
 				<h2 className="text-xl font-semibold sm:text-2xl" style={{ color: "#1a2f48" }}>
 					All Product Sections
 				</h2>
@@ -199,12 +240,15 @@ function Home({ search }) {
 			</div>
 
 			{loading ? (
-				<div className="flex items-center gap-3 py-8">
-					<div
-						className="h-5 w-5 rounded-full animate-spin"
-						style={{ border: "2px solid rgba(2,132,199,0.2)", borderTopColor: "#0284c7" }}
-					/>
-					<p style={{ color: "#3a5470" }}>Loading products...</p>
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+					{Array.from({ length: 8 }).map((_, index) => (
+						<div key={`skeleton-${index}`} className="overflow-hidden rounded-2xl border border-blue-100 bg-white/80 p-3 shadow-sm animate-pulse">
+							<div className="h-40 rounded-xl bg-blue-100" />
+							<div className="mt-3 h-4 w-3/4 rounded bg-blue-100" />
+							<div className="mt-2 h-4 w-1/2 rounded bg-blue-100" />
+							<div className="mt-4 h-8 w-full rounded-lg bg-blue-100" />
+						</div>
+					))}
 				</div>
 			) : null}
 			{error ? (

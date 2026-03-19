@@ -88,7 +88,7 @@ mongoose.connect(process.env.MONGO_URI)
   });
 
 app.get("/", (req, res) => {
-  res.send("Apna Furniture House Backend Running");
+  res.send("Maa Sheela Iron Art Backend Running");
 });
 
 const PORT = process.env.PORT || 5000;

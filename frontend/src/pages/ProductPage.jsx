@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { apiFetchJson, mediaUrl, resolveApiErrorMessage } from "../config/api";
 import StarRating from "../components/StarRating";
 import ReviewForm from "../components/ReviewForm";
+import ImageLightbox from "../components/ImageLightbox";
+import { showToast } from "../config/toast";
 
 function ProductPage() {
   const { id } = useParams();
@@ -12,6 +14,7 @@ function ProductPage() {
 
     const [product, setProduct] = useState(null);
     const [selectedImage, setSelectedImage] = useState("");
+    const [previewImage, setPreviewImage] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [ratingInfo, setRatingInfo] = useState({
@@ -151,6 +154,7 @@ function ProductPage() {
             : [...existingCart, { ...safeProduct, quantity: 1 }];
 
         localStorage.setItem("cartItems", JSON.stringify(nextCart));
+        showToast("Added to cart", "success");
         navigate("/cart");
     };
 
@@ -289,7 +293,8 @@ function ProductPage() {
                         <img
                             src={imageUrl}
                             alt={product.name}
-                            className="h-72 w-full object-cover sm:h-108"
+                            className="h-72 w-full cursor-zoom-in object-cover sm:h-108"
+                            onClick={() => setPreviewImage(imageUrl)}
                             onError={e => { e.currentTarget.src = "https://placehold.co/700x500/dce8f5/0284c7?text=No+Image"; }}
                         />
                     </div>
@@ -447,6 +452,7 @@ function ProductPage() {
                                                 alt={`Review ${i + 1}`}
                                                 className="h-16 w-16 rounded-lg object-cover cursor-pointer"
                                                 style={{ border: "1px solid rgba(100,160,220,0.22)" }}
+                                                onClick={() => setPreviewImage(mediaUrl(imagePath))}
                                                 onError={e => { e.currentTarget.src = "https://placehold.co/64x64?text=Img"; }}
                                             />
                                         ))}
@@ -464,6 +470,13 @@ function ProductPage() {
                     <p className="mt-3 text-sm" style={{ color: "#6080a0" }}>No ratings yet. Be the first to review this product!</p>
                 )}
             </div>
+
+            <ImageLightbox
+                isOpen={Boolean(previewImage)}
+                imageSrc={previewImage}
+                alt={product?.name || "Product image"}
+                onClose={() => setPreviewImage("")}
+            />
         </section>
     );
 }

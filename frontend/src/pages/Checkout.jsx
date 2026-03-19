@@ -10,6 +10,7 @@ import {
   mediaUrl,
   resolveApiErrorMessage,
 } from "../config/api";
+import ImageLightbox from "../components/ImageLightbox";
 
 const DEFAULT_TAX_RATE = 0.08;
 const DEFAULT_SHIPPING_CHARGE = 79;
@@ -226,7 +227,7 @@ const toLegacyPaymentShape = (data = {}) => {
     key: data?.key || data?.checkout?.key || "",
     amount: data?.order?.amount ?? data?.checkout?.amount,
     currency: data?.order?.currency || data?.checkout?.currency || "INR",
-    name: data?.name || data?.checkout?.name || "Apna Furniture House",
+    name: data?.name || data?.checkout?.name || "Maa Sheela Iron Art",
     description: data?.description || data?.checkout?.description || "Secure payment",
     prefill: data?.prefill || {},
   };
@@ -329,6 +330,7 @@ function Checkout() {
   const [orderPlaced, setOrderPlaced] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [previewImage, setPreviewImage] = useState("");
 
   useEffect(() => {
     if (email) {
@@ -844,7 +846,7 @@ function Checkout() {
         key: normalizedCheckout.key,
         amount: normalizedCheckout.amount,
         currency: normalizedCheckout.currency || "INR",
-        name: normalizedCheckout.name || "Apna Furniture House",
+        name: normalizedCheckout.name || "Maa Sheela Iron Art",
         description: normalizedCheckout.description || "Secure payment",
         order_id: gatewayOrderId,
         prefill: {
@@ -949,7 +951,13 @@ function Checkout() {
         {step === 1 ? (
           <div className="space-y-5">
             <div className="flex flex-col gap-4 rounded-xl p-4 sm:flex-row" style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.20)" }}>
-              <img src={imageUrl} alt={product.name} className="h-36 w-full rounded-xl object-cover sm:h-28 sm:w-36" onError={e => { e.currentTarget.src = "https://placehold.co/200x150?text=No+Image"; }} />
+              <img
+                src={imageUrl}
+                alt={product.name}
+                className="h-36 w-full cursor-zoom-in rounded-xl object-cover sm:h-28 sm:w-36"
+                onClick={() => setPreviewImage(imageUrl)}
+                onError={e => { e.currentTarget.src = "https://placehold.co/200x150?text=No+Image"; }}
+              />
               <div className="flex-1 space-y-1">
                 <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>{product.name}</h2>
                 <p className="text-sm" style={{ color: "#6080a0" }}>{product.category}</p>
@@ -1294,6 +1302,13 @@ function Checkout() {
           </div>
         ) : null}
       </div>
+
+      <ImageLightbox
+        isOpen={Boolean(previewImage)}
+        imageSrc={previewImage}
+        alt={product?.name || "Checkout product preview"}
+        onClose={() => setPreviewImage("")}
+      />
     </section>
   );
 }

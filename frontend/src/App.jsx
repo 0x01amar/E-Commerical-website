@@ -10,6 +10,7 @@ import LoginPassword from "./pages/LoginPassword";
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import ToastHost from "./components/ToastHost";
 
 function App() {
   const [search, setSearch] = useState("");
@@ -43,6 +44,8 @@ function App() {
           <Route path="*" element={<Navigate replace to="/" />} />
         </Routes>
       </main>
+
+      <ToastHost />
     </div>
   );
 

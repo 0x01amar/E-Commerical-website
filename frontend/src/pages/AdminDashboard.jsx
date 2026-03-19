@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import OrderTimeline, { ORDER_STATUS_STEPS } from "../components/OrderTimeline";
 import ProductCard from "../components/ProductCard";
 import StarRating from "../components/StarRating";
+import ImageLightbox from "../components/ImageLightbox";
 import { apiFetch, apiFetchJson, mediaUrl, parseApiResponseJson, resolveApiErrorMessage } from "../config/api";
+import { showToast } from "../config/toast";
 
 const defaultProductForm = {
   name: "",
@@ -125,8 +127,14 @@ function AdminDashboard() {
   const [deliveryUpdatingOrderId, setDeliveryUpdatingOrderId] = useState("");
   const [cancelNotifications, setCancelNotifications] = useState([]);
   const [deletingOrderId, setDeletingOrderId] = useState("");
+  const [previewImage, setPreviewImage] = useState("");
+  const [heroImageUrl, setHeroImageUrl] = useState("https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=80");
+  const [heroImageFile, setHeroImageFile] = useState(null);
+  const [heroImageSaving, setHeroImageSaving] = useState(false);
+  const [heroImageError, setHeroImageError] = useState("");
 
   const latestUserCancellationTsRef = useRef(0);
+  const productEditorRef = useRef(null);
 
   const navigate = useNavigate();
   const isAdmin = localStorage.getItem("role") === "admin";
@@ -318,6 +326,65 @@ function AdminDashboard() {
     };
   }, [adminKey, isAdmin]);
 
+  useEffect(() => {
+    const loadHeroImage = async () => {
+      try {
+        const { response, data } = await apiFetchJson("/settings/hero-image");
+
+        if (response.ok && data?.heroImageUrl) {
+          setHeroImageUrl(data.heroImageUrl);
+        }
+      } catch (error) {
+        // Use default fallback image
+      }
+    };
+
+    loadHeroImage();
+  }, []);
+
+  const saveHeroImage = async (event) => {
+    event.preventDefault();
+
+    if (!heroImageFile && !heroImageUrl) {
+      setHeroImageError("Please select or enter a hero image URL");
+      return;
+    }
+
+    try {
+      setHeroImageSaving(true);
+      setHeroImageError("");
+
+      const formData = new FormData();
+
+      if (heroImageFile) {
+        formData.append("heroImage", heroImageFile);
+      } else {
+        formData.append("heroImageUrl", heroImageUrl);
+      }
+
+      const { response, data } = await apiFetch("/settings/hero-image", {
+        method: "PUT",
+        body: formData,
+        headers: {
+          "x-admin-key": adminKey,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to update hero image");
+      }
+
+      setHeroImageUrl(data?.heroImageUrl || heroImageUrl);
+      setHeroImageFile(null);
+      showToast("Hero image updated", "success");
+    } catch (saveError) {
+      setHeroImageError(resolveApiErrorMessage(saveError, "Failed to update hero image"));
+      showToast("Failed to update hero image", "error");
+    } finally {
+      setHeroImageSaving(false);
+    }
+  };
+
   const groupedProducts = useMemo(() => {
     const productSections = new Set([
       ...sections.map((section) => String(section?.name || "").trim()).filter(Boolean),
@@ -370,6 +437,95 @@ function AdminDashboard() {
   const resetSectionForm = () => {
     setSectionForm(defaultSectionForm);
     setEditingSectionId("");
+  };
+
+  const startAddProductForSection = (sectionName = "") => {
+    const normalizedSection = String(sectionName || "").trim() || sections[0]?.name || "General";
+
+    resetForm();
+    setProductForm((prev) => ({
+      ...prev,
+      section: normalizedSection,
+      category: normalizedSection,
+    }));
+
+    window.setTimeout(() => {
+      productEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+  };
+
+  const deleteSection = async (section) => {
+    const sectionId = String(section?._id || "");
+    const sectionName = String(section?.name || "").trim();
+
+    if (!sectionId || !sectionName) {
+      return;
+    }
+
+    if (sectionName.toLowerCase() === "general") {
+      setSectionError("General section cannot be deleted");
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete section '${sectionName}'? Products will be moved to General.`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setSectionSaving(true);
+      setSectionError("");
+
+      const { response, data } = await apiFetchJson(`/products/sections/${sectionId}`, {
+        method: "DELETE",
+        headers: {
+          "x-admin-key": adminKey,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to delete section");
+      }
+
+      setSections((prev) => prev.filter((item) => item._id !== sectionId));
+      setProducts((prev) => prev.map((product) => {
+        const currentSection = String(product?.section || product?.category || "").trim();
+
+        if (currentSection !== sectionName) {
+          return product;
+        }
+
+        return {
+          ...product,
+          section: "General",
+          category: "General",
+        };
+      }));
+
+      if (editingSectionId === sectionId) {
+        resetSectionForm();
+      }
+
+      setProductForm((prev) => {
+        if (String(prev.section || "").trim() !== sectionName) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          section: "General",
+          category: "General",
+        };
+      });
+
+      showToast("Section deleted successfully", "success");
+    } catch (deleteError) {
+      setSectionError(resolveApiErrorMessage(deleteError, "Failed to delete section"));
+      showToast("Failed to delete section", "error");
+    } finally {
+      setSectionSaving(false);
+    }
   };
 
   const saveCheckoutPricing = async (event) => {
@@ -561,8 +717,10 @@ function AdminDashboard() {
       }
 
       resetSectionForm();
+      showToast(editingSectionId ? "Section updated" : "Section added", "success");
     } catch (saveError) {
       setSectionError(resolveApiErrorMessage(saveError, "Failed to save section"));
+      showToast("Failed to save section", "error");
     } finally {
       setSectionSaving(false);
     }
@@ -721,6 +879,7 @@ function AdminDashboard() {
       }
 
       resetForm();
+      showToast(editingId ? "Product updated" : "Product added", "success");
     } catch (saveError) {
       const isNetworkError =
         saveError instanceof TypeError &&
@@ -731,6 +890,7 @@ function AdminDashboard() {
           ? "Failed to connect to backend while saving product. Please check backend server/API URL and try again."
           : resolveApiErrorMessage(saveError, "Failed to save product")
       );
+      showToast("Failed to save product", "error");
     } finally {
       setSaving(false);
     }
@@ -755,8 +915,10 @@ function AdminDashboard() {
       }
 
       setProducts((prev) => prev.filter((product) => product._id !== id));
+      showToast("Product deleted", "success");
     } catch (deleteError) {
       setError(resolveApiErrorMessage(deleteError, "Failed to delete product"));
+      showToast("Failed to delete product", "error");
     }
   };
 
@@ -1022,8 +1184,90 @@ function AdminDashboard() {
             </div>
           </form>
 
+          <form onSubmit={saveHeroImage} className="glass rounded-2xl p-5">
+            <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>Hero Section Image</h2>
+            <p className="mt-1 text-xs" style={{ color: "#6080a0" }}>
+              Upload or enter a URL for the hero section image displayed on the homepage.
+            </p>
+
+            {heroImageUrl ? (
+              <div className="mt-4 rounded-xl overflow-hidden border border-blue-200" style={{ background: "rgba(255,255,255,0.78)" }}>
+                <img
+                  src={heroImageUrl}
+                  alt="Hero preview"
+                  className="h-40 w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=80";
+                  }}
+                />
+              </div>
+            ) : null}
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: "#1a2f48" }}>Upload Image (or enter URL below)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    setHeroImageFile(event.target.files?.[0] || null);
+                    if (event.target.files?.[0]) {
+                      const reader = new FileReader();
+                      reader.onload = (e) => {
+                        setHeroImageUrl(e.target?.result || "");
+                      };
+                      reader.readAsDataURL(event.target.files[0]);
+                    }
+                  }}
+                  className="input-dark w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: "#1a2f48" }}>Or enter Image URL</label>
+                <input
+                  type="text"
+                  placeholder="https://..."
+                  value={heroImageFile ? "" : heroImageUrl}
+                  onChange={(event) => setHeroImageUrl(event.target.value)}
+                  disabled={Boolean(heroImageFile)}
+                  className="input-dark w-full disabled:opacity-60"
+                />
+              </div>
+            </div>
+
+            {heroImageError ? (
+              <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-600">
+                {heroImageError}
+              </p>
+            ) : null}
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="submit"
+                disabled={heroImageSaving}
+                className="btn-neon rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60 flex-1"
+              >
+                {heroImageSaving ? "Saving..." : "Save Hero Image"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setHeroImageFile(null);
+                  setHeroImageUrl("https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=80");
+                }}
+                className="btn-ghost rounded-xl px-4 py-2 text-sm"
+              >
+                Reset to Default
+              </button>
+            </div>
+          </form>
+
           <form onSubmit={submitSection} className="glass rounded-2xl p-5">
             <h2 className="text-lg font-semibold" style={{ color: "#1a2f48" }}>Manage Sections</h2>
+            <p className="mt-1 text-xs" style={{ color: "#6080a0" }}>
+              Create, edit, delete sections and directly launch the full product editor for any section.
+            </p>
 
             <div className="mt-4 space-y-3">
               <input
@@ -1056,36 +1300,62 @@ function AdminDashboard() {
                     Cancel
                   </button>
                 ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => startAddProductForSection(sectionForm.name)}
+                  className="btn-ghost rounded-xl px-4 py-2 text-sm"
+                >
+                  Add Product Here
+                </button>
               </div>
             </div>
 
             <div className="mt-5 space-y-2">
               {sections.map((section) => (
-                <div key={section._id || section.name} className="flex items-center justify-between rounded-xl px-3 py-2" style={{ border: "1px solid rgba(100,160,220,0.18)", background: "rgba(255,255,255,0.78)" }}>
+                <div key={section._id || section.name} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2" style={{ border: "1px solid rgba(100,160,220,0.18)", background: "rgba(255,255,255,0.78)" }}>
                   <div>
                     <p className="text-sm font-semibold" style={{ color: "#1a2f48" }}>{section.name}</p>
                     <p className="text-xs" style={{ color: "#6080a0" }}>Order: {Number(section.displayOrder || 0)}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingSectionId(section._id || "");
-                      setSectionForm({
-                        name: section.name,
-                        displayOrder: String(section.displayOrder || 0),
-                      });
-                    }}
-                    className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
-                  >
-                    Edit
-                  </button>
+
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => startAddProductForSection(section.name)}
+                      className="btn-neon rounded-lg px-3 py-1.5 text-xs"
+                    >
+                      Add Product
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingSectionId(section._id || "");
+                        setSectionForm({
+                          name: section.name,
+                          displayOrder: String(section.displayOrder || 0),
+                        });
+                      }}
+                      className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteSection(section)}
+                      disabled={sectionSaving || String(section?.name || "").trim().toLowerCase() === "general"}
+                      className="btn-danger rounded-lg px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </form>
         </div>
 
-        <form onSubmit={submitProduct} className="glass rounded-2xl p-6">
+        <form ref={productEditorRef} onSubmit={submitProduct} className="glass rounded-2xl p-6 scroll-mt-28">
         <h2 className="text-xl font-semibold" style={{ color: "#1a2f48" }}>
             {editingId ? "Edit Product" : "Add New Product"}
           </h2>
@@ -1374,7 +1644,8 @@ function AdminDashboard() {
                         <img
                           src={imagePath ? mediaUrl(imagePath) : "https://placehold.co/140x100?text=No+Image"}
                           alt={order.productName}
-                          className="h-20 w-24 rounded-lg object-cover shadow-sm"
+                          className="h-20 w-24 cursor-zoom-in rounded-lg object-cover shadow-sm"
+                          onClick={() => setPreviewImage(imagePath ? mediaUrl(imagePath) : "https://placehold.co/700x500/dce8f5/0284c7?text=No+Image")}
                           onError={(e) => {
                             e.currentTarget.src = "https://placehold.co/140x100?text=No+Image";
                           }}
@@ -1545,6 +1816,13 @@ function AdminDashboard() {
           <p className="mt-4 text-sm" style={{ color: "#6080a0" }}>No user-cancelled orders yet.</p>
         )}
       </div>
+
+      <ImageLightbox
+        isOpen={Boolean(previewImage)}
+        imageSrc={previewImage}
+        alt="Order product preview"
+        onClose={() => setPreviewImage("")}
+      />
     </section>
   );
 }

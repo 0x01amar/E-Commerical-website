@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { mediaUrl } from "../config/api";
 import StarRating from "./StarRating";
+import ImageLightbox from "./ImageLightbox";
 
 function ProductCard({
   product,
@@ -8,6 +10,7 @@ function ProductCard({
   onDelete,
   showAdminActions = false,
 }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
   const mainImage = product?.image || product?.images?.[0] || "";
 
   const imageUrl = mainImage
@@ -36,7 +39,13 @@ function ProductCard({
           <img
             src={imageUrl}
             alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+            loading="lazy"
+            className="h-full w-full cursor-zoom-in object-cover transition-transform duration-500 hover:scale-110"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setPreviewOpen(true);
+            }}
             onError={(e) => {
               e.target.src = "https://placehold.co/600x400/dce8f5/0284c7?text=No+Image";
             }}
@@ -156,6 +165,13 @@ function ProductCard({
           </button>
         </div>
       ) : null}
+
+      <ImageLightbox
+        isOpen={previewOpen}
+        imageSrc={imageUrl}
+        alt={product?.name || "Product preview"}
+        onClose={() => setPreviewOpen(false)}
+      />
     </article>
   );
 }

@@ -353,7 +353,7 @@ const createRazorpayOrder = async (req, res) => {
         receipt: trimString(gatewayOrder.receipt || receipt),
       },
       internalOrderId: order._id,
-      name: "Apna Furniture House",
+      name: "Maa Sheela Iron Art",
       description: paymentOption === "half"
         ? `Half payment for ${trimString(product.name)}`
         : `Secure payment for ${trimString(product.name)}`,

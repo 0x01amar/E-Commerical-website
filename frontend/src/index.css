@@ -23,11 +23,25 @@ body {
     radial-gradient(ellipse at 50% 50%, rgba(14,165,233,0.08) 0%, transparent 65%);
   background-attachment: fixed;
   color: #1a2f48;
+  /* Performance: Enable hardware acceleration */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root {
+  --brand-blue: #2563eb;
 }
 
 img {
   max-width: 100%;
   display: block;
+  /* Optimize images for responsive display */
+  aspect-ratio: auto;
+}
+
+/* Lazy load images */
+img[loading="lazy"] {
+  background: linear-gradient(90deg, rgba(200, 220, 240, 0.1), rgba(200, 220, 240, 0.2));
 }
 
 html {
@@ -235,6 +249,22 @@ html {
   pointer-events: none;
 }
 
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in-up 0.45s ease both;
+}
+
 /* Focus states */
 input:focus,
 textarea:focus,
@@ -245,4 +275,63 @@ select:focus {
 button:focus-visible {
   outline: 2px solid #0284c7;
   outline-offset: 2px;
+}
+
+button:not(:disabled) {
+  transition: transform 0.24s ease, box-shadow 0.24s ease, background-color 0.24s ease, border-color 0.24s ease, color 0.24s ease;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.14);
+}
+
+/* ─── Mobile Optimization ─── */
+@media (max-width: 768px) {
+  /* Reduce animations on mobile/slower devices */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Touch-friendly targets for mobile */
+  button, a, input, textarea, select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve mobile scrolling performance */
+  .glass,
+  .glass-hover {
+    will-change: auto;
+  }
+
+  /* Optimize background images on mobile */
+  body {
+    background-attachment: scroll;
+  }
+}
+
+/* ─── Performance: GPU acceleration for smooth scrolling ─── */
+*.animate-fade-in,
+button:not(:disabled),
+.glass-hover {
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimize for slow 3G / reduced data */
+@media (prefers-reduced-data: reduce) {
+  * {
+    animation: none !important;
+    background-image: none !important;
+  }
+
+  body {
+    background: #e8f0f9;
+  }
 }

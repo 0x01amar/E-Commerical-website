@@ -466,6 +466,44 @@ router.put("/sections/:sectionId", requireAdminKey, async (req, res) => {
   }
 });
 
+router.delete("/sections/:sectionId", requireAdminKey, async (req, res) => {
+  try {
+    const section = await Section.findById(req.params.sectionId);
+
+    if (!section) {
+      return res.status(404).json({ message: "Section not found" });
+    }
+
+    const sectionName = trimString(section.name);
+
+    if (/^general$/i.test(sectionName)) {
+      return res.status(400).json({ message: "General section cannot be deleted" });
+    }
+
+    await ensureSectionExists("General");
+
+    const updatedProducts = await Product.updateMany(
+      { section: sectionName },
+      {
+        $set: {
+          section: "General",
+          category: "General",
+        },
+      }
+    );
+
+    await Section.findByIdAndDelete(section._id);
+
+    return res.json({
+      message: "Section deleted successfully",
+      deletedSection: sectionName,
+      reassignedProducts: Number(updatedProducts?.modifiedCount || 0),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to delete section" });
+  }
+});
+
 router.post("/", requireAdminKey, upload.fields([
   { name: "image", maxCount: 1 },
   { name: "images", maxCount: 25 },
