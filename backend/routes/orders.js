@@ -20,6 +20,24 @@ const ORDER_STATUSES = [
   "Cancelled",
 ];
 
+const USER_CANCELLATION_REASONS = [
+  { code: "ordered_by_mistake", label: "Ordered by mistake" },
+  { code: "found_better_price", label: "Found a better price elsewhere" },
+  { code: "delivery_takes_too_long", label: "Delivery time is too long" },
+  { code: "shipping_too_high", label: "Shipping charges are too high" },
+  { code: "product_details_unclear", label: "Product details were not clear" },
+  { code: "changed_requirements", label: "My requirements changed" },
+  { code: "duplicate_order", label: "Placed a duplicate order" },
+  { code: "payment_issue", label: "Facing payment issues" },
+  { code: "update_delivery_address", label: "Need to update delivery address" },
+  { code: "other_personal_reason", label: "Other personal reason" },
+];
+
+const USER_CANCELLATION_REASON_MAP = USER_CANCELLATION_REASONS.reduce((accumulator, reason) => {
+  accumulator[reason.code] = reason.label;
+  return accumulator;
+}, {});
+
 const normalizeEmail = (email = "") => String(email).trim().toLowerCase();
 const trimString = (value = "") => String(value || "").trim();
 const asTwoDecimals = (value = 0) => Number(Number(value || 0).toFixed(2));
@@ -60,6 +78,9 @@ const calculatePricing = (unitPrice, quantity, pricingSettings = {}) => {
   const shippingCharge = subtotal > 0 ? asTwoDecimals(configuredShippingCharge) : 0;
   const totalAmount = asTwoDecimals(subtotal + taxAmount + shippingCharge);
   const exactHalf = asTwoDecimals(totalAmount / 2);
+  const pricingSource = trimString(pricingSettings.pricingSource).toLowerCase() === "product"
+    ? "product"
+    : "global";
 
   return {
     taxRate,
@@ -68,6 +89,29 @@ const calculatePricing = (unitPrice, quantity, pricingSettings = {}) => {
     shippingCharge,
     totalAmount,
     exactHalf,
+    pricingSource,
+  };
+};
+
+const resolvePricingForProduct = (product = {}, pricingSettings = {}) => {
+  const globalTaxRate = Number.isFinite(Number(pricingSettings.taxRate))
+    ? Number(pricingSettings.taxRate)
+    : DEFAULT_TAX_RATE;
+
+  const globalShippingCharge = Number.isFinite(Number(pricingSettings.shippingCharge))
+    ? Number(pricingSettings.shippingCharge)
+    : DEFAULT_SHIPPING_CHARGE;
+
+  const productTaxRate = Number(product?.taxRate);
+  const productShippingCharge = Number(product?.shippingCharge);
+
+  const hasProductTaxRate = Number.isFinite(productTaxRate) && productTaxRate >= 0 && productTaxRate <= 1;
+  const hasProductShippingCharge = Number.isFinite(productShippingCharge) && productShippingCharge >= 0;
+
+  return {
+    taxRate: hasProductTaxRate ? productTaxRate : globalTaxRate,
+    shippingCharge: hasProductShippingCharge ? productShippingCharge : globalShippingCharge,
+    pricingSource: hasProductTaxRate || hasProductShippingCharge ? "product" : "global",
   };
 };
 
@@ -319,7 +363,9 @@ const createOrderFromData = async ({
     unitPrice: asTwoDecimals(productData.unitPrice),
     subtotal: pricing.subtotal,
     taxAmount: pricing.taxAmount,
+    appliedTaxRate: Number(pricing.taxRate || 0),
     shippingCharge: pricing.shippingCharge,
+    pricingSource: pricing.pricingSource || "global",
     totalAmount: pricing.totalAmount,
     paymentOption,
     upiTransactionId: trimString(transactionId),
@@ -377,7 +423,8 @@ router.post("/", async (req, res) => {
 
     const { user, product, normalizedAddress, userPhone, requestPhone } = validation;
     const checkoutPricingSettings = await getCheckoutPricingSettings();
-    const pricing = calculatePricing(product.price, quantity, checkoutPricingSettings);
+    const effectivePricingSettings = resolvePricingForProduct(product, checkoutPricingSettings);
+    const pricing = calculatePricing(product.price, quantity, effectivePricingSettings);
 
     const order = await createOrderFromData({
       user,
@@ -442,6 +489,36 @@ router.get("/admin/all", async (req, res) => {
   }
 });
 
+router.get("/cancellation-reasons", (_req, res) => {
+  return res.json(USER_CANCELLATION_REASONS);
+});
+
+router.delete("/:orderId/admin-delete", async (req, res) => {
+  try {
+    const adminKey = trimString(req.headers["x-admin-key"] || "");
+
+    if (!isAdminKeyValid(adminKey)) {
+      return res.status(403).json({ message: "Admin access denied" });
+    }
+
+    const order = await Order.findById(req.params.orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.status !== "Cancelled") {
+      return res.status(400).json({ message: "Only cancelled orders can be deleted permanently" });
+    }
+
+    await Order.findByIdAndDelete(req.params.orderId);
+
+    return res.json({ message: "Cancelled order deleted permanently" });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to delete cancelled order" });
+  }
+});
+
 router.put("/:orderId/status", async (req, res) => {
   try {
     const adminKey = trimString(req.headers["x-admin-key"] || "");
@@ -456,15 +533,42 @@ router.put("/:orderId/status", async (req, res) => {
       return res.status(400).json({ message: "Invalid order status" });
     }
 
-    const order = await Order.findByIdAndUpdate(
-      req.params.orderId,
-      { status },
-      { new: true }
-    );
+    const existingOrder = await Order.findById(req.params.orderId);
 
-    if (!order) {
+    if (!existingOrder) {
       return res.status(404).json({ message: "Order not found" });
     }
+
+    const updateData = {
+      status,
+    };
+
+    if (status === "Cancelled") {
+      const cancellationReason = trimString(req.body?.cancellationReason);
+      const cancellationReasonCode = trimString(req.body?.cancellationReasonCode || "cancelled_by_admin") || "cancelled_by_admin";
+
+      const isExistingUserCancellation = trimString(existingOrder.cancelledBy) === "user";
+
+      updateData.cancelledBy = isExistingUserCancellation ? "user" : "admin";
+      updateData.cancellationReasonCode = isExistingUserCancellation
+        ? trimString(existingOrder.cancellationReasonCode || cancellationReasonCode)
+        : cancellationReasonCode;
+      updateData.cancellationReason = isExistingUserCancellation
+        ? trimString(existingOrder.cancellationReason || cancellationReason || "Cancelled by user")
+        : cancellationReason || "Cancelled by admin";
+      updateData.cancelledAt = existingOrder.cancelledAt || new Date();
+    } else {
+      updateData.cancelledBy = "";
+      updateData.cancellationReasonCode = "";
+      updateData.cancellationReason = "";
+      updateData.cancelledAt = null;
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.orderId,
+      updateData,
+      { new: true }
+    );
 
     return res.json({
       message: "Order status updated",
@@ -511,9 +615,19 @@ router.put("/:orderId/delivery-date", async (req, res) => {
 router.put("/:orderId/cancel", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email || "");
+    const cancellationReasonCode = trimString(req.body?.reasonCode || req.body?.cancellationReasonCode).toLowerCase();
+    const cancellationReason = USER_CANCELLATION_REASON_MAP[cancellationReasonCode] || "";
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
+    }
+
+    if (!cancellationReasonCode) {
+      return res.status(400).json({ message: "Please select a cancellation reason" });
+    }
+
+    if (!cancellationReason) {
+      return res.status(400).json({ message: "Invalid cancellation reason selected" });
     }
 
     const order = await Order.findById(req.params.orderId);
@@ -531,6 +645,10 @@ router.put("/:orderId/cancel", async (req, res) => {
     }
 
     order.status = "Cancelled";
+    order.cancelledBy = "user";
+    order.cancellationReasonCode = cancellationReasonCode;
+    order.cancellationReason = cancellationReason;
+    order.cancelledAt = new Date();
     await order.save();
 
     return res.json({

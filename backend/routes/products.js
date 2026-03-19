@@ -21,6 +21,70 @@ const toNumber = (value, fallback = 0) => {
 
 const trimString = (value = "") => String(value || "").trim();
 
+const hasOwn = (object = {}, key = "") => Object.prototype.hasOwnProperty.call(object || {}, key);
+
+const normalizeOptionalNumber = (value, digits = 2) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const converted = Number(value);
+  return Number.isFinite(converted) ? Number(converted.toFixed(digits)) : null;
+};
+
+const parseProductPricingOverrides = (payload = {}) => {
+  const hasTaxRate = hasOwn(payload, "taxRate");
+  const hasTaxRatePercent = hasOwn(payload, "taxRatePercent");
+  const hasTaxField = hasTaxRate || hasTaxRatePercent;
+
+  let taxRate = null;
+
+  if (hasTaxField) {
+    const rawTax = trimString(hasTaxRatePercent ? payload.taxRatePercent : payload.taxRate);
+
+    if (rawTax) {
+      const parsedTax = Number(rawTax);
+
+      if (!Number.isFinite(parsedTax)) {
+        return { error: "Product tax rate must be a valid number" };
+      }
+
+      const normalizedTax = hasTaxRatePercent ? parsedTax / 100 : parsedTax;
+
+      if (normalizedTax < 0 || normalizedTax > 1) {
+        return { error: "Product tax rate must be between 0% and 100%" };
+      }
+
+      taxRate = Number(normalizedTax.toFixed(4));
+    }
+  }
+
+  const hasShippingField = hasOwn(payload, "shippingCharge");
+  let shippingCharge = null;
+
+  if (hasShippingField) {
+    const rawShipping = trimString(payload.shippingCharge);
+
+    if (rawShipping) {
+      const parsedShipping = Number(rawShipping);
+
+      if (!Number.isFinite(parsedShipping) || parsedShipping < 0) {
+        return { error: "Product shipping charge must be a non-negative number" };
+      }
+
+      shippingCharge = Number(parsedShipping.toFixed(2));
+    }
+  }
+
+  return {
+    hasTaxField,
+    taxRate,
+    hasShippingField,
+    shippingCharge,
+    error: "",
+  };
+};
+
 const normalizeImagePath = (value = "") => {
   const trimmedValue = trimString(value).replace(/\\+/g, "/");
 
@@ -123,6 +187,9 @@ const normalizeProductResponse = (productDocument) => {
   product.image = mainImage;
   product.section = trimString(product.section) || trimString(product.category) || "General";
   product.category = trimString(product.category) || product.section;
+  product.taxRate = normalizeOptionalNumber(product.taxRate, 4);
+  product.taxRatePercent = product.taxRate !== null ? Number((product.taxRate * 100).toFixed(2)) : null;
+  product.shippingCharge = normalizeOptionalNumber(product.shippingCharge, 2);
   product.ratingAverage = Number(product.ratingAverage || 0);
   product.ratingCount = Number(product.ratingCount || 0);
   product.ratings = Array.isArray(product.ratings)
@@ -262,6 +329,7 @@ router.get("/sections", async (req, res) => {
 
     if (!sections.length) {
       const defaultSectionNames = [
+        "General",
         "Wooden Chair",
         "Iron Chair",
         "Wooden Bed",
@@ -270,7 +338,10 @@ router.get("/sections", async (req, res) => {
       ];
 
       const productSectionNames = await Product.distinct("section");
-      const sourceNames = productSectionNames.length ? productSectionNames : defaultSectionNames;
+      const sourceNames = Array.from(new Set([
+        "General",
+        ...(productSectionNames.length ? productSectionNames : defaultSectionNames),
+      ]));
 
       for (const [index, rawName] of sourceNames.entries()) {
         const name = trimString(rawName);
@@ -292,6 +363,18 @@ router.get("/sections", async (req, res) => {
           displayOrder: index,
         });
       }
+
+      sections = await Section.find().sort({ displayOrder: 1, name: 1 });
+    }
+
+    const hasGeneralSection = sections.some((section) => /^general$/i.test(trimString(section?.name)));
+
+    if (!hasGeneralSection) {
+      await Section.create({
+        name: "General",
+        slug: await getUniqueSectionSlug("general"),
+        displayOrder: 0,
+      });
 
       sections = await Section.find().sort({ displayOrder: 1, name: 1 });
     }
@@ -409,6 +492,12 @@ router.post("/", requireAdminKey, upload.fields([
 
     const ratingAverage = clamp(toNumber(req.body?.ratingAverage, 0), 0, 5);
     const ratingCount = Math.max(0, Math.round(toNumber(req.body?.ratingCount, 0)));
+    const pricingOverrides = parseProductPricingOverrides(req.body || {});
+
+    if (pricingOverrides.error) {
+      await Promise.allSettled(uploadedImages.map((imagePath) => deleteGridFSFileByPath(imagePath)));
+      return res.status(400).json({ message: pricingOverrides.error });
+    }
 
     await ensureSectionExists(section);
 
@@ -420,6 +509,8 @@ router.post("/", requireAdminKey, upload.fields([
       description: trimString(req.body.description),
       warranty: trimString(req.body.warranty),
       stock: toNumber(req.body.stock),
+      taxRate: pricingOverrides.taxRate,
+      shippingCharge: pricingOverrides.shippingCharge,
       image,
       images,
       ratingAverage,
@@ -709,6 +800,20 @@ const updateProductHandler = async (req, res) => {
     if (req.body.description !== undefined) updateData.description = trimString(req.body.description);
     if (req.body.warranty !== undefined) updateData.warranty = trimString(req.body.warranty);
     if (req.body.stock !== undefined) updateData.stock = toNumber(req.body.stock);
+
+    const pricingOverrides = parseProductPricingOverrides(req.body || {});
+
+    if (pricingOverrides.error) {
+      return res.status(400).json({ message: pricingOverrides.error });
+    }
+
+    if (pricingOverrides.hasTaxField) {
+      updateData.taxRate = pricingOverrides.taxRate;
+    }
+
+    if (pricingOverrides.hasShippingField) {
+      updateData.shippingCharge = pricingOverrides.shippingCharge;
+    }
 
     const nextSection = req.body.section !== undefined || req.body.category !== undefined
       ? trimString(req.body.section || req.body.category || existingProduct.section || "General")

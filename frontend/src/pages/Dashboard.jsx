@@ -14,6 +14,19 @@ const EMPTY_ADDRESS = {
   fullAddress: "",
 };
 
+const DEFAULT_CANCELLATION_REASONS = [
+  { code: "ordered_by_mistake", label: "Ordered by mistake" },
+  { code: "found_better_price", label: "Found a better price elsewhere" },
+  { code: "delivery_takes_too_long", label: "Delivery time is too long" },
+  { code: "shipping_too_high", label: "Shipping charges are too high" },
+  { code: "product_details_unclear", label: "Product details were not clear" },
+  { code: "changed_requirements", label: "My requirements changed" },
+  { code: "duplicate_order", label: "Placed a duplicate order" },
+  { code: "payment_issue", label: "Facing payment issues" },
+  { code: "update_delivery_address", label: "Need to update delivery address" },
+  { code: "other_personal_reason", label: "Other personal reason" },
+];
+
 const normalizeAddress = (address = {}) => {
   if (typeof address === "string") {
     const fullAddress = address.trim();
@@ -78,6 +91,9 @@ function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState("");
+  const [cancelReasons, setCancelReasons] = useState(DEFAULT_CANCELLATION_REASONS);
+  const [cancelReasonDrafts, setCancelReasonDrafts] = useState({});
+  const [cancellingOrderId, setCancellingOrderId] = useState("");
 
   const email = localStorage.getItem("email");
   const navigate = useNavigate();
@@ -121,30 +137,79 @@ function Dashboard() {
   }, [email]);
 
   useEffect(() => {
+    const loadCancellationReasons = async () => {
+      try {
+        const { response, data } = await apiFetchJson("/orders/cancellation-reasons");
+
+        if (!response.ok) {
+          return;
+        }
+
+        if (Array.isArray(data) && data.length) {
+          const normalized = data
+            .map((item) => ({
+              code: String(item?.code || "").trim(),
+              label: String(item?.label || "").trim(),
+            }))
+            .filter((item) => item.code && item.label);
+
+          if (normalized.length) {
+            setCancelReasons(normalized);
+          }
+        }
+      } catch {
+        setCancelReasons(DEFAULT_CANCELLATION_REASONS);
+      }
+    };
+
+    loadCancellationReasons();
+  }, []);
+
+  useEffect(() => {
     if (!email) {
       setOrdersLoading(false);
       return;
     }
 
-    const loadOrders = async () => {
+    let isMounted = true;
+
+    const loadOrders = async (showLoader = false) => {
       try {
-        setOrdersLoading(true);
+        if (showLoader) {
+          setOrdersLoading(true);
+        }
+
         const { response, data } = await apiFetchJson(`/orders/my?email=${encodeURIComponent(email)}`);
 
         if (!response.ok) {
           throw new Error(data?.message || "Failed to load orders");
         }
 
-        setOrders(Array.isArray(data) ? data : []);
-        setOrdersError("");
+        if (isMounted) {
+          setOrders(Array.isArray(data) ? data : []);
+          setOrdersError("");
+        }
       } catch (loadError) {
-        setOrdersError(resolveApiErrorMessage(loadError, "Failed to load orders"));
+        if (isMounted && showLoader) {
+          setOrdersError(resolveApiErrorMessage(loadError, "Failed to load orders"));
+        }
       } finally {
-        setOrdersLoading(false);
+        if (isMounted && showLoader) {
+          setOrdersLoading(false);
+        }
       }
     };
 
-    loadOrders();
+    loadOrders(true);
+
+    const intervalId = setInterval(() => {
+      loadOrders(false);
+    }, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
   }, [email]);
 
   const handlePhotoChange = (event) => {
@@ -221,6 +286,52 @@ function Dashboard() {
       setError(resolveApiErrorMessage(updateError, "Failed to update profile"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const cancelOrder = async (orderId) => {
+    const reasonCode = String(cancelReasonDrafts[orderId] || "").trim();
+
+    if (!reasonCode) {
+      setOrdersError("Please select a cancellation reason before cancelling the order.");
+      return;
+    }
+
+    const confirmed = window.confirm("Cancel this order?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setCancellingOrderId(orderId);
+      setOrdersError("");
+
+      const { response, data } = await apiFetchJson(`/orders/${orderId}/cancel`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          reasonCode,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to cancel order");
+      }
+
+      setOrders((prev) => prev.map((order) => (order._id === orderId ? data.order : order)));
+      setCancelReasonDrafts((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+    } catch (cancelError) {
+      setOrdersError(resolveApiErrorMessage(cancelError, "Failed to cancel order"));
+    } finally {
+      setCancellingOrderId("");
     }
   };
 
@@ -504,13 +615,33 @@ function Dashboard() {
                         </button>
                       ) : null}
                       {order.status !== "Delivered" && order.status !== "Cancelled" ? (
-                        <button
-                          type="button"
-                          onClick={() => window.confirm("Cancel this order?")}
-                          className="btn-danger text-xs px-3 py-1.5"
-                        >
-                          Cancel
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select
+                            value={cancelReasonDrafts[order._id] || ""}
+                            onChange={(event) =>
+                              setCancelReasonDrafts((prev) => ({
+                                ...prev,
+                                [order._id]: event.target.value,
+                              }))
+                            }
+                            className="input-dark text-xs"
+                          >
+                            <option value="">Select cancellation reason</option>
+                            {cancelReasons.map((reason) => (
+                              <option key={reason.code} value={reason.code}>
+                                {reason.label}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => cancelOrder(order._id)}
+                            disabled={!cancelReasonDrafts[order._id] || cancellingOrderId === order._id}
+                            className="btn-danger text-xs px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {cancellingOrderId === order._id ? "Cancelling..." : "Cancel"}
+                          </button>
+                        </div>
                       ) : null}
                     </div>
                   </div>
@@ -525,6 +656,12 @@ function Dashboard() {
                     <p className="mt-2 text-xs" style={{ color: "#3a5470" }}>
                     Payment: {order.paymentOption === "half" ? "Half Payment" : "Cash on Delivery"}
                   </p>
+
+                  {order.status === "Cancelled" ? (
+                    <p className="mt-1 text-xs" style={{ color: "#b91c1c" }}>
+                      Cancelled by {order.cancelledBy || "admin"} • Reason: {order.cancellationReason || "Cancelled"}
+                    </p>
+                  ) : null}
                 </div>
               ))}
             </div>

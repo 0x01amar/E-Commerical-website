@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import OrderTimeline, { ORDER_STATUS_STEPS } from "../components/OrderTimeline";
 import ProductCard from "../components/ProductCard";
@@ -15,6 +15,8 @@ const defaultProductForm = {
   warranty: "",
   ratingAverage: "",
   ratingCount: "",
+  taxRatePercent: "",
+  shippingCharge: "",
 };
 
 const defaultSectionForm = {
@@ -56,6 +58,37 @@ const wait = (ms) => new Promise((resolve) => {
   setTimeout(resolve, ms);
 });
 
+const getOrderTimestamp = (order = {}) => {
+  const source = order?.cancelledAt || order?.updatedAt || order?.createdAt;
+  const timestamp = new Date(source || 0).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+const formatOrderAddress = (address = {}) => {
+  if (typeof address === "string") {
+    return address;
+  }
+
+  const fullAddress = String(address?.fullAddress || "").trim();
+
+  if (fullAddress) {
+    return fullAddress;
+  }
+
+  return [
+    address?.line1,
+    address?.landmark,
+    address?.villageTown,
+    address?.wardNo ? `Ward No ${address.wardNo}` : "",
+    address?.district,
+    address?.state,
+    address?.pincode,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(", ");
+};
+
 function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [sections, setSections] = useState([]);
@@ -90,6 +123,10 @@ function AdminDashboard() {
   const [statusDrafts, setStatusDrafts] = useState({});
   const [deliveryDateDrafts, setDeliveryDateDrafts] = useState({});
   const [deliveryUpdatingOrderId, setDeliveryUpdatingOrderId] = useState("");
+  const [cancelNotifications, setCancelNotifications] = useState([]);
+  const [deletingOrderId, setDeletingOrderId] = useState("");
+
+  const latestUserCancellationTsRef = useRef(0);
 
   const navigate = useNavigate();
   const isAdmin = localStorage.getItem("role") === "admin";
@@ -171,6 +208,21 @@ function AdminDashboard() {
             return accumulator;
           }, {})
         );
+        setDeliveryDateDrafts(
+          normalizedOrders.reduce((accumulator, order) => {
+            accumulator[order._id] = order.expectedDelivery || "10-15 days";
+            return accumulator;
+          }, {})
+        );
+
+        latestUserCancellationTsRef.current = normalizedOrders.reduce((maxTimestamp, order) => {
+          if (order?.status !== "Cancelled" || order?.cancelledBy !== "user") {
+            return maxTimestamp;
+          }
+
+          return Math.max(maxTimestamp, getOrderTimestamp(order));
+        }, 0);
+        setCancelNotifications([]);
       } catch (loadError) {
         const message = resolveApiErrorMessage(loadError, "Failed to load admin dashboard");
         setError(message);
@@ -194,6 +246,78 @@ function AdminDashboard() {
     }
   }, [editingId, productForm.section, sections]);
 
+  useEffect(() => {
+    if (!isAdmin || !adminKey) {
+      return undefined;
+    }
+
+    const intervalId = setInterval(async () => {
+      try {
+        const { response, data } = await apiFetchJson("/orders/admin/all", {
+          headers: {
+            "x-admin-key": adminKey,
+          },
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const normalizedOrders = Array.isArray(data) ? data : [];
+        const previousLatest = latestUserCancellationTsRef.current || 0;
+
+        const newUserCancellations = normalizedOrders
+          .filter((order) => order?.status === "Cancelled" && order?.cancelledBy === "user")
+          .filter((order) => getOrderTimestamp(order) > previousLatest)
+          .sort((first, second) => getOrderTimestamp(second) - getOrderTimestamp(first));
+
+        if (newUserCancellations.length) {
+          latestUserCancellationTsRef.current = newUserCancellations.reduce(
+            (maxTimestamp, order) => Math.max(maxTimestamp, getOrderTimestamp(order)),
+            previousLatest
+          );
+
+          setCancelNotifications((prev) => [
+            ...newUserCancellations.map((order) => ({
+              id: `${order._id}-${order.cancelledAt || order.updatedAt || Date.now()}`,
+              orderId: order._id,
+              orderCode: order.orderCode,
+              userName: order.userName,
+              reason: order.cancellationReason || "Cancelled by user",
+            })),
+            ...prev,
+          ].slice(0, 12));
+        } else {
+          latestUserCancellationTsRef.current = normalizedOrders.reduce((maxTimestamp, order) => {
+            if (order?.status !== "Cancelled" || order?.cancelledBy !== "user") {
+              return maxTimestamp;
+            }
+
+            return Math.max(maxTimestamp, getOrderTimestamp(order));
+          }, previousLatest);
+        }
+
+        setOrders(normalizedOrders);
+        setStatusDrafts(
+          normalizedOrders.reduce((accumulator, order) => {
+            accumulator[order._id] = order.status;
+            return accumulator;
+          }, {})
+        );
+        setDeliveryDateDrafts((prev) =>
+          normalizedOrders.reduce((accumulator, order) => {
+            accumulator[order._id] = prev[order._id] || order.expectedDelivery || "10-15 days";
+            return accumulator;
+          }, {})
+        );
+      } catch {}
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [adminKey, isAdmin]);
+
   const groupedProducts = useMemo(() => {
     const productSections = new Set([
       ...sections.map((section) => String(section?.name || "").trim()).filter(Boolean),
@@ -211,6 +335,16 @@ function AdminDashboard() {
       .filter((group) => group.products.length)
       .sort((first, second) => first.name.localeCompare(second.name));
   }, [products, sections]);
+
+  const userCancelledOrders = useMemo(
+    () => orders.filter((order) => order?.status === "Cancelled" && order?.cancelledBy === "user"),
+    [orders]
+  );
+
+  const managedOrders = useMemo(
+    () => orders.filter((order) => !(order?.status === "Cancelled" && order?.cancelledBy === "user")),
+    [orders]
+  );
 
   const resetForm = () => {
     newImages.forEach((entry) => {
@@ -472,6 +606,8 @@ function AdminDashboard() {
       formData.append("warranty", productForm.warranty.trim());
       formData.append("ratingAverage", productForm.ratingAverage || "0");
       formData.append("ratingCount", productForm.ratingCount || "0");
+      formData.append("taxRatePercent", String(productForm.taxRatePercent || "").trim());
+      formData.append("shippingCharge", String(productForm.shippingCharge || "").trim());
       formData.append("existingImages", JSON.stringify(existingImages));
 
       newImages.forEach((entry) => {
@@ -638,6 +774,14 @@ function AdminDashboard() {
       warranty: product.warranty || "",
       ratingAverage: String(product.ratingAverage ?? 0),
       ratingCount: String(product.ratingCount ?? 0),
+      taxRatePercent: product.taxRatePercent !== null && product.taxRatePercent !== undefined
+        ? String(product.taxRatePercent)
+        : Number.isFinite(Number(product.taxRate))
+          ? String(Number((Number(product.taxRate) * 100).toFixed(2)))
+          : "",
+      shippingCharge: product.shippingCharge !== null && product.shippingCharge !== undefined
+        ? String(product.shippingCharge)
+        : "",
     });
 
     newImages.forEach((entry) => {
@@ -658,6 +802,20 @@ function AdminDashboard() {
 
   const updateOrderStatus = async (orderId) => {
     const status = statusDrafts[orderId] || "Order Placed";
+    const requestPayload = { status };
+
+    if (status === "Cancelled") {
+      const reasonInput = window.prompt("Enter cancellation reason", "Cancelled by admin");
+
+      if (reasonInput === null) {
+        return;
+      }
+
+      const normalizedReason = String(reasonInput || "").trim();
+
+      requestPayload.cancellationReasonCode = "cancelled_by_admin";
+      requestPayload.cancellationReason = normalizedReason || "Cancelled by admin";
+    }
 
     try {
       setStatusUpdatingOrderId(orderId);
@@ -669,7 +827,7 @@ function AdminDashboard() {
           "Content-Type": "application/json",
           "x-admin-key": adminKey,
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(requestPayload),
       });
 
       if (!response.ok) {
@@ -709,6 +867,47 @@ function AdminDashboard() {
       setOrdersError(resolveApiErrorMessage(updateError, "Failed to update delivery date"));
     } finally {
       setDeliveryUpdatingOrderId("");
+    }
+  };
+
+  const deleteCancelledOrder = async (orderId) => {
+    try {
+      const confirmed = window.confirm("Delete this cancelled order permanently?");
+
+      if (!confirmed) {
+        return;
+      }
+
+      setDeletingOrderId(orderId);
+      setOrdersError("");
+
+      const { response, data } = await apiFetchJson(`/orders/${orderId}/admin-delete`, {
+        method: "DELETE",
+        headers: {
+          "x-admin-key": adminKey,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to delete cancelled order");
+      }
+
+      setOrders((prev) => prev.filter((order) => order._id !== orderId));
+      setStatusDrafts((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      setDeliveryDateDrafts((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      setCancelNotifications((prev) => prev.filter((notification) => notification.orderId !== orderId));
+    } catch (deleteError) {
+      setOrdersError(resolveApiErrorMessage(deleteError, "Failed to delete cancelled order"));
+    } finally {
+      setDeletingOrderId("");
     }
   };
 
@@ -753,6 +952,30 @@ function AdminDashboard() {
       {sectionError ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">{sectionError}</p> : null}
       {pricingError ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">{pricingError}</p> : null}
       {pricingNotice ? <p className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">{pricingNotice}</p> : null}
+
+      {cancelNotifications.length ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-amber-800">New User Cancellation Notifications</h2>
+            <button
+              type="button"
+              onClick={() => setCancelNotifications([])}
+              className="rounded-lg border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {cancelNotifications.map((notification) => (
+              <div key={notification.id} className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs text-amber-900">
+                <p className="font-semibold">{notification.orderCode} • {notification.userName}</p>
+                <p className="mt-0.5">Reason: {notification.reason}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_2fr]">
         <div className="space-y-6">
@@ -946,12 +1169,37 @@ function AdminDashboard() {
               className="input-dark"
             />
 
+            <input
+              placeholder="Product Tax Rate % (optional)"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={productForm.taxRatePercent}
+              onChange={(event) => setProductForm((prev) => ({ ...prev, taxRatePercent: event.target.value }))}
+              className="input-dark"
+            />
+
+            <input
+              placeholder="Product Shipping ₹ (optional)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={productForm.shippingCharge}
+              onChange={(event) => setProductForm((prev) => ({ ...prev, shippingCharge: event.target.value }))}
+              className="input-dark"
+            />
+
             <textarea
               placeholder="Description"
               value={productForm.description}
               onChange={(event) => setProductForm((prev) => ({ ...prev, description: event.target.value }))}
               className="input-dark min-h-24 md:col-span-2"
             />
+
+            <p className="text-xs md:col-span-2" style={{ color: "#6080a0" }}>
+              Leave tax and shipping fields empty to use global checkout pricing defaults.
+            </p>
           </div>
 
           <div className="mt-5 rounded-2xl p-4" style={{ border: "1px solid rgba(100,160,220,0.18)", background: "rgba(255,255,255,0.78)" }}>
@@ -1082,6 +1330,16 @@ function AdminDashboard() {
                           size="sm"
                           className="mt-1"
                         />
+                        <p className="mt-1 text-[11px]" style={{ color: "#3a5470" }}>
+                          Tax: {product?.taxRatePercent !== null && product?.taxRatePercent !== undefined
+                            ? `${Number(product.taxRatePercent).toFixed(2)}%`
+                            : "Global default"}
+                        </p>
+                        <p className="text-[11px]" style={{ color: "#3a5470" }}>
+                          Shipping: {product?.shippingCharge !== null && product?.shippingCharge !== undefined
+                            ? `₹${Number(product.shippingCharge).toFixed(2)}`
+                            : "Global default"}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -1100,9 +1358,9 @@ function AdminDashboard() {
           {ordersLoading ? <p className="mt-4 text-sm text-sky-700">Loading orders...</p> : null}
 
         {!ordersLoading ? (
-          orders.length ? (
+          managedOrders.length ? (
             <div className="mt-4 space-y-4">
-              {orders.map((order) => {
+              {managedOrders.map((order) => {
                 const selectedStatus = statusDrafts[order._id] || order.status;
                 const imagePath = order.productImage || "";
                 const isOnlinePayment = order.paymentOption === "upi" || order.paymentOption === "half";
@@ -1153,6 +1411,16 @@ function AdminDashboard() {
                             ) : (
                               <p className="mt-1 text-xs" style={{ color: "#059669" }}>💵 Cash on Delivery</p>
                             )}
+                            {order.status === "Cancelled" ? (
+                              <div className="mt-2 rounded-lg px-2 py-2 text-xs" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.22)" }}>
+                                <p style={{ color: "#b91c1c" }}>
+                                  Cancelled By: <span className="font-semibold">{order.cancelledBy || "admin"}</span>
+                                </p>
+                                <p style={{ color: "#b91c1c" }}>
+                                  Reason: <span className="font-semibold">{order.cancellationReason || "Cancelled"}</span>
+                                </p>
+                              </div>
+                            ) : null}
                           <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                               <div className="rounded px-2 py-1" style={{ background: "rgba(37,99,235,0.10)", border: "1px solid rgba(37,99,235,0.20)" }}><p className="text-blue-600">📅 Placed: {new Date(order.createdAt).toLocaleDateString()}</p></div>
                               <div className="rounded px-2 py-1" style={{ background: "rgba(13,148,136,0.10)", border: "1px solid rgba(13,148,136,0.22)" }}><p className="text-teal-700">🚚 Delivery: {order.expectedDelivery}</p></div>
@@ -1212,6 +1480,17 @@ function AdminDashboard() {
                             {deliveryUpdatingOrderId === order._id ? "..." : "Set"}
                           </button>
                         </div>
+
+                        {order.status === "Cancelled" ? (
+                          <button
+                            type="button"
+                            onClick={() => deleteCancelledOrder(order._id)}
+                            disabled={deletingOrderId === order._id}
+                            className="btn-danger rounded-lg px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingOrderId === order._id ? "Deleting..." : "Delete Permanently"}
+                          </button>
+                        ) : null}
                       </div>
                     </div>
 
@@ -1226,6 +1505,45 @@ function AdminDashboard() {
               <p className="mt-4 text-sm" style={{ color: "#6080a0" }}>No orders found.</p>
           )
         ) : null}
+      </div>
+
+      <div className="glass rounded-2xl p-6">
+        <h2 className="text-xl font-semibold" style={{ color: "#1a2f48" }}>Orders Cancelled by User</h2>
+
+        {userCancelledOrders.length ? (
+          <div className="mt-4 space-y-4">
+            {userCancelledOrders.map((order) => (
+              <div key={order._id} className="rounded-xl p-4" style={{ border: "1px solid rgba(239,68,68,0.24)", background: "rgba(255,255,255,0.82)" }}>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold" style={{ color: "#1a2f48" }}>{order.productName}</p>
+                    <p className="text-xs" style={{ color: "#3a5470" }}>Order ID: <span className="font-semibold">{order.orderCode}</span></p>
+                    <p className="text-xs" style={{ color: "#3a5470" }}>Customer: {order.userName} • {order.userEmail}</p>
+                    <p className="text-xs" style={{ color: "#3a5470" }}>Phone: {order.userPhone || "-"}</p>
+                    <p className="text-xs" style={{ color: "#3a5470" }}>Address: {formatOrderAddress(order.address) || "-"}</p>
+                    <p className="text-xs" style={{ color: "#b91c1c" }}>
+                      Reason: <span className="font-semibold">{order.cancellationReason || "Cancelled by user"}</span>
+                    </p>
+                    <p className="text-xs" style={{ color: "#b91c1c" }}>
+                      Cancelled At: {order.cancelledAt ? new Date(order.cancelledAt).toLocaleString() : "-"}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => deleteCancelledOrder(order._id)}
+                    disabled={deletingOrderId === order._id}
+                    className="btn-danger rounded-lg px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {deletingOrderId === order._id ? "Deleting..." : "Delete Permanently"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm" style={{ color: "#6080a0" }}>No user-cancelled orders yet.</p>
+        )}
       </div>
     </section>
   );

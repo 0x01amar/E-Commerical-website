@@ -446,18 +446,31 @@ function Checkout() {
 
   const subtotal = useMemo(() => Number(product?.price || 0) * quantity, [product?.price, quantity]);
 
-  const taxRate = useMemo(() => {
+  const globalTaxRate = useMemo(() => {
     const parsed = Number(pricingSettings.taxRate);
     return Number.isFinite(parsed) ? parsed : DEFAULT_TAX_RATE;
   }, [pricingSettings.taxRate]);
 
-  const configuredShippingCharge = useMemo(() => {
+  const globalShippingCharge = useMemo(() => {
     const parsed = Number(pricingSettings.shippingCharge);
     return Number.isFinite(parsed) ? parsed : DEFAULT_SHIPPING_CHARGE;
   }, [pricingSettings.shippingCharge]);
 
-  const taxAmount = useMemo(() => subtotal * taxRate, [subtotal, taxRate]);
-  const shippingCharge = useMemo(() => (subtotal > 0 ? configuredShippingCharge : 0), [configuredShippingCharge, subtotal]);
+  const productTaxRate = useMemo(() => {
+    const parsed = Number(product?.taxRate);
+    return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : null;
+  }, [product?.taxRate]);
+
+  const productShippingCharge = useMemo(() => {
+    const parsed = Number(product?.shippingCharge);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }, [product?.shippingCharge]);
+
+  const effectiveTaxRate = productTaxRate !== null ? productTaxRate : globalTaxRate;
+  const effectiveShippingCharge = productShippingCharge !== null ? productShippingCharge : globalShippingCharge;
+
+  const taxAmount = useMemo(() => subtotal * effectiveTaxRate, [subtotal, effectiveTaxRate]);
+  const shippingCharge = useMemo(() => (subtotal > 0 ? effectiveShippingCharge : 0), [effectiveShippingCharge, subtotal]);
   const totalPrice = useMemo(() => subtotal + taxAmount + shippingCharge, [shippingCharge, subtotal, taxAmount]);
   const expectedHalfAmount = useMemo(() => Number((totalPrice / 2).toFixed(2)), [totalPrice]);
   const deliveryAddressText = useMemo(() => formatAddress(addressForm), [addressForm]);
@@ -1147,7 +1160,7 @@ function Checkout() {
                 <span>₹{subtotal.toFixed(2)}</span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm" style={{ color: "#3a5470" }}>
-                <span>Tax ({Math.round(taxRate * 100)}%)</span>
+                <span>Tax ({Math.round(effectiveTaxRate * 100)}%)</span>
                 <span>₹{taxAmount.toFixed(2)}</span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm" style={{ color: "#3a5470" }}>

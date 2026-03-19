@@ -47,6 +47,19 @@ const productSchema = new mongoose.Schema({
     default: 0,
   },
 
+  taxRate: {
+    type: Number,
+    default: null,
+    min: 0,
+    max: 1,
+  },
+
+  shippingCharge: {
+    type: Number,
+    default: null,
+    min: 0,
+  },
+
   warranty:{
     type:String,
     default: "",

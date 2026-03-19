@@ -60,6 +60,9 @@ const calculatePricing = (unitPrice, quantity, pricingSettings = {}) => {
   const shippingCharge = subtotal > 0 ? asTwoDecimals(configuredShippingCharge) : 0;
   const totalAmount = asTwoDecimals(subtotal + taxAmount + shippingCharge);
   const exactHalf = asTwoDecimals(totalAmount / 2);
+  const pricingSource = trimString(pricingSettings.pricingSource).toLowerCase() === "product"
+    ? "product"
+    : "global";
 
   return {
     taxRate,
@@ -68,6 +71,29 @@ const calculatePricing = (unitPrice, quantity, pricingSettings = {}) => {
     shippingCharge,
     totalAmount,
     exactHalf,
+    pricingSource,
+  };
+};
+
+const resolvePricingForProduct = (product = {}, pricingSettings = {}) => {
+  const globalTaxRate = Number.isFinite(Number(pricingSettings.taxRate))
+    ? Number(pricingSettings.taxRate)
+    : DEFAULT_TAX_RATE;
+
+  const globalShippingCharge = Number.isFinite(Number(pricingSettings.shippingCharge))
+    ? Number(pricingSettings.shippingCharge)
+    : DEFAULT_SHIPPING_CHARGE;
+
+  const productTaxRate = Number(product?.taxRate);
+  const productShippingCharge = Number(product?.shippingCharge);
+
+  const hasProductTaxRate = Number.isFinite(productTaxRate) && productTaxRate >= 0 && productTaxRate <= 1;
+  const hasProductShippingCharge = Number.isFinite(productShippingCharge) && productShippingCharge >= 0;
+
+  return {
+    taxRate: hasProductTaxRate ? productTaxRate : globalTaxRate,
+    shippingCharge: hasProductShippingCharge ? productShippingCharge : globalShippingCharge,
+    pricingSource: hasProductTaxRate || hasProductShippingCharge ? "product" : "global",
   };
 };
 
@@ -198,7 +224,8 @@ const validateOrderPayload = async ({ email, productId, quantity, address, phone
   }
 
   const pricingSettings = await getCheckoutPricingSettings();
-  const pricing = calculatePricing(product.price, quantity, pricingSettings);
+  const effectivePricingSettings = resolvePricingForProduct(product, pricingSettings);
+  const pricing = calculatePricing(product.price, quantity, effectivePricingSettings);
   const payableAmount = paymentOption === "half" ? pricing.exactHalf : pricing.totalAmount;
 
   if (amount !== undefined) {
@@ -292,7 +319,9 @@ const createRazorpayOrder = async (req, res) => {
       unitPrice: asTwoDecimals(product.price),
       subtotal: pricing.subtotal,
       taxAmount: pricing.taxAmount,
+      appliedTaxRate: Number(pricing.taxRate || 0),
       shippingCharge: pricing.shippingCharge,
+      pricingSource: pricing.pricingSource || "global",
       totalAmount: pricing.totalAmount,
       paymentOption,
       paidNowAmount: asTwoDecimals(payableAmount),

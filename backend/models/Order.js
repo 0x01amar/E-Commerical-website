@@ -112,10 +112,21 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    appliedTaxRate: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 1,
+    },
     shippingCharge: {
       type: Number,
       required: true,
       min: 0,
+    },
+    pricingSource: {
+      type: String,
+      enum: ["global", "product"],
+      default: "global",
     },
     totalAmount: {
       type: Number,
@@ -184,6 +195,25 @@ const orderSchema = new mongoose.Schema(
         "Cancelled",
       ],
       default: "Order Placed",
+    },
+    cancelledBy: {
+      type: String,
+      enum: ["", "user", "admin"],
+      default: "",
+    },
+    cancellationReasonCode: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    cancellationReason: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
     },
     expectedDelivery: {
       type: String,
