@@ -421,39 +421,39 @@ function Dashboard() {
           <h2 className="text-xl font-semibold" style={{ color: "#1a2f48" }}>Profile</h2>
 
         <div
-          className="mt-5 flex flex-col gap-4 rounded-xl p-4 sm:flex-row sm:items-center"
+          className="mt-5 flex flex-col gap-3 rounded-lg p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4 md:rounded-xl md:p-4"
             style={{ background: "rgba(240,248,255,0.78)", border: "1px solid rgba(2,132,199,0.14)" }}
         >
           <img
             src={displayPhoto}
             alt={user.name || "User profile"}
-            className="h-24 w-24 rounded-full object-cover"
+            className="h-20 w-20 rounded-full object-cover sm:h-24 sm:w-24"
               style={{ border: "2px solid rgba(2,132,199,0.24)", boxShadow: "0 10px 24px rgba(2,132,199,0.10)" }}
           />
-          <div className="space-y-2">
-              <p className="text-sm font-medium" style={{ color: "#3a5470" }}>Profile Photo</p>
+          <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-xs font-medium sm:text-sm" style={{ color: "#3a5470" }}>Profile Photo</p>
             <input
               type="file"
               accept="image/*"
               onChange={handlePhotoChange}
-              className="block w-full text-sm"
+              className="block w-full text-xs sm:text-sm"
                 style={{ color: "#3a5470" }}
             />
-              <p className="text-xs" style={{ color: "#6080a0" }}>Choose a photo and click Save Changes.</p>
+              <p className="text-[10px] sm:text-xs" style={{ color: "#6080a0" }}>Choose a photo and click Save Changes.</p>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 md:gap-4">
           <div>
               <p className="mb-1 text-xs font-medium" style={{ color: "#6080a0" }}>Name</p>
             {isEditing ? (
               <input
                 value={form.name}
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                className="input-dark"
+                className="input-dark text-xs md:text-sm"
               />
             ) : (
-                <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#1a2f48" }}>{user.name || "-"}</p>
+                <p className="rounded-lg px-2.5 py-1.5 text-xs sm:text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#1a2f48" }}>{user.name || "-"}</p>
             )}
           </div>
 
@@ -469,22 +469,22 @@ function Dashboard() {
                     phone: event.target.value.replace(/[^0-9]/g, ""),
                   }))
                 }
-                className="input-dark"
+                className="input-dark text-xs md:text-sm"
               />
             ) : (
-                <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#1a2f48" }}>{user.phone || "-"}</p>
+                <p className="rounded-lg px-2.5 py-1.5 text-xs sm:text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#1a2f48" }}>{user.phone || "-"}</p>
             )}
           </div>
 
           <div className="sm:col-span-2">
               <p className="mb-1 text-xs font-medium" style={{ color: "#6080a0" }}>Email</p>
-              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#3a5470" }}>{user.email}</p>
+              <p className="rounded-lg px-2.5 py-1.5 text-xs sm:text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#3a5470" }}>{user.email}</p>
           </div>
 
           <div className="sm:col-span-2">
               <p className="mb-1 text-xs font-medium" style={{ color: "#6080a0" }}>Address</p>
             {isEditing ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2 md:gap-3">
                 {[["line1","Address line"],["landmark","Landmark"],["villageTown","Village/Town"],["wardNo","Ward No"],["district","District"],["state","State"],["pincode","Pincode",6]].map(([field, ph, maxLen]) => (
                   <input
                     key={field}
@@ -494,24 +494,24 @@ function Dashboard() {
                       setForm((prev) => ({ ...prev, address: { ...prev.address, [field]: field === "pincode" ? event.target.value.replace(/[^0-9]/g,"") : event.target.value } }))
                     }
                     placeholder={ph}
-                    className="input-dark"
+                    className="input-dark text-xs md:text-sm"
                   />
                 ))}
               </div>
             ) : (
-                <p className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#3a5470" }}>{displayAddress}</p>
+                <p className="rounded-lg px-2.5 py-1.5 text-xs sm:text-sm" style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(100,160,220,0.22)", color: "#3a5470" }}>{displayAddress}</p>
             )}
           </div>
         </div>
 
-        <div className="mt-5 flex gap-3">
+        <div className="mt-4 flex gap-2 md:gap-3">
           {isEditing ? (
             <>
               <button
                 type="button"
                 onClick={updateProfile}
                 disabled={saving}
-                className="btn-neon disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-neon disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm py-2 md:py-2.5 px-3 md:px-4"
               >
                 {saving ? "Saving..." : "✓ Save Changes"}
               </button>
@@ -527,7 +527,7 @@ function Dashboard() {
                   });
                   setPhotoPreview(user?.photo || "");
                 }}
-                className="btn-ghost"
+                className="btn-ghost text-xs md:text-sm py-2 md:py-2.5 px-3 md:px-4"
               >
                 ✕ Cancel
               </button>
@@ -536,7 +536,7 @@ function Dashboard() {
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-250 hover:scale-105"
+              className="rounded-lg px-3 py-2 md:px-4 md:py-2.5 text-xs md:text-sm font-semibold transition-all duration-250 hover:scale-105"
                 style={{ background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.26)", color: "#b45309" }}
             >
               ✏️ Edit Profile
@@ -550,56 +550,56 @@ function Dashboard() {
         {ordersLoading ? (
           <div className="flex items-center gap-3 mt-4">
               <div className="h-4 w-4 rounded-full animate-spin" style={{ border: "2px solid rgba(2,132,199,0.18)", borderTopColor: "#0284c7" }} />
-              <p className="text-sm" style={{ color: "#3a5470" }}>Loading orders...</p>
+              <p className="text-xs sm:text-sm" style={{ color: "#3a5470" }}>Loading orders...</p>
           </div>
         ) : null}
         {ordersError ? (
-            <p className="mt-4 rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626" }}>
+            <p className="mt-4 rounded-lg px-2.5 py-2 text-xs sm:text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626" }}>
             {ordersError}
           </p>
         ) : null}
 
         {!ordersLoading && !ordersError ? (
           orders.length ? (
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-3 md:space-y-4">
               {orders.map((order) => (
                 <div
                   key={order._id}
-                  className="glass-hover rounded-xl p-4"
+                  className="glass-hover rounded-lg p-3 md:rounded-xl md:p-4"
                     style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.22)" }}
                 >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex gap-3">
+                  <div className="flex flex-col gap-2 md:gap-3">
+                    <div className="flex gap-2 md:gap-3">
                       <img
                           src={order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/160x110/dce8f5/0284c7?text=No+Image"}
                         alt={order.productName}
-                        className="h-16 w-20 cursor-zoom-in rounded-lg object-cover shrink-0"
+                        className="h-16 w-20 rounded-lg object-cover shrink-0 md:h-20 md:w-24"
                           onClick={() => setPreviewImage(order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/600x400/dce8f5/0284c7?text=No+Image")}
                           style={{ border: "1px solid rgba(100,160,220,0.22)" }}
                           onError={(e) => { e.target.src = "https://placehold.co/160x110/dce8f5/0284c7?text=No+Image"; }}
                       />
                       <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold" style={{ color: "#1a2f48" }}>{order.productName}</p>
-                          <p className="mt-0.5 text-xs" style={{ color: "#3a5470" }}>
+                          <p className="text-xs font-semibold sm:text-sm md:text-base" style={{ color: "#1a2f48" }}>{order.productName}</p>
+                          <p className="mt-0.5 text-[10px] sm:text-xs" style={{ color: "#3a5470" }}>
                             ID: <span style={{ color: "#0284c7" }}>{order.orderCode}</span>
                         </p>
-                          <p className="mt-0.5 text-xs" style={{ color: "#3a5470" }}>
+                          <p className="mt-0.5 text-[10px] sm:text-xs md:text-sm" style={{ color: "#3a5470" }}>
                           Qty: {order.quantity} • ₹{Number(order.totalAmount || 0).toFixed(2)}
                         </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                            <span className="rounded-lg px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(37,99,235,0.10)", border: "1px solid rgba(37,99,235,0.20)", color: "#2563eb" }}>
+                        <div className="mt-1.5 md:mt-2 flex flex-wrap gap-1 md:gap-2">
+                            <span className="rounded-lg px-1.5 py-0.5 text-[9px] font-medium sm:text-xs md:px-2 md:py-0.5" style={{ background: "rgba(37,99,235,0.10)", border: "1px solid rgba(37,99,235,0.20)", color: "#2563eb" }}>
                             📅 {new Date(order.createdAt).toLocaleDateString()}
                           </span>
-                            <span className="rounded-lg px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(13,148,136,0.10)", border: "1px solid rgba(13,148,136,0.22)", color: "#0f766e" }}>
+                            <span className="rounded-lg px-1.5 py-0.5 text-[9px] font-medium sm:text-xs md:px-2 md:py-0.5" style={{ background: "rgba(13,148,136,0.10)", border: "1px solid rgba(13,148,136,0.22)", color: "#0f766e" }}>
                             🚚 {order.expectedDelivery}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
                       <span
-                        className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                        className="inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold md:px-2.5 md:py-1 md:text-xs"
                         style={{
                           background: order.status === "Delivered" ? "rgba(20,184,166,0.15)" : order.status === "Cancelled" ? "rgba(239,68,68,0.12)" : "rgba(251,191,36,0.12)",
                           border: order.status === "Delivered" ? "1px solid rgba(20,184,166,0.3)" : order.status === "Cancelled" ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(251,191,36,0.25)",
@@ -612,13 +612,13 @@ function Dashboard() {
                         <button
                           type="button"
                           onClick={() => navigate(`/product/${order.productId}`)}
-                          className="btn-ghost text-xs px-3 py-1.5"
+                          className="btn-ghost text-[9px] md:text-xs px-2 py-0.5 md:px-3 md:py-1.5"
                         >
                           View
                         </button>
                       ) : null}
                       {order.status !== "Delivered" && order.status !== "Cancelled" ? (
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1 w-full md:gap-2 md:w-auto">
                           <select
                             value={cancelReasonDrafts[order._id] || ""}
                             onChange={(event) =>
@@ -627,9 +627,9 @@ function Dashboard() {
                                 [order._id]: event.target.value,
                               }))
                             }
-                            className="input-dark text-xs"
+                            className="input-dark text-[9px] md:text-xs py-1 md:py-2 px-2 flex-1 md:flex-none"
                           >
-                            <option value="">Select cancellation reason</option>
+                            <option value="">Select reason</option>
                             {cancelReasons.map((reason) => (
                               <option key={reason.code} value={reason.code}>
                                 {reason.label}
@@ -640,7 +640,7 @@ function Dashboard() {
                             type="button"
                             onClick={() => cancelOrder(order._id)}
                             disabled={!cancelReasonDrafts[order._id] || cancellingOrderId === order._id}
-                            className="btn-danger text-xs px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="btn-danger text-[9px] md:text-xs px-2 py-1 md:px-3 md:py-1.5 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {cancellingOrderId === order._id ? "Cancelling..." : "Cancel"}
                           </button>
@@ -650,18 +650,18 @@ function Dashboard() {
                   </div>
 
                   <div
-                    className="mt-3 rounded-xl p-3"
+                    className="mt-2 md:mt-3 rounded-lg p-2 md:rounded-xl md:p-3 overflow-x-auto"
                       style={{ background: "rgba(240,248,255,0.72)", border: "1px solid rgba(100,160,220,0.18)" }}
                   >
                     <OrderTimeline status={order.status} compact />
                   </div>
 
-                    <p className="mt-2 text-xs" style={{ color: "#3a5470" }}>
+                    <p className="mt-1.5 md:mt-2 text-[9px] md:text-xs" style={{ color: "#3a5470" }}>
                     Payment: {order.paymentOption === "half" ? "Half Payment" : "Cash on Delivery"}
                   </p>
 
                   {order.status === "Cancelled" ? (
-                    <p className="mt-1 text-xs" style={{ color: "#b91c1c" }}>
+                    <p className="mt-0.5 text-[9px] md:text-xs" style={{ color: "#b91c1c" }}>
                       Cancelled by {order.cancelledBy || "admin"} • Reason: {order.cancellationReason || "Cancelled"}
                     </p>
                   ) : null}
@@ -670,11 +670,11 @@ function Dashboard() {
             </div>
           ) : (
             <div className="mt-6 text-center">
-                <p className="text-sm" style={{ color: "#3a5470" }}>No orders yet.</p>
+                <p className="text-xs sm:text-sm" style={{ color: "#3a5470" }}>No orders yet.</p>
               <button
                 type="button"
                 onClick={() => navigate("/")}
-                className="mt-3 btn-neon text-xs"
+                className="mt-3 btn-neon text-xs md:text-sm py-2 md:py-2.5 px-3 md:px-4"
               >
                 Start Shopping
               </button>

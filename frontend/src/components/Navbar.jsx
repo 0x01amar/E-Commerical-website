@@ -210,19 +210,19 @@ function Navbar({ search, setSearch }) {
         }}
         className="sticky top-0 z-50 md:hidden"
       >
-        <div className="mx-auto max-w-7xl px-2 pb-2 pt-1.5">
-          <div className="flex items-center justify-center">
+        <div className="mx-auto max-w-7xl px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={goToProductsSection}
-              className="rounded-md bg-white/15 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white"
+              className="flex items-center gap-1 rounded-lg bg-white/20 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-white/30 transition-all"
             >
-              Maa Sheela Iron Art
+              <span>🛋️</span> MSI
             </button>
           </div>
 
           {showSearch ? (
-            <div className="mt-1.5 rounded-lg bg-white/95 p-0.5 shadow-sm">
+            <div className="mt-2 rounded-lg bg-white/95 p-0.5 shadow-sm">
               <SearchBar
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -249,14 +249,14 @@ function Navbar({ search, setSearch }) {
           borderTop: "1px solid rgba(37,99,235,0.2)",
           boxShadow: "0 -8px 24px rgba(15,23,42,0.14)",
         }}
-        className="fixed inset-x-0 bottom-0 z-50 px-1.5 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-1.5 md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 md:hidden"
       >
-        <div className="mx-auto max-w-7xl rounded-xl border border-blue-100 bg-white/95 px-1.5 py-1.5">
-          <div className="grid grid-cols-5 items-center gap-0.5">
+        <div className="mx-auto max-w-7xl rounded-xl border border-blue-100 bg-white/95 px-2 py-2">
+          <div className="grid grid-cols-5 items-center gap-1">
             <button
               type="button"
               onClick={goToProductsSection}
-              className="flex flex-col items-center rounded-lg px-0.5 py-1 text-[9px] font-semibold text-blue-800"
+              className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-blue-800 hover:bg-blue-50 transition-colors"
             >
               <HomeIcon className="h-4 w-4" />
               Home
@@ -266,7 +266,7 @@ function Navbar({ search, setSearch }) {
               <button
                 type="button"
                 onClick={() => navigate("/cart")}
-                className="flex flex-col items-center rounded-lg px-0.5 py-1 text-[9px] font-semibold text-sky-800"
+                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-sky-800 hover:bg-sky-50 transition-colors"
               >
                 <ShoppingCartIcon className="h-4 w-4" />
                 Cart
@@ -275,7 +275,7 @@ function Navbar({ search, setSearch }) {
               <button
                 type="button"
                 onClick={() => navigate("/admin-dashboard")}
-                className="flex flex-col items-center rounded-lg px-0.5 py-1 text-[9px] font-semibold text-indigo-800"
+                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-indigo-800 hover:bg-indigo-50 transition-colors"
               >
                 <UserCircleIcon className="h-4 w-4" />
                 Admin
@@ -285,7 +285,7 @@ function Navbar({ search, setSearch }) {
             <button
               type="button"
               onClick={goToProductsSection}
-              className="flex flex-col items-center rounded-lg bg-blue-600 px-0.5 py-1 text-[9px] font-semibold text-white shadow-sm"
+              className="flex flex-col items-center gap-0.5 rounded-lg bg-blue-600 px-1 py-1.5 text-[9px] font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
             >
               <Squares2X2Icon className="h-4 w-4" />
               Categories
@@ -295,7 +295,7 @@ function Navbar({ search, setSearch }) {
               <button
                 type="button"
                 onClick={() => navigate("/dashboard")}
-                className="flex flex-col items-center rounded-lg px-0.5 py-1 text-[9px] font-semibold text-amber-800"
+                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-amber-800 hover:bg-amber-50 transition-colors"
               >
                 <ClipboardDocumentListIcon className="h-4 w-4" />
                 Orders
@@ -304,7 +304,7 @@ function Navbar({ search, setSearch }) {
               <button
                 type="button"
                 onClick={() => navigate("/login")}
-                className="flex flex-col items-center rounded-lg px-0.5 py-1 text-[9px] font-semibold text-violet-800"
+                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-violet-800 hover:bg-violet-50 transition-colors"
               >
                 <ArrowRightOnRectangleIcon className="h-4 w-4" />
                 Login
@@ -315,7 +315,7 @@ function Navbar({ search, setSearch }) {
               <button
                 type="button"
                 onClick={goToProfile}
-                className="flex flex-col items-center rounded-lg px-0.5 py-1 text-[9px] font-semibold text-indigo-800"
+                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-indigo-800 hover:bg-indigo-50 transition-colors"
               >
                 <UserCircleIcon className="h-4 w-4" />
                 Profile
@@ -324,7 +324,7 @@ function Navbar({ search, setSearch }) {
               <button
                 type="button"
                 onClick={() => navigate("/signup")}
-                className="flex flex-col items-center rounded-lg px-0.5 py-1 text-[9px] font-semibold text-emerald-800"
+                className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[9px] font-semibold text-emerald-800 hover:bg-emerald-50 transition-colors"
               >
                 <UserPlusIcon className="h-4 w-4" />
                 Sign Up
