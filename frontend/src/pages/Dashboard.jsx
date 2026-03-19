@@ -90,6 +90,7 @@ function Dashboard() {
   const [saving, setSaving] = useState(false);
   const [photoPreview, setPhotoPreview] = useState("");
   const [orders, setOrders] = useState([]);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState("");
   const [cancelReasons, setCancelReasons] = useState(DEFAULT_CANCELLATION_REASONS);
@@ -182,6 +183,8 @@ function Dashboard() {
 
   useEffect(() => {
     if (!email) {
+      setOrders([]);
+      setTotalOrders(0);
       setOrdersLoading(false);
       return;
     }
@@ -194,14 +197,23 @@ function Dashboard() {
           setOrdersLoading(true);
         }
 
-        const { response, data } = await apiFetchJson(`/orders/my?email=${encodeURIComponent(email)}`);
+        const { response, data } = await apiFetchJson(`/orders/my?email=${encodeURIComponent(email)}&includeSummary=true`);
 
         if (!response.ok) {
           throw new Error(data?.message || "Failed to load orders");
         }
 
         if (isMounted) {
-          setOrders(Array.isArray(data) ? data : []);
+          const normalizedOrders = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.orders)
+              ? data.orders
+              : [];
+
+          const parsedTotalOrders = Number(data?.totalOrders);
+
+          setOrders(normalizedOrders);
+          setTotalOrders(Number.isFinite(parsedTotalOrders) ? parsedTotalOrders : normalizedOrders.length);
           setOrdersError("");
         }
       } catch (loadError) {
@@ -593,6 +605,11 @@ function Dashboard() {
       {activeTab === "orders" || isDesktop ? (
         <div className="glass rounded-2xl p-6 md:mb-0 mb-24">
           <h2 className="text-xl font-semibold" style={{ color: "#1a2f48" }}>📦 My Orders</h2>
+          {!ordersLoading && !ordersError ? (
+            <p className="mt-2 text-xs md:hidden" style={{ color: "#3a5470" }}>
+              Total orders so far: {totalOrders}
+            </p>
+          ) : null}
         {ordersLoading ? (
           <div className="flex items-center gap-3 mt-4">
               <div className="h-4 w-4 rounded-full animate-spin" style={{ border: "2px solid rgba(2,132,199,0.18)", borderTopColor: "#0284c7" }} />
@@ -609,109 +626,147 @@ function Dashboard() {
           orders.length ? (
             <div className="mt-4 space-y-3 md:space-y-4">
               {orders.map((order) => (
-                <div
-                  key={order._id}
-                  className="glass-hover rounded-lg p-3 md:rounded-xl md:p-4"
+                isDesktop ? (
+                  <div
+                    key={order._id}
+                    className="glass-hover rounded-lg p-3 md:rounded-xl md:p-4"
                     style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.22)" }}
-                >
-                  <div className="flex flex-col gap-2 md:gap-3">
-                    <div className="flex gap-2 md:gap-3">
-                      <img
+                  >
+                    <div className="flex flex-col gap-2 md:gap-3">
+                      <div className="flex gap-2 md:gap-3">
+                        <img
                           src={order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/160x110/dce8f5/0284c7?text=No+Image"}
-                        alt={order.productName}
-                        className="h-16 w-20 rounded-lg object-cover shrink-0 md:h-20 md:w-24"
+                          alt={order.productName}
+                          className="h-16 w-20 rounded-lg object-cover shrink-0 md:h-20 md:w-24"
                           onClick={() => setPreviewImage(order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/600x400/dce8f5/0284c7?text=No+Image")}
                           style={{ border: "1px solid rgba(100,160,220,0.22)" }}
                           onError={(e) => { e.target.src = "https://placehold.co/160x110/dce8f5/0284c7?text=No+Image"; }}
-                      />
-                      <div className="flex-1 min-w-0">
+                        />
+                        <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold sm:text-sm md:text-base" style={{ color: "#1a2f48" }}>{order.productName}</p>
                           <p className="mt-0.5 text-[10px] sm:text-xs" style={{ color: "#3a5470" }}>
                             ID: <span style={{ color: "#0284c7" }}>{order.orderCode}</span>
-                        </p>
+                          </p>
                           <p className="mt-0.5 text-[10px] sm:text-xs md:text-sm" style={{ color: "#3a5470" }}>
-                          Qty: {order.quantity} • ₹{Number(order.totalAmount || 0).toFixed(2)}
-                        </p>
-                        <div className="mt-1.5 md:mt-2 flex flex-wrap gap-1 md:gap-2">
+                            Qty: {order.quantity} • ₹{Number(order.totalAmount || 0).toFixed(2)}
+                          </p>
+                          <div className="mt-1.5 md:mt-2 flex flex-wrap gap-1 md:gap-2">
                             <span className="rounded-lg px-1.5 py-0.5 text-[9px] font-medium sm:text-xs md:px-2 md:py-0.5" style={{ background: "rgba(37,99,235,0.10)", border: "1px solid rgba(37,99,235,0.20)", color: "#2563eb" }}>
-                            📅 {new Date(order.createdAt).toLocaleDateString()}
-                          </span>
+                              📅 {new Date(order.createdAt).toLocaleDateString()}
+                            </span>
                             <span className="rounded-lg px-1.5 py-0.5 text-[9px] font-medium sm:text-xs md:px-2 md:py-0.5" style={{ background: "rgba(13,148,136,0.10)", border: "1px solid rgba(13,148,136,0.22)", color: "#0f766e" }}>
-                            🚚 {order.expectedDelivery}
-                          </span>
+                              🚚 {order.expectedDelivery}
+                            </span>
+                          </div>
                         </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                        <span
+                          className="inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold md:px-2.5 md:py-1 md:text-xs"
+                          style={{
+                            background: order.status === "Delivered" ? "rgba(20,184,166,0.15)" : order.status === "Cancelled" ? "rgba(239,68,68,0.12)" : "rgba(251,191,36,0.12)",
+                            border: order.status === "Delivered" ? "1px solid rgba(20,184,166,0.3)" : order.status === "Cancelled" ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(251,191,36,0.25)",
+                            color: order.status === "Delivered" ? "#0f766e" : order.status === "Cancelled" ? "#dc2626" : "#b45309",
+                          }}
+                        >
+                          {order.status}
+                        </span>
+                        {order.productId ? (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/product/${order.productId}`)}
+                            className="btn-ghost text-[9px] md:text-xs px-2 py-0.5 md:px-3 md:py-1.5"
+                          >
+                            View
+                          </button>
+                        ) : null}
+                        {order.status !== "Delivered" && order.status !== "Cancelled" ? (
+                          <div className="flex flex-wrap items-center gap-1 w-full md:gap-2 md:w-auto">
+                            <select
+                              value={cancelReasonDrafts[order._id] || ""}
+                              onChange={(event) =>
+                                setCancelReasonDrafts((prev) => ({
+                                  ...prev,
+                                  [order._id]: event.target.value,
+                                }))
+                              }
+                              className="input-dark text-[9px] md:text-xs py-1 md:py-2 px-2 flex-1 md:flex-none"
+                            >
+                              <option value="">Select reason</option>
+                              {cancelReasons.map((reason) => (
+                                <option key={reason.code} value={reason.code}>
+                                  {reason.label}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => cancelOrder(order._id)}
+                              disabled={!cancelReasonDrafts[order._id] || cancellingOrderId === order._id}
+                              className="btn-danger text-[9px] md:text-xs px-2 py-1 md:px-3 md:py-1.5 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {cancellingOrderId === order._id ? "Cancelling..." : "Cancel"}
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                    <div
+                      className="mt-2 md:mt-3 rounded-lg p-2 md:rounded-xl md:p-3 overflow-x-auto"
+                      style={{ background: "rgba(240,248,255,0.72)", border: "1px solid rgba(100,160,220,0.18)" }}
+                    >
+                      <OrderTimeline status={order.status} compact />
+                    </div>
+
+                    <p className="mt-1.5 md:mt-2 text-[9px] md:text-xs" style={{ color: "#3a5470" }}>
+                      Payment: {order.paymentOption === "half" ? "Half Payment" : "Cash on Delivery"}
+                    </p>
+
+                    {order.status === "Cancelled" ? (
+                      <p className="mt-0.5 text-[9px] md:text-xs" style={{ color: "#b91c1c" }}>
+                        Cancelled by {order.cancelledBy || "admin"} • Reason: {order.cancellationReason || "Cancelled"}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div
+                    key={order._id}
+                    className="glass-hover rounded-lg p-3"
+                    style={{ background: "rgba(255,255,255,0.78)", border: "1px solid rgba(100,160,220,0.22)" }}
+                  >
+                    <div className="flex gap-2">
+                      <img
+                        src={order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/160x110/dce8f5/0284c7?text=No+Image"}
+                        alt={order.productName}
+                        className="h-16 w-20 rounded-lg object-cover shrink-0"
+                        onClick={() => setPreviewImage(order.productImage ? mediaUrl(order.productImage) : "https://placehold.co/600x400/dce8f5/0284c7?text=No+Image")}
+                        style={{ border: "1px solid rgba(100,160,220,0.22)" }}
+                        onError={(e) => { e.target.src = "https://placehold.co/160x110/dce8f5/0284c7?text=No+Image"; }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold" style={{ color: "#1a2f48" }}>{order.productName}</p>
+                        <p className="mt-0.5 text-[10px]" style={{ color: "#3a5470" }}>
+                          Qty: {order.quantity} • ₹{Number(order.totalAmount || 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between gap-2">
                       <span
-                        className="inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold md:px-2.5 md:py-1 md:text-xs"
+                        className="inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold"
                         style={{
                           background: order.status === "Delivered" ? "rgba(20,184,166,0.15)" : order.status === "Cancelled" ? "rgba(239,68,68,0.12)" : "rgba(251,191,36,0.12)",
                           border: order.status === "Delivered" ? "1px solid rgba(20,184,166,0.3)" : order.status === "Cancelled" ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(251,191,36,0.25)",
-                            color: order.status === "Delivered" ? "#0f766e" : order.status === "Cancelled" ? "#dc2626" : "#b45309",
+                          color: order.status === "Delivered" ? "#0f766e" : order.status === "Cancelled" ? "#dc2626" : "#b45309",
                         }}
                       >
                         {order.status}
                       </span>
-                      {order.productId ? (
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/product/${order.productId}`)}
-                          className="btn-ghost text-[9px] md:text-xs px-2 py-0.5 md:px-3 md:py-1.5"
-                        >
-                          View
-                        </button>
-                      ) : null}
-                      {order.status !== "Delivered" && order.status !== "Cancelled" ? (
-                        <div className="flex flex-wrap items-center gap-1 w-full md:gap-2 md:w-auto">
-                          <select
-                            value={cancelReasonDrafts[order._id] || ""}
-                            onChange={(event) =>
-                              setCancelReasonDrafts((prev) => ({
-                                ...prev,
-                                [order._id]: event.target.value,
-                              }))
-                            }
-                            className="input-dark text-[9px] md:text-xs py-1 md:py-2 px-2 flex-1 md:flex-none"
-                          >
-                            <option value="">Select reason</option>
-                            {cancelReasons.map((reason) => (
-                              <option key={reason.code} value={reason.code}>
-                                {reason.label}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => cancelOrder(order._id)}
-                            disabled={!cancelReasonDrafts[order._id] || cancellingOrderId === order._id}
-                            className="btn-danger text-[9px] md:text-xs px-2 py-1 md:px-3 md:py-1.5 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {cancellingOrderId === order._id ? "Cancelling..." : "Cancel"}
-                          </button>
-                        </div>
-                      ) : null}
                     </div>
                   </div>
-
-                  <div
-                    className="mt-2 md:mt-3 rounded-lg p-2 md:rounded-xl md:p-3 overflow-x-auto"
-                      style={{ background: "rgba(240,248,255,0.72)", border: "1px solid rgba(100,160,220,0.18)" }}
-                  >
-                    <OrderTimeline status={order.status} compact />
-                  </div>
-
-                    <p className="mt-1.5 md:mt-2 text-[9px] md:text-xs" style={{ color: "#3a5470" }}>
-                    Payment: {order.paymentOption === "half" ? "Half Payment" : "Cash on Delivery"}
-                  </p>
-
-                  {order.status === "Cancelled" ? (
-                    <p className="mt-0.5 text-[9px] md:text-xs" style={{ color: "#b91c1c" }}>
-                      Cancelled by {order.cancelledBy || "admin"} • Reason: {order.cancellationReason || "Cancelled"}
-                    </p>
-                  ) : null}
-                </div>
+                )
               ))}
             </div>
           ) : (

@@ -462,12 +462,21 @@ router.post("/", async (req, res) => {
 router.get("/my", async (req, res) => {
   try {
     const email = normalizeEmail(req.query?.email);
+    const includeSummary = trimString(req.query?.includeSummary).toLowerCase() === "true";
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
     }
 
     const orders = await Order.find({ userEmail: email }).sort({ createdAt: -1 });
+
+    if (includeSummary) {
+      return res.json({
+        totalOrders: orders.length,
+        orders,
+      });
+    }
+
     return res.json(orders);
   } catch (error) {
     return res.status(500).json({ message: "Failed to load orders" });
