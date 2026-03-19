@@ -6,6 +6,7 @@ import {
   UserCircleIcon,
   UserPlusIcon,
   ArrowRightOnRectangleIcon,
+  Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 import SearchBar from "./SearchBar";
 import { apiFetchJson } from "../config/api";
@@ -76,6 +77,23 @@ function Navbar({ search, setSearch }) {
       return;
     }
     navigate("/dashboard");
+  };
+
+  const goToProductsSection = () => {
+    if (location.pathname !== "/") {
+      sessionStorage.setItem("scrollToProducts", "1");
+      navigate("/");
+      return;
+    }
+
+    const productsSection = document.getElementById("all-sections");
+
+    if (productsSection) {
+      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    sessionStorage.setItem("scrollToProducts", "1");
   };
 
   return (
@@ -185,21 +203,40 @@ function Navbar({ search, setSearch }) {
 
       <header
         style={{
-          background: "rgba(255,255,255,0.96)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          borderBottom: "1px solid rgba(37,99,235,0.16)",
+          background: "#2874f0",
+          borderBottom: "1px solid rgba(255,255,255,0.26)",
+          boxShadow: "0 6px 20px rgba(30,64,175,0.26)",
         }}
         className="sticky top-0 z-50 md:hidden"
       >
-        <div className="mx-auto flex max-w-7xl items-center px-4 py-3">
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-blue-800"
-          >
-            Maa Sheela Iron Art
-          </button>
+        <div className="mx-auto max-w-7xl px-3 pb-3 pt-2">
+          <div className="flex items-center justify-center">
+            <button
+              type="button"
+              onClick={goToProductsSection}
+              className="rounded-md bg-white/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white"
+            >
+              Maa Sheela Iron Art
+            </button>
+          </div>
+
+          {showSearch ? (
+            <div className="mt-2 rounded-xl bg-white/95 p-1 shadow-sm">
+              <SearchBar
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                suggestions={searchSuggestions}
+                onSelectSuggestion={(suggestion) => {
+                  setSearch(String(suggestion?.label || ""));
+
+                  if (location.pathname !== "/") {
+                    navigate("/");
+                  }
+                }}
+                placeholder="Search for products, categories..."
+              />
+            </div>
+          ) : null}
         </div>
       </header>
 
@@ -211,30 +248,14 @@ function Navbar({ search, setSearch }) {
           borderTop: "1px solid rgba(37,99,235,0.2)",
           boxShadow: "0 -8px 24px rgba(15,23,42,0.14)",
         }}
-        className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] pt-2 md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 px-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] pt-2 md:hidden"
       >
-        <div className="mx-auto max-w-7xl">
-          {showSearch ? (
-            <SearchBar
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              suggestions={searchSuggestions}
-              onSelectSuggestion={(suggestion) => {
-                setSearch(String(suggestion?.label || ""));
-
-                if (location.pathname !== "/") {
-                  navigate("/");
-                }
-              }}
-              placeholder="Search products..."
-            />
-          ) : null}
-
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+        <div className="mx-auto max-w-7xl rounded-2xl border border-blue-100 bg-white/95 px-2 py-2">
+          <div className="grid grid-cols-5 items-center gap-1">
             <button
               type="button"
-              onClick={() => navigate("/")}
-              className="flex min-w-20 flex-1 flex-col items-center rounded-xl border border-blue-100 bg-blue-50 px-2 py-2 text-[11px] font-semibold text-blue-800"
+              onClick={goToProductsSection}
+              className="flex flex-col items-center rounded-xl px-1 py-2 text-[11px] font-semibold text-blue-800"
             >
               <HomeIcon className="h-5 w-5" />
               Home
@@ -244,41 +265,62 @@ function Navbar({ search, setSearch }) {
               <button
                 type="button"
                 onClick={() => navigate("/cart")}
-                className="flex min-w-20 flex-1 flex-col items-center rounded-xl border border-sky-100 bg-sky-50 px-2 py-2 text-[11px] font-semibold text-sky-800"
+                className="flex flex-col items-center rounded-xl px-1 py-2 text-[11px] font-semibold text-sky-800"
               >
                 <ShoppingCartIcon className="h-5 w-5" />
                 Cart
               </button>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate("/admin-dashboard")}
+                className="flex flex-col items-center rounded-xl px-1 py-2 text-[11px] font-semibold text-indigo-800"
+              >
+                <UserCircleIcon className="h-5 w-5" />
+                Dashboard
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={goToProductsSection}
+              className="flex flex-col items-center rounded-xl bg-blue-600 px-1 py-2 text-[11px] font-semibold text-white shadow-sm"
+            >
+              <Squares2X2Icon className="h-5 w-5" />
+              Categories
+            </button>
 
             {isLoggedIn ? (
               <button
                 type="button"
                 onClick={goToProfile}
-                className="flex min-w-20 flex-1 flex-col items-center rounded-xl border border-indigo-100 bg-indigo-50 px-2 py-2 text-[11px] font-semibold text-indigo-800"
+                className="flex flex-col items-center rounded-xl px-1 py-2 text-[11px] font-semibold text-indigo-800"
               >
                 <UserCircleIcon className="h-5 w-5" />
                 {isAdminSession ? "Dashboard" : "Profile"}
               </button>
             ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => navigate("/signup")}
-                  className="flex min-w-20 flex-1 flex-col items-center rounded-xl border border-emerald-100 bg-emerald-50 px-2 py-2 text-[11px] font-semibold text-emerald-800"
-                >
-                  <UserPlusIcon className="h-5 w-5" />
-                  Sign Up
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/login")}
-                  className="flex min-w-20 flex-1 flex-col items-center rounded-xl border border-violet-100 bg-violet-50 px-2 py-2 text-[11px] font-semibold text-violet-800"
-                >
-                  <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                  Login
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="flex flex-col items-center rounded-xl px-1 py-2 text-[11px] font-semibold text-violet-800"
+              >
+                <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                Login
+              </button>
+            )}
+
+            {!isLoggedIn ? (
+              <button
+                type="button"
+                onClick={() => navigate("/signup")}
+                className="flex flex-col items-center rounded-xl px-1 py-2 text-[11px] font-semibold text-emerald-800"
+              >
+                <UserPlusIcon className="h-5 w-5" />
+                Sign Up
+              </button>
+            ) : (
+              <span aria-hidden="true" className="block h-9" />
             )}
           </div>
         </div>

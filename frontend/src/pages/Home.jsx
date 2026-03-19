@@ -152,6 +152,30 @@ function Home({ search }) {
 		loadHomeData();
 	}, []);
 
+	useEffect(() => {
+		if (hasActiveSearch) {
+			return;
+		}
+
+		if (sessionStorage.getItem("scrollToProducts") !== "1") {
+			return;
+		}
+
+		sessionStorage.removeItem("scrollToProducts");
+
+		const timeoutId = window.setTimeout(() => {
+			const productsSection = document.getElementById("all-sections");
+
+			if (productsSection) {
+				productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+			}
+		}, 120);
+
+		return () => {
+			window.clearTimeout(timeoutId);
+		};
+	}, [hasActiveSearch]);
+
 	const filteredProducts = useMemo(() => {
 		const searchTerms = (search || "")
 			.toLowerCase()
@@ -315,6 +339,20 @@ function Home({ search }) {
 									<span className="text-amber-500">IRON ART</span>
 								</h1>
 
+								<div className="md:hidden">
+									<div className="h-62.5 w-full max-w-112.5 overflow-hidden rounded-2xl">
+										<img
+											src={heroImageUrl}
+											alt="Elegant furniture showcase"
+											loading="lazy"
+											className="h-full w-full rounded-2xl object-cover shadow-lg transition-transform duration-300 hover:scale-[1.02]"
+											onError={(event) => {
+												event.currentTarget.src = DEFAULT_HERO_IMAGE;
+											}}
+										/>
+									</div>
+								</div>
+
 								<h2 className="text-xl font-medium text-slate-600 md:text-2xl">
 									Beautiful Furniture for Modern Homes
 								</h2>
@@ -367,7 +405,7 @@ function Home({ search }) {
 								</div>
 							</div>
 
-							<div className="h-62.5 w-full max-w-112.5 shrink-0 justify-self-center sm:h-87.5 md:h-100 md:justify-self-end">
+							<div className="hidden h-62.5 w-full max-w-112.5 shrink-0 justify-self-center sm:h-87.5 md:block md:h-100 md:justify-self-end">
 								<img
 									src={heroImageUrl}
 									alt="Elegant furniture showcase"
@@ -384,21 +422,24 @@ function Home({ search }) {
 			) : null}
 
 			{!hasActiveSearch ? (
-				<div id="all-sections" className="flex items-center justify-between scroll-mt-28">
-					<h2 className="text-xl font-semibold sm:text-2xl" style={{ color: "#1a2f48" }}>
-						All Product Sections
-					</h2>
-					<span
-						className="rounded-full px-3 py-1 text-sm font-medium"
-						style={{
-							background: "rgba(2,132,199,0.08)",
-							border: "1px solid rgba(2,132,199,0.22)",
-							color: "#0284c7",
-						}}
-					>
-						{filteredProducts.length} items
-					</span>
-				</div>
+				<>
+					<div id="all-sections" className="scroll-mt-28" />
+					<div className="hidden items-center justify-between sm:flex">
+						<h2 className="text-xl font-semibold sm:text-2xl" style={{ color: "#1a2f48" }}>
+							All Product Sections
+						</h2>
+						<span
+							className="rounded-full px-3 py-1 text-sm font-medium"
+							style={{
+								background: "rgba(2,132,199,0.08)",
+								border: "1px solid rgba(2,132,199,0.22)",
+								color: "#0284c7",
+							}}
+						>
+							{filteredProducts.length} items
+						</span>
+					</div>
+				</>
 			) : null}
 
 			{loading ? (
