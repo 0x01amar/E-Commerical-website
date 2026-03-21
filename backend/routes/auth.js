@@ -9,30 +9,35 @@ const passwordPolicyRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 
 // -------- EMAIL TRANSPORTER --------
-// Using explicit host and port for better reliability across different environments
+// Updated to use Port 587 (STARTTLS) which is often more reliable than 465 in many environments
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // Use SSL/TLS
+  port: 587,
+  secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  // Increase timeout for slow connections
-  connectionTimeout: 10000, 
-  greetingTimeout: 10000,
+  tls: {
+    // Do not fail on invalid certificates (useful for some network configurations)
+    rejectUnauthorized: false
+  },
+  connectionTimeout: 15000, // 15 seconds
+  greetingTimeout: 15000,
 });
 
 // Verify connection configuration on startup
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   transporter.verify(function (error, success) {
     if (error) {
-      console.error(" [AUTH] TRANSPORTER CONNECTION ERROR:", error.message);
+      console.error(" [AUTH] !!! TRANSPORTER CONNECTION ERROR !!!");
+      console.error(" [AUTH] Error Message:", error.message);
+      console.error(" [AUTH] Error Code:", error.code);
       if (error.message.includes("Invalid login") || error.message.includes("auth")) {
         console.error(" [AUTH] TIP: Ensure you are using a 16-character 'App Password' if using Gmail with 2FA.");
       }
     } else {
-      console.log(" [AUTH] Email server is ready to deliver OTPs");
+      console.log(" [AUTH] Email server is ready to deliver OTPs (Connected to smtp.gmail.com:587)");
     }
   });
 } else {
@@ -196,7 +201,7 @@ router.post("/signup/request-otp", async (req, res) => {
 
     try {
       if (emailUser && emailPass) {
-        console.log(`[AUTH] Attempting to send OTP email to ${email} via ${emailUser}...`);
+        console.log(` [AUTH] Sending OTP to ${email}...`);
         const mailOptions = {
           from: `"Maa Sheela Iron Arts" <${emailUser}>`,
           to: email,
@@ -217,20 +222,18 @@ router.post("/signup/request-otp", async (req, res) => {
           `
         };
         const info = await transporter.sendMail(mailOptions);
-        console.log("[AUTH] MAIL SENT SUCCESSFULLY. MessageId:", info.messageId);
+        console.log(" [AUTH] MAIL SENT SUCCESSFULLY. MessageId:", info.messageId);
         emailSent = true;
       } else {
-        console.warn("[AUTH] CRITICAL: EMAIL_USER or EMAIL_PASS is missing in .env file. Email will NOT be sent.");
+        console.warn(" [AUTH] CRITICAL: EMAIL_USER or EMAIL_PASS is missing in .env file.");
       }
     } catch (mailError) {
-      console.error("[AUTH] MAIL SENDING FAILED:", mailError.message);
+      console.error(" [AUTH] MAIL SENDING FAILED!");
+      console.error(" [AUTH] Detail:", mailError.message);
       if (mailError.message.includes("Invalid login")) {
-        console.error("[AUTH] TIP: If using Gmail, ensure you are using a 16-character 'App Password', not your regular password.");
+        console.error(" [AUTH] TIP: If using Gmail, ensure you are using a 16-character 'App Password', not your regular password.");
       }
     }
-
-    // Log for development
-    console.log(` [AUTH] OTP for ${email} is ${otp}. Email delivered: ${emailSent}`);
 
     if (emailSent) {
       return res.json({
@@ -238,9 +241,9 @@ router.post("/signup/request-otp", async (req, res) => {
       });
     } else {
       return res.json({
-        message: "Signup initiated, but we couldn't send the verification email. Please contact support or check back later.",
-        tip: "Server configuration issue: EMAIL_USER or EMAIL_PASS may be incorrect.",
-        otp: process.env.NODE_ENV === "development" ? otp : undefined // Only return OTP in dev for debugging
+        message: "OTP generation successful, but email delivery failed. Please check the server console for errors.",
+        tip: "Server-side configuration error. Admin needs to check environment variables.",
+        otp: process.env.NODE_ENV === "development" ? otp : undefined
       });
     }
 
