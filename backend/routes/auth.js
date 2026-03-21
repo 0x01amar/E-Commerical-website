@@ -9,22 +9,35 @@ const passwordPolicyRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 
 // -------- EMAIL TRANSPORTER --------
+// Using explicit host and port for better reliability across different environments
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // Use SSL/TLS
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  // Increase timeout for slow connections
+  connectionTimeout: 10000, 
+  greetingTimeout: 10000,
 });
 
-// Verify connection configuration
-transporter.verify(function (error, success) {
-  if (error) {
-    console.error("TRANSPORTER CONNECTION ERROR:", error);
-  } else {
-    console.log("Email server is ready to take our messages");
-  }
-});
+// Verify connection configuration on startup
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  transporter.verify(function (error, success) {
+    if (error) {
+      console.error(" [AUTH] TRANSPORTER CONNECTION ERROR:", error.message);
+      if (error.message.includes("Invalid login") || error.message.includes("auth")) {
+        console.error(" [AUTH] TIP: Ensure you are using a 16-character 'App Password' if using Gmail with 2FA.");
+      }
+    } else {
+      console.log(" [AUTH] Email server is ready to deliver OTPs");
+    }
+  });
+} else {
+  console.warn(" [AUTH] WARNING: EMAIL_USER or EMAIL_PASS not set. OTP emails will fail.");
+}
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 
@@ -217,12 +230,19 @@ router.post("/signup/request-otp", async (req, res) => {
     }
 
     // Log for development
-    console.log(`[AUTH] OTP for ${email} is ${otp}. Email delivered: ${emailSent}`);
+    console.log(` [AUTH] OTP for ${email} is ${otp}. Email delivered: ${emailSent}`);
 
-    res.json({
-      message: emailSent ? "OTP sent to your email" : "OTP generated. Check server logs if email failed.",
-      otp: emailSent ? undefined : otp // Only return OTP in response if email fails (Dev friendly)
-    });
+    if (emailSent) {
+      return res.json({
+        message: "OTP sent to your email. Please check your inbox (and spam folder).",
+      });
+    } else {
+      return res.json({
+        message: "Signup initiated, but we couldn't send the verification email. Please contact support or check back later.",
+        tip: "Server configuration issue: EMAIL_USER or EMAIL_PASS may be incorrect.",
+        otp: process.env.NODE_ENV === "development" ? otp : undefined // Only return OTP in dev for debugging
+      });
+    }
 
   } catch (err) {
 

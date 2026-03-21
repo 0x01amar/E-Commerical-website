@@ -65,10 +65,12 @@ function UserLogin() {
 
             if (!response.ok) throw new Error(data?.message || "Failed to send OTP");
             
-            showToast(data.message || "OTP sent to your email", "success");
-            
+            // Handle cases where email might have failed but signup initiated
             if (data.otp) {
-                console.log("DEV MODE: OTP is", data.otp);
+                console.log(" [DEV MODE] OTP received in response:", data.otp);
+                showToast("Dev Mode: OTP is " + data.otp, "info");
+            } else {
+                showToast(data.message || "OTP sent to your email", "success");
             }
 
             setStep(2);

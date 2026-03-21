@@ -20,7 +20,7 @@ function Home({ search }) {
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [heroImageUrl, setHeroImageUrl] = useState(DEFAULT_HERO_IMAGE);
+  const [heroImageUrl, setHeroImageUrl] = useState(null);
   const [siteContent, setSiteContent] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const isAdmin = localStorage.getItem("role") === "admin";
@@ -42,6 +42,8 @@ function Home({ search }) {
         
         if (heroRes.response.ok && heroRes.data?.heroImageUrl) {
           setHeroImageUrl(heroRes.data.heroImageUrl);
+        } else {
+          setHeroImageUrl(DEFAULT_HERO_IMAGE);
         }
 
         if (contentRes.response.ok) {
@@ -49,6 +51,7 @@ function Home({ search }) {
         }
       } catch (err) {
         setError(resolveApiErrorMessage(err, "Failed to load store data"));
+        setHeroImageUrl(DEFAULT_HERO_IMAGE);
       } finally {
         setLoading(false);
       }
@@ -82,18 +85,25 @@ function Home({ search }) {
   return (
     <div className={`${hasActiveSearch ? "pt-24 space-y-12" : "space-y-12 md:space-y-24"} pb-20 page-transition`}>
       {/* Hero Section */}
-      {!hasActiveSearch && heroImageUrl && (
+      {!hasActiveSearch && (
         <section className="relative h-[70vh] md:h-screen min-h-[500px] md:min-h-[700px] flex items-center overflow-hidden bg-neutral-dark mobile-hero-height">
-          <div className="absolute inset-0 z-0">
-            <img 
-              src={heroImageUrl} 
-              alt="Hero" 
-              onLoad={() => setImageLoaded(true)}
-              className={`w-full h-full object-cover scale-105 animate-slow-zoom transition-opacity duration-1000 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-              onError={(e) => e.target.src = DEFAULT_HERO_IMAGE}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-neutral-dark/80 via-neutral-dark/40 to-transparent md:via-neutral-dark/40" />
-          </div>
+          {heroImageUrl && (
+            <div className="absolute inset-0 z-0">
+              <img 
+                key={heroImageUrl}
+                src={heroImageUrl} 
+                alt="Hero" 
+                onLoad={() => setImageLoaded(true)}
+                className={`w-full h-full object-cover scale-105 animate-slow-zoom transition-opacity duration-1000 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                onError={(e) => {
+                  if (e.target.src !== DEFAULT_HERO_IMAGE) {
+                    e.target.src = DEFAULT_HERO_IMAGE;
+                  }
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-neutral-dark/80 via-neutral-dark/40 to-transparent md:via-neutral-dark/40" />
+            </div>
+          )}
 
           <div className="relative z-10 max-w-7xl mx-auto px-6 w-full text-white space-y-8">
             <div className="space-y-4 max-w-2xl animate-in fade-in slide-in-from-left duration-1000">
@@ -219,7 +229,8 @@ function Home({ search }) {
               </div>
             </div>
           </div>
-        </section>      )}
+        </section>
+      )}
     </div>
   );
 }
