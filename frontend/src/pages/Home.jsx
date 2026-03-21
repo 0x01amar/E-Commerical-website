@@ -189,8 +189,8 @@ function Home({ search }) {
 
       {/* CTA Section */}
       {!hasActiveSearch && (
-        <section className="max-w-7xl mx-auto px-6">
-          <div className="bg-primary p-8 md:p-20 text-center text-white space-y-6 md:space-y-8 rounded-2xl md:rounded-sm relative overflow-hidden shadow-2xl md:shadow-none">
+        <section className="max-w-7xl mx-auto px-4 md:px-6">
+          <div className="bg-primary p-6 md:p-20 text-center text-white space-y-6 md:space-y-8 rounded-2xl md:rounded-sm relative overflow-hidden shadow-2xl md:shadow-none">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
             <div className="relative z-10 space-y-4 max-w-2xl mx-auto">
               <h2 className="text-3xl md:text-5xl font-heading font-bold leading-tight">Bring Your Vision to Life</h2>
@@ -198,20 +198,19 @@ function Home({ search }) {
                 Can't find exactly what you're looking for? We specialize in custom iron and wooden furniture. Let's create something unique for your space.
               </p>
               <div className="pt-4 md:pt-6">
-                <Button 
-                  size="lg" 
-                  variant="secondary" 
-                  className="w-full md:w-auto md:px-12 h-14 md:h-16 rounded-xl md:rounded-sm flex items-center justify-center gap-2 group/cta"
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="w-full md:w-auto px-6 md:px-12 h-auto min-h-14 md:h-16 rounded-xl md:rounded-sm flex items-center justify-center gap-2 group/cta whitespace-normal md:whitespace-nowrap py-4 md:py-0"
                   onClick={() => navigate("/contact")}
                 >
                   Contact for Custom Quote
-                  <ArrowRightIcon className="w-5 h-5 transition-transform group-hover/cta:translate-x-1" />
+                  <ArrowRightIcon className="w-5 h-5 transition-transform group-hover/cta:translate-x-1 shrink-0" />
                 </Button>
               </div>
             </div>
           </div>
-        </section>
-      )}
+        </section>      )}
     </div>
   );
 }

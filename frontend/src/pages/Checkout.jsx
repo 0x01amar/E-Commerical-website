@@ -100,6 +100,12 @@ function Checkout() {
     if (email) loadData();
   }, [productId, email, mode, navigate]);
 
+  useEffect(() => {
+    if (!loading && window.innerWidth < 768) {
+      window.scrollTo(0, 0);
+    }
+  }, [step, loading]);
+
   const subtotal = useMemo(() => {
     if (mode === "cart") {
       return cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);

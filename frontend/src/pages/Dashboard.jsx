@@ -8,7 +8,7 @@ import { Card } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import UserSidebar from "./user/UserSidebar";
 import { showToast } from "../config/toast";
-import { CreditCardIcon } from "@heroicons/react/24/outline";
+import { CreditCardIcon, ArrowLeftOnRectangleIcon } from "@heroicons/react/24/outline";
 
 const EMPTY_ADDRESS = {
   line1: "", landmark: "", villageTown: "", wardNo: "",
@@ -309,6 +309,19 @@ function Dashboard() {
               )}
             </div>
           )}
+
+          {/* Mobile Only Logout */}
+          <div className="md:hidden flex justify-center pt-8">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleLogout} 
+              className="text-accent border-accent/20 h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+            >
+              <ArrowLeftOnRectangleIcon className="w-4 h-4 mr-2" />
+              Logout Account
+            </Button>
+          </div>
         </div>
       </div>
       <ImageLightbox isOpen={!!previewImage} imageSrc={previewImage} onClose={() => setPreviewImage("")} />

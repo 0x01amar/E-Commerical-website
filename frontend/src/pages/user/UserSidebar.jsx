@@ -41,7 +41,7 @@ function UserSidebar({ activeTab, setActiveTab, onLogout }) {
         
         <button 
           onClick={onLogout}
-          className="flex-1 md:flex-grow-0 md:mt-8 flex items-center justify-center md:justify-start gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 text-accent hover:bg-accent/5 transition-all text-xs md:text-sm font-bold md:font-medium rounded-xl md:rounded-sm border border-accent/10"
+          className="hidden md:flex flex-1 md:flex-grow-0 md:mt-8 items-center justify-center md:justify-start gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 text-accent hover:bg-accent/5 transition-all text-xs md:text-sm font-bold md:font-medium rounded-xl md:rounded-sm border border-accent/10"
         >
           <ArrowLeftOnRectangleIcon className="w-4 h-4 md:w-5 md:h-5" />
           Logout
