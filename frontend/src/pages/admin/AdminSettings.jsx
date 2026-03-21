@@ -11,26 +11,26 @@ function AdminSettings({
   onSaveHeroImage
 }) {
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="space-y-2">
-        <h2 className="text-3xl font-heading font-bold">Store Configuration</h2>
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+      <div className="space-y-1 md:space-y-2">
+        <h2 className="text-2xl md:text-3xl font-heading font-bold">Store Configuration</h2>
         <p className="text-neutral-dark/40 text-sm font-body">Manage global settings, pricing and content.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
         {/* Site Content */}
-        <Card className="p-8 border-none shadow-sm bg-white rounded-sm space-y-8">
-          <h3 className="font-heading text-xl font-bold">Showcase & Branding</h3>
-          <form className="space-y-6" onSubmit={(e) => {
+        <Card className="p-4 md:p-8 border-none shadow-sm bg-white rounded-sm space-y-6 md:space-y-8">
+          <h3 className="font-heading text-lg md:text-xl font-bold">Showcase & Branding</h3>
+          <form className="space-y-4 md:space-y-6" onSubmit={(e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
             onSaveSiteContent(Object.fromEntries(formData));
           }}>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Shop Name</label>
-              <Input name="shopName" defaultValue={siteContent.shopName} />
+              <Input name="shopName" defaultValue={siteContent.shopName} className="h-10 md:h-11 text-sm" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Tagline</label>
               <textarea 
                 name="tagline" 
@@ -38,17 +38,17 @@ function AdminSettings({
                 className="w-full border border-neutral-dark/10 p-3 text-sm focus:outline-none focus:border-primary rounded-sm min-h-24"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Phone</label>
-                <Input name="contactNumber" defaultValue={siteContent.contactNumber} />
+                <Input name="contactNumber" defaultValue={siteContent.contactNumber} className="h-10 md:h-11 text-sm" />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">WhatsApp</label>
-                <Input name="whatsAppNumber" defaultValue={siteContent.whatsAppNumber} />
+                <Input name="whatsAppNumber" defaultValue={siteContent.whatsAppNumber} className="h-10 md:h-11 text-sm" />
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Store Address</label>
               <textarea 
                 name="address" 
@@ -56,45 +56,45 @@ function AdminSettings({
                 className="w-full border border-neutral-dark/10 p-3 text-sm focus:outline-none focus:border-primary rounded-sm min-h-24"
               />
             </div>
-            <Button type="submit" className="w-full">Save Branding</Button>
+            <Button type="submit" className="w-full h-10 md:h-12 text-sm">Save Branding</Button>
           </form>
         </Card>
 
-        <div className="space-y-8">
+        <div className="space-y-6 md:space-y-8">
           {/* Checkout Pricing */}
-          <Card className="p-8 border-none shadow-sm bg-white rounded-sm space-y-8">
-            <h3 className="font-heading text-xl font-bold">Pricing & Tax</h3>
-            <form className="space-y-6" onSubmit={(e) => {
+          <Card className="p-4 md:p-8 border-none shadow-sm bg-white rounded-sm space-y-6 md:space-y-8">
+            <h3 className="font-heading text-lg md:text-xl font-bold">Pricing & Tax</h3>
+            <form className="space-y-4 md:space-y-6" onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.target);
               onSavePricing(Object.fromEntries(formData));
             }}>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Tax Rate (%)</label>
-                  <Input name="taxRatePercent" type="number" step="0.01" defaultValue={pricing.taxRatePercent} />
+                  <Input name="taxRatePercent" type="number" step="0.01" defaultValue={pricing.taxRatePercent} className="h-10 md:h-11 text-sm" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Shipping Charge (₹)</label>
-                  <Input name="shippingCharge" type="number" step="0.01" defaultValue={pricing.shippingCharge} />
+                  <Input name="shippingCharge" type="number" step="0.01" defaultValue={pricing.shippingCharge} className="h-10 md:h-11 text-sm" />
                 </div>
               </div>
-              <Button type="submit" className="w-full">Save Pricing</Button>
+              <Button type="submit" className="w-full h-10 md:h-12 text-sm">Save Pricing</Button>
             </form>
           </Card>
 
           {/* Hero Image */}
-          <Card className="p-8 border-none shadow-sm bg-white rounded-sm space-y-8">
-            <h3 className="font-heading text-xl font-bold">Hero Imagery</h3>
+          <Card className="p-4 md:p-8 border-none shadow-sm bg-white rounded-sm space-y-6 md:space-y-8">
+            <h3 className="font-heading text-lg md:text-xl font-bold">Hero Imagery</h3>
             <div className="space-y-4">
               <div className="aspect-video bg-neutral-cream rounded-sm overflow-hidden">
                 <img src={heroImageUrl} className="w-full h-full object-cover" alt="Hero" />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Image URL</label>
-                <div className="flex gap-2">
-                  <Input id="heroUrl" defaultValue={heroImageUrl} className="flex-grow" />
-                  <Button onClick={() => onSaveHeroImage(document.getElementById('heroUrl').value)}>Update</Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input id="heroUrl" defaultValue={heroImageUrl} className="flex-grow h-10 md:h-11 text-sm" />
+                  <Button onClick={() => onSaveHeroImage(document.getElementById('heroUrl').value)} className="h-10 md:h-11 text-sm shrink-0">Update</Button>
                 </div>
               </div>
             </div>

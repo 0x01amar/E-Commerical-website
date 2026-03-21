@@ -1,0 +1,147 @@
+@media (max-width: 768px) {
+  /* Mobile-specific theme adjustments */
+  :root {
+    --mobile-radius: 24px;
+    --mobile-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+  }
+
+  html {
+    scroll-behavior: auto !important; /* Disable smooth scroll during page changes to prevent jitter */
+  }
+
+  body {
+    background-color: #FDFCFB; /* neutral-cream */
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Compact Hero for Mobile */
+  .mobile-hero-height {
+    height: 70vh !important;
+    min-height: 500px !important;
+  }
+
+  /* 2-column grid for products on mobile */
+  .mobile-product-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    padding: 0 16px !important;
+  }
+
+  /* Card Redesign for Mobile */
+  .mobile-card {
+    border-radius: var(--mobile-radius) !important;
+    overflow: hidden !important;
+    background: white !important;
+    box-shadow: var(--mobile-shadow) !important;
+    border: 1px solid rgba(0,0,0,0.03) !important;
+    transition: transform 0.2s ease !important;
+  }
+
+  .mobile-card:active {
+    transform: scale(0.97);
+  }
+
+  /* Ultra-Compact Grid for Benefits */
+  .mobile-benefits-container {
+    padding: 8px 12px !important;
+    overflow: hidden !important;
+    margin-top: 16px !important;
+  }
+
+  .mobile-benefits-scroll {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important;
+    width: 100% !important;
+    transform: none !important;
+  }
+
+  .mobile-benefit-item {
+    width: 100% !important;
+    min-width: 0 !important;
+    background: white !important;
+    padding: 8px 4px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 6px !important;
+    border: 1px solid rgba(0,0,0,0.03) !important;
+    min-height: 60px !important;
+  }
+
+  .mobile-benefit-item div {
+    width: 24px !important;
+    height: 24px !important;
+    margin: 0 !important;
+    background: #f0f7f1 !important; /* light primary tint */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Simple Icon styling for benefits */
+  .mobile-benefit-item svg {
+    width: 14px !important;
+    height: 14px !important;
+    color: var(--primary) !important;
+  }
+
+  .mobile-benefit-item h3 {
+    font-size: 8px !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+    color: #333 !important;
+  }
+
+  .mobile-benefit-item p {
+    display: none !important; /* Hide description on mobile */
+  }
+
+  /* Section Header Mobile */
+  .mobile-section-header {
+    padding: 0 16px !important;
+    margin-bottom: 24px !important;
+  }
+
+  .mobile-section-title {
+    font-size: 24px !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  /* Floating Buttons */
+  .mobile-fab {
+    position: fixed !important;
+    bottom: 100px !important;
+    right: 20px !important;
+    z-index: 40 !important;
+    border-radius: 9999px !important;
+    width: 56px !important;
+    height: 56px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 10px 25px rgba(74, 93, 78, 0.3) !important;
+  }
+
+  /* App-like transitions - Simplified to prevent jitter */
+  .page-transition {
+    animation: fadeInOnly 0.4s ease-out forwards;
+    will-change: opacity;
+  }
+
+  @keyframes fadeInOnly {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}

@@ -193,8 +193,31 @@ const orderSchema = new mongoose.Schema(
         "Out for Delivery",
         "Delivered",
         "Cancelled",
+        "Custom Request Received",
+        "Design Finalized",
+        "Advance Payment Requested",
       ],
       default: "Order Placed",
+    },
+    isCustom: {
+      type: Boolean,
+      default: false,
+    },
+    customDetails: {
+      type: String,
+      default: "",
+    },
+    customStatus: {
+      type: String,
+      default: "",
+    },
+    advanceAmount: {
+      type: Number,
+      default: 0,
+    },
+    isAdvancePaid: {
+      type: Boolean,
+      default: false,
     },
     cancelledBy: {
       type: String,

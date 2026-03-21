@@ -1,6 +1,5 @@
 import { useState } from "react";
-import Navbar from "./components/Navbar";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import ProductPage from "./pages/ProductPage";
 import UserLogin from "./pages/UserLogin";
 import AdminLogin from "./pages/AdminLogin";
@@ -12,7 +11,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Contact from "./pages/Contact";
 import ToastHost from "./components/ToastHost";
-
+import ScrollToTop from "./components/ScrollToTop";
 import MainLayout from "./components/layout/MainLayout";
 
 function App() {
@@ -20,6 +19,7 @@ function App() {
 
   return (
     <MainLayout search={search} setSearch={setSearch}>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Home search={search} />} />
         <Route path="/product/:id" element={<ProductPage />} />

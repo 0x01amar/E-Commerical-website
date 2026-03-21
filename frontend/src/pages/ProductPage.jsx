@@ -6,12 +6,15 @@ import ReviewForm from "../components/ReviewForm";
 import ImageLightbox from "../components/ImageLightbox";
 import { showToast } from "../config/toast";
 import { Button } from "../components/ui/button";
+import Modal from "../components/ui/modal";
 import { 
   ShoppingBagIcon, 
   ArrowLeftIcon, 
   ShieldCheckIcon, 
   TruckIcon, 
-  ArrowPathIcon 
+  ArrowPathIcon,
+  WrenchScrewdriverIcon,
+  SparklesIcon
 } from "@heroicons/react/24/outline";
 
 function ProductPage() {
@@ -25,6 +28,9 @@ function ProductPage() {
   const [previewImage, setPreviewImage] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [customDetails, setCustomDetails] = useState("");
+  const [submittingCustom, setSubmittingCustom] = useState(false);
   const [ratingInfo, setRatingInfo] = useState({
     canRate: false,
     hasRated: false,
@@ -86,6 +92,39 @@ function ProductPage() {
     localStorage.setItem("cartItems", JSON.stringify(nextCart));
     showToast("Added to cart", "success");
     navigate("/cart");
+  };
+
+  const handleCustomOrderSubmit = async (e) => {
+    e.preventDefault();
+    if (!customDetails.trim()) {
+      showToast("Please provide customization details", "error");
+      return;
+    }
+
+    try {
+      setSubmittingCustom(true);
+      const { response, data } = await apiFetchJson("/orders/custom", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          productId: id,
+          customDetails,
+        }),
+      });
+
+      if (response.ok) {
+        showToast("Custom request submitted!", "success");
+        setIsCustomModalOpen(false);
+        setCustomDetails("");
+        navigate("/dashboard");
+      } else {
+        showToast(data.message || "Failed to submit request", "error");
+      }
+    } catch (err) {
+      showToast("An error occurred", "error");
+    } finally {
+      setSubmittingCustom(false);
+    }
   };
 
   if (loading) return (
@@ -190,11 +229,44 @@ function ProductPage() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="flex-1 h-16 text-lg" onClick={handleAddToCart}>
-              <ShoppingBagIcon className="w-6 h-6 mr-2" /> Add to Cart
-            </Button>
-            <Button size="lg" variant="outline" className="flex-1 h-16 text-lg" onClick={() => navigate(`/checkout/${id}?mode=buy-now`)}>
+          <div className="flex flex-col gap-3 md:gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
+              <Button 
+                size="lg" 
+                className="flex-[1.5] h-14 md:h-16 text-sm md:text-lg rounded-xl md:rounded-sm shadow-lg md:shadow-none truncate" 
+                onClick={handleAddToCart}
+              >
+                <ShoppingBagIcon className="w-5 h-5 md:w-6 md:h-6 mr-1 md:mr-2" /> Add to Cart
+              </Button>
+              
+              {/* Mobile Only Rounded Pill Customize Button */}
+              <button 
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    navigate("/login", { state: { redirectTo: `/product/${id}` } });
+                    return;
+                  }
+                  setIsCustomModalOpen(true);
+                }}
+                className="md:hidden flex-1 h-14 px-3 flex items-center justify-center gap-1.5 rounded-full bg-neutral-dark text-white active:scale-95 transition-all shadow-md shrink-0"
+              >
+                <SparklesIcon className="w-4 h-4" />
+                <span className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">Customize</span>
+              </button>
+
+              {/* Desktop Only Customize Button */}
+              <Button size="lg" variant="outline" className="hidden md:flex flex-1 h-16 text-lg rounded-sm" onClick={() => {
+                if (!isLoggedIn) {
+                  navigate("/login", { state: { redirectTo: `/product/${id}` } });
+                  return;
+                }
+                setIsCustomModalOpen(true);
+              }}>
+                <WrenchScrewdriverIcon className="w-6 h-6 mr-2" /> Customize
+              </Button>
+            </div>
+            
+            <Button size="lg" variant="secondary" className="w-full h-14 md:h-16 text-base md:text-lg rounded-xl md:rounded-sm shadow-md md:shadow-none" onClick={() => navigate(`/checkout/${id}?mode=buy-now`)}>
               Buy It Now
             </Button>
           </div>
@@ -215,6 +287,39 @@ function ProductPage() {
           </div>
         </div>
       </div>
+
+      {/* Custom Order Modal */}
+      <Modal 
+        isOpen={isCustomModalOpen} 
+        onClose={() => setIsCustomModalOpen(false)} 
+        title="Customization Request"
+      >
+        <form onSubmit={handleCustomOrderSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold uppercase tracking-widest text-neutral-dark/60">
+              What features would you like to customize?
+            </label>
+            <textarea 
+              className="w-full min-h-[150px] p-4 bg-neutral-cream border border-neutral-dark/10 rounded-sm focus:outline-none focus:ring-2 focus:ring-primary/20 font-body text-neutral-dark"
+              placeholder="E.g., Change dimensions to 40x40x20, use dark walnut finish, add extra padding..."
+              value={customDetails}
+              onChange={(e) => setCustomDetails(e.target.value)}
+              required
+            />
+          </div>
+          <p className="text-xs text-neutral-dark/40 font-body leading-relaxed">
+            Our artisans will review your request and update you on the possibility and timeline via chat or email.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+            <Button type="button" variant="outline" className="flex-1 h-12 md:h-14" onClick={() => setIsCustomModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1 h-12 md:h-14" disabled={submittingCustom}>
+              {submittingCustom ? "Submitting..." : "Submit Request"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Review Section */}
       <section className="space-y-12 pt-12 border-t border-neutral-dark/10">
@@ -273,6 +378,7 @@ function ProductPage() {
         </div>
       </section>
 
+      {/* Lightbox for previewing images */}
       <ImageLightbox 
         isOpen={!!previewImage} 
         imageSrc={previewImage} 

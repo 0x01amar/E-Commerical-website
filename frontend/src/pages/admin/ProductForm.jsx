@@ -12,6 +12,7 @@ function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }
     stock: "",
     image: "",
     images: [],
+    shippingCharge: "",
     ...initialData
   });
 
@@ -51,17 +52,21 @@ function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Product Name</label>
-          <Input name="name" value={formData.name} onChange={handleChange} required />
+          <Input name="name" value={formData.name || ""} onChange={handleChange} required />
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Price (₹)</label>
-          <Input name="price" type="number" value={formData.price} onChange={handleChange} required />
+          <Input name="price" type="number" value={formData.price ?? ""} onChange={handleChange} required />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Shipping Charge (₹)</label>
+          <Input name="shippingCharge" type="number" value={formData.shippingCharge ?? ""} onChange={handleChange} placeholder="e.g. 500" required />
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Section</label>
           <select 
             name="section" 
-            value={formData.section} 
+            value={formData.section || ""} 
             onChange={handleChange}
             className="w-full border border-neutral-dark/10 p-3 text-sm focus:outline-none focus:border-primary rounded-sm"
             required
@@ -72,7 +77,7 @@ function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Stock</label>
-          <Input name="stock" type="number" value={formData.stock} onChange={handleChange} required />
+          <Input name="stock" type="number" value={formData.stock ?? ""} onChange={handleChange} required />
         </div>
       </div>
 
@@ -80,7 +85,7 @@ function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }
         <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Description</label>
         <textarea 
           name="description" 
-          value={formData.description} 
+          value={formData.description || ""} 
           onChange={handleChange}
           className="w-full border border-neutral-dark/10 p-4 text-sm focus:outline-none focus:border-primary rounded-sm min-h-[100px] resize-none"
           required

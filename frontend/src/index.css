@@ -23,6 +23,10 @@
     @apply bg-neutral-cream text-neutral-dark font-body antialiased selection:bg-primary/20;
   }
 
+  button {
+    @apply cursor-pointer;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-bold tracking-tight;
   }
@@ -32,6 +36,13 @@
 @layer components {
   .card-hover {
     @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
@@ -45,3 +56,5 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
 }
+
+@import "./styles/mobile.css";

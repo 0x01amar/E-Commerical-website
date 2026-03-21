@@ -2,6 +2,7 @@ const express = require("express");
 const {
   createRazorpayOrder,
   verifyRazorpayPayment,
+  createCustomAdvanceRazorpayOrder,
 } = require("../controllers/paymentController");
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.get("/health", (_req, res) => {
 
 router.post("/orders", createRazorpayOrder);
 router.post("/verify", verifyRazorpayPayment);
+router.post("/custom-advance", createCustomAdvanceRazorpayOrder);
 
 module.exports = router;

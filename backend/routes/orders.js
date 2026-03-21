@@ -18,7 +18,221 @@ const ORDER_STATUSES = [
   "Out for Delivery",
   "Delivered",
   "Cancelled",
+  "Custom Request Received",
+  "Design Finalized",
+  "Advance Payment Requested",
 ];
+
+router.post("/custom", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const productId = trimString(req.body?.productId);
+    const customDetails = trimString(req.body?.customDetails);
+
+    if (!email || !productId || !customDetails) {
+      return res.status(400).json({ message: "Email, Product ID, and Custom Details are required" });
+    }
+
+    const validation = await validateCheckoutRequest({
+      email,
+      productId,
+      quantity: 1,
+      address: req.body?.address,
+      phone: req.body?.phone,
+    });
+
+    if (validation.status !== 200) {
+      return res.status(validation.status).json({ message: validation.message });
+    }
+
+    const { user, product, normalizedAddress, userPhone, requestPhone } = validation;
+    const checkoutPricingSettings = await getCheckoutPricingSettings();
+    const effectivePricingSettings = resolvePricingForProduct(product, checkoutPricingSettings);
+    const pricing = calculatePricing(product.price, 1, effectivePricingSettings);
+
+    const order = await Order.create({
+      orderCode: `CUST-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
+      userEmail: email,
+      userName: trimString(user?.name) || "Customer",
+      userPhone,
+      productId: product._id,
+      productName: trimString(product.name),
+      productImage: trimString(product.image || (Array.isArray(product.images) ? product.images[0] : "")),
+      productCategory: trimString(product.section || product.category),
+      quantity: 1,
+      unitPrice: asTwoDecimals(product.price),
+      subtotal: pricing.subtotal,
+      taxAmount: pricing.taxAmount,
+      appliedTaxRate: Number(pricing.taxRate || 0),
+      shippingCharge: pricing.shippingCharge,
+      pricingSource: pricing.pricingSource || "global",
+      totalAmount: pricing.totalAmount,
+      paymentOption: "cod", // Default for custom order request
+      paidNowAmount: 0,
+      paymentStatus: "pending",
+      address: normalizedAddress,
+      isCustom: true,
+      customDetails,
+      status: "Custom Request Received",
+      customStatus: "Request pending review",
+    });
+
+    if (user) {
+      user.address = normalizedAddress;
+      if (requestPhone && /^\d{10}$/.test(requestPhone)) {
+        user.phone = requestPhone;
+      }
+      await user.save();
+    }
+
+    await sendCustomOrderAdminEmail(order);
+
+    return res.status(201).json({
+      message: "Custom order request submitted successfully",
+      order,
+    });
+  } catch (error) {
+    console.error("Custom order error:", error);
+    return res.status(500).json({ message: "Failed to submit custom order request" });
+  }
+});
+
+const sendCustomUpdateEmail = async (order) => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return;
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const text = `Hi ${order.userName},\n\nYour custom order #${order.orderCode} has been updated.\n\nArtisan's Note: ${order.customStatus || "No specific note"}\n${order.status === "Advance Payment Requested" ? `Advance Payment Required: ₹${order.advanceAmount}\n\nPlease visit your dashboard to pay the advance.` : `Current Status: ${order.status}`}\n\nThank you for choosing us.`;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: order.userEmail,
+      subject: `Update on your Custom Order - ${order.orderCode}`,
+      text,
+    });
+  } catch (error) {
+    console.error("Failed to send custom update email:", error);
+  }
+};
+
+const sendCustomOrderAdminEmail = async (order) => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return;
+
+  const adminEmail = trimString(process.env.ADMIN_EMAIL || process.env.EMAIL_USER);
+  if (!adminEmail) return;
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const details = trimString(order.customDetails || "-");
+  const text = [
+    `New custom order request received: ${order.orderCode}`,
+    "",
+    `Customer: ${order.userName}`,
+    `Email: ${order.userEmail}`,
+    `Phone: ${order.userPhone}`,
+    `Product: ${order.productName}`,
+    `Requested customizations: ${details}`,
+    `Current status: ${order.status}`,
+  ].join("\n");
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: adminEmail,
+      subject: `New Custom Order Request - ${order.orderCode}`,
+      text,
+    });
+  } catch (error) {
+    console.error("Failed to send custom admin email:", error);
+  }
+};
+
+router.put("/:orderId/custom-update", async (req, res) => {
+  try {
+    const adminKey = trimString(req.headers["x-admin-key"] || "");
+    if (!isAdminKeyValid(adminKey)) {
+      return res.status(403).json({ message: "Admin access denied" });
+    }
+
+    const order = await Order.findById(req.params.orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (!order.isCustom) {
+      return res.status(400).json({ message: "This route is only for custom orders" });
+    }
+
+    const { customStatus, advanceAmount, status } = req.body;
+
+    if (customStatus !== undefined) {
+      order.customStatus = trimString(customStatus);
+    }
+
+    if (advanceAmount !== undefined) {
+      const parsedAdvanceAmount = Number(advanceAmount);
+      if (!Number.isFinite(parsedAdvanceAmount) || parsedAdvanceAmount < 0) {
+        return res.status(400).json({ message: "Advance amount must be a valid non-negative number" });
+      }
+      order.advanceAmount = asTwoDecimals(parsedAdvanceAmount);
+    }
+
+    if (status !== undefined) {
+      const normalizedStatus = trimString(status);
+      if (!ORDER_STATUSES.includes(normalizedStatus)) {
+        return res.status(400).json({ message: "Invalid order status" });
+      }
+      order.status = normalizedStatus;
+    }
+
+    if (order.status === "Advance Payment Requested") {
+      if (!(Number(order.advanceAmount) > 0)) {
+        return res.status(400).json({ message: "Set a valid advance amount before requesting advance payment" });
+      }
+
+      order.paymentOption = "half";
+      if (!order.isAdvancePaid) {
+        order.paymentStatus = "pending";
+        order.paidNowAmount = 0;
+      }
+    }
+
+    if (order.status === "Delivered") {
+      order.paymentStatus = "paid";
+      order.paidNowAmount = asTwoDecimals(order.totalAmount);
+    }
+
+    await order.save();
+
+    // Send email notification for custom updates
+    await sendCustomUpdateEmail(order);
+
+    return res.json({
+      message: "Custom order updated successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update custom order" });
+  }
+});
 
 const USER_CANCELLATION_REASONS = [
   { code: "ordered_by_mistake", label: "Ordered by mistake" },
@@ -75,7 +289,10 @@ const calculatePricing = (unitPrice, quantity, pricingSettings = {}) => {
 
   const subtotal = asTwoDecimals(Number(unitPrice || 0) * Number(quantity || 0));
   const taxAmount = asTwoDecimals(subtotal * taxRate);
+  
+  // Use product-specific shipping charge if provided, otherwise fallback to global
   const shippingCharge = subtotal > 0 ? asTwoDecimals(configuredShippingCharge) : 0;
+  
   const totalAmount = asTwoDecimals(subtotal + taxAmount + shippingCharge);
   const exactHalf = asTwoDecimals(totalAmount / 2);
   const pricingSource = trimString(pricingSettings.pricingSource).toLowerCase() === "product"

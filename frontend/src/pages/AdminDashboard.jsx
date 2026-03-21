@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiFetchJson, resolveApiErrorMessage } from "../config/api";
+import { apiFetchJson } from "../config/api";
 import { showToast } from "../config/toast";
 import AdminSidebar from "./admin/AdminSidebar";
 import AdminOverview from "./admin/AdminOverview";
 import AdminProducts from "./admin/AdminProducts";
 import AdminOrders from "./admin/AdminOrders";
 import AdminSettings from "./admin/AdminSettings";
+import AdminMobileBottomNav from "./admin/AdminMobileBottomNav";
 import Modal from "../components/ui/modal";
 import ProductForm from "./admin/ProductForm";
 import SectionManager from "./admin/SectionManager";
@@ -87,6 +88,49 @@ function AdminDashboard() {
       }
     } catch (err) {
       showToast("Update failed", "error");
+    }
+  };
+
+  const updateCustomOrder = async (orderId, payload) => {
+    try {
+      const { response, data } = await apiFetchJson(`/orders/${orderId}/custom-update`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
+        showToast("Custom order updated", "success");
+      } else {
+        showToast(data.message || "Update failed", "error");
+      }
+    } catch (err) {
+      showToast("An error occurred", "error");
+    }
+  };
+
+  const updateDeliveryDate = async (orderId, expectedDelivery) => {
+    try {
+      const payload = { expectedDelivery: String(expectedDelivery || "").trim() };
+      if (!payload.expectedDelivery) {
+        showToast("Expected delivery is required", "error");
+        return;
+      }
+
+      const { response, data } = await apiFetchJson(`/orders/${orderId}/delivery-date`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
+        showToast("Delivery date updated", "success");
+      } else {
+        showToast(data.message || "Update failed", "error");
+      }
+    } catch (err) {
+      showToast("An error occurred", "error");
     }
   };
 
@@ -210,10 +254,22 @@ function AdminDashboard() {
 
   return (
     <div className="flex min-h-screen bg-neutral-cream">
-      <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout} />
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <AdminSidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          onLogout={handleLogout} 
+        />
+      </div>
       
-      <main className="flex-grow ml-64 p-12 overflow-x-hidden">
-        <div className="max-w-7xl mx-auto">
+      <main className="grow w-full p-4 md:p-12 overflow-x-hidden pb-32 lg:pb-12">
+        {/* Mobile Header (Simplified) */}
+        <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-neutral-dark/5 flex items-center px-6 z-30">
+          <h1 className="font-heading font-bold text-lg">Admin Panel</h1>
+        </div>
+
+        <div className="max-w-7xl mx-auto pt-16 lg:pt-0">
           {activeTab === 'overview' && <AdminOverview products={products} orders={orders} />}
           {activeTab === 'products' && (
             <AdminProducts 
@@ -229,7 +285,8 @@ function AdminDashboard() {
             <AdminOrders 
               orders={orders} 
               onUpdateStatus={updateOrderStatus}
-              onUpdateDelivery={(id, val) => showToast("Feature in development", "info")}
+              onUpdateCustom={updateCustomOrder}
+              onUpdateDelivery={updateDeliveryDate}
             />
           )}
           {activeTab === 'settings' && (
@@ -244,6 +301,13 @@ function AdminDashboard() {
           )}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <AdminMobileBottomNav 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onLogout={handleLogout} 
+      />
 
       {/* Modals */}
       <Modal 

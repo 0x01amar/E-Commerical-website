@@ -15,7 +15,7 @@ function AdminSidebar({ activeTab, setActiveTab, onLogout }) {
   ];
 
   return (
-    <aside className="w-64 bg-neutral-dark text-white min-h-screen p-8 flex flex-col fixed left-0 top-0">
+    <aside className="w-64 bg-neutral-dark text-white min-h-screen p-8 flex flex-col">
       <div className="mb-12">
         <div className="h-8 w-auto">
           <svg className="h-full w-auto" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg">

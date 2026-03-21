@@ -85,6 +85,7 @@ const createRazorpayOrder = async (req, res) => {
 
     const pricingSettings = await getCheckoutPricingSettings();
     let totalSubtotal = 0;
+    let totalShippingCharge = 0;
     let itemsToProcess = [];
 
     if (isCartOrder) {
@@ -96,7 +97,12 @@ const createRazorpayOrder = async (req, res) => {
         if (!product) continue;
         const qty = Math.max(1, Number(item.quantity || 1));
         totalSubtotal += (product.price * qty);
-        itemsToProcess.push({ product, quantity: qty });
+        
+        // Sum individual shipping charges
+        const itemShipping = Number.isFinite(product.shippingCharge) ? product.shippingCharge : pricingSettings.shippingCharge;
+        totalShippingCharge += itemShipping;
+        
+        itemsToProcess.push({ product, quantity: qty, shippingCharge: itemShipping });
       }
     } else {
       const productId = trimString(req.body?.productId);
@@ -104,14 +110,16 @@ const createRazorpayOrder = async (req, res) => {
       const product = await Product.findById(productId);
       if (!product) return res.status(404).json({ message: "Product not found" });
       totalSubtotal = product.price * quantity;
-      itemsToProcess.push({ product, quantity });
+      
+      totalShippingCharge = Number.isFinite(product.shippingCharge) ? product.shippingCharge : pricingSettings.shippingCharge;
+      
+      itemsToProcess.push({ product, quantity, shippingCharge: totalShippingCharge });
     }
 
     if (itemsToProcess.length === 0) return res.status(400).json({ message: "No valid products to order" });
 
-    const shippingCharge = totalSubtotal > 10000 ? 0 : pricingSettings.shippingCharge;
     const taxAmount = asTwoDecimals(totalSubtotal * pricingSettings.taxRate);
-    const totalAmount = asTwoDecimals(totalSubtotal + taxAmount + shippingCharge);
+    const totalAmount = asTwoDecimals(totalSubtotal + taxAmount + totalShippingCharge);
     const payableAmountPaise = Math.round(totalAmount * 100);
 
     const razorpay = getRazorpayClient();
@@ -144,8 +152,8 @@ const createRazorpayOrder = async (req, res) => {
         subtotal: item.product.price * item.quantity,
         taxAmount: (item.product.price * item.quantity) * pricingSettings.taxRate,
         appliedTaxRate: pricingSettings.taxRate,
-        shippingCharge: shippingCharge / itemsToProcess.length, // Split shipping
-        totalAmount: (item.product.price * item.quantity) * (1 + pricingSettings.taxRate) + (shippingCharge / itemsToProcess.length),
+        shippingCharge: item.shippingCharge,
+        totalAmount: (item.product.price * item.quantity) * (1 + pricingSettings.taxRate) + item.shippingCharge,
         paymentOption,
         paidNowAmount: totalAmount, // The full payment for the session
         paymentStatus: "upi_pending_verification",
@@ -173,30 +181,111 @@ const createRazorpayOrder = async (req, res) => {
   }
 };
 
+const createCustomAdvanceRazorpayOrder = async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const orderId = trimString(req.body?.orderId);
+
+    if (!email || !orderId) {
+      return res.status(400).json({ message: "Email and order ID are required" });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (order.userEmail !== email) return res.status(403).json({ message: "Unauthorized" });
+    if (!order.isCustom || order.status !== "Advance Payment Requested") return res.status(400).json({ message: "Invalid order state for advance payment" });
+
+    const advanceAmount = asTwoDecimals(order.advanceAmount);
+    if (!(advanceAmount > 0)) {
+      return res.status(400).json({ message: "Advance amount is not set" });
+    }
+
+    const payableAmountPaise = Math.round(advanceAmount * 100);
+    const razorpay = getRazorpayClient();
+    if (!razorpay) return res.status(503).json({ message: PAYMENT_CONFIG_ERROR_MESSAGE });
+
+    const gatewayOrder = await razorpay.orders.create({
+      amount: payableAmountPaise,
+      currency: "INR",
+      receipt: `rcpt_adv_${order._id}`,
+      notes: { orderId: order._id.toString(), type: "advance" }
+    });
+
+    order.gatewayOrderId = gatewayOrder.id;
+    await order.save();
+
+    return res.json({
+      key: process.env.RAZORPAY_KEY_ID,
+      order: { id: gatewayOrder.id, amount: gatewayOrder.amount, currency: gatewayOrder.currency },
+      internalOrderId: order._id,
+      name: "Maa Sheela Iron Arts",
+      description: `Advance Payment for Custom Order ${order.orderCode}`,
+      prefill: { name: order.userName, email: order.userEmail, contact: order.userPhone },
+    });
+  } catch (error) {
+    console.error("CUSTOM ADVANCE ERROR:", error);
+    return res.status(500).json({ message: "Failed to initiate advance payment" });
+  }
+};
+
 const verifyRazorpayPayment = async (req, res) => {
   try {
-    const { email, internalOrderId, internalOrderIds, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+    const email = normalizeEmail(req.body?.email);
+    const { internalOrderId, internalOrderIds, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
     const razorpaySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!email || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      return res.status(400).json({ message: "Missing payment verification details" });
+    }
+
+    if (!razorpaySecret) {
+      return res.status(503).json({ message: PAYMENT_CONFIG_ERROR_MESSAGE });
+    }
 
     const generatedSignature = crypto.createHmac("sha256", razorpaySecret)
       .update(`${razorpayOrderId}|${razorpayPaymentId}`).digest("hex");
 
     if (generatedSignature !== razorpaySignature) return res.status(400).json({ message: "Invalid signature" });
 
-    // Update all related orders
+    // Update related orders
     const idsToUpdate = Array.isArray(internalOrderIds) ? internalOrderIds : [internalOrderId];
+    if (!idsToUpdate[0]) {
+      return res.status(400).json({ message: "Internal order ID is required" });
+    }
+    
+    const sampleOrder = await Order.findById(idsToUpdate[0]);
+    if (!sampleOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const isAdvance = sampleOrder.isCustom
+      && sampleOrder.status === "Advance Payment Requested"
+      && !sampleOrder.isAdvancePaid;
+
+    const updateData = { 
+      gatewayPaymentId: razorpayPaymentId, 
+      gatewaySignature: razorpaySignature,
+      paymentPaidAt: new Date()
+    };
+
+    if (isAdvance) {
+      const effectiveAdvanceAmount = asTwoDecimals(sampleOrder.advanceAmount);
+      const effectiveTotalAmount = asTwoDecimals(sampleOrder.totalAmount);
+
+      updateData.isAdvancePaid = true;
+      updateData.paymentStatus = effectiveAdvanceAmount >= effectiveTotalAmount ? "paid" : "partial";
+      updateData.status = "Confirmed";
+      updateData.paidNowAmount = Math.min(effectiveAdvanceAmount, effectiveTotalAmount);
+    } else {
+      updateData.paymentStatus = "paid";
+    }
+
     await Order.updateMany(
       { _id: { $in: idsToUpdate }, userEmail: email },
-      { 
-        gatewayPaymentId: razorpayPaymentId, 
-        gatewaySignature: razorpaySignature,
-        paymentStatus: "paid",
-        paymentPaidAt: new Date()
-      }
+      updateData
     );
 
     const firstOrder = await Order.findById(idsToUpdate[0]);
-
     return res.json({ message: "Payment verified", verified: true, order: firstOrder });
   } catch (error) {
     console.error("VERIFY ERROR:", error);
@@ -210,4 +299,4 @@ const buildPaymentAppLabel = (payment = {}) => {
   return method.toUpperCase() || "Online";
 };
 
-module.exports = { createRazorpayOrder, verifyRazorpayPayment };
+module.exports = { createRazorpayOrder, verifyRazorpayPayment, createCustomAdvanceRazorpayOrder };
