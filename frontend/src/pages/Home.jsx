@@ -21,6 +21,7 @@ function Home({ search }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [heroImageUrl, setHeroImageUrl] = useState(DEFAULT_HERO_IMAGE);
+  const [siteContent, setSiteContent] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const isAdmin = localStorage.getItem("role") === "admin";
   const hasActiveSearch = Boolean(search?.trim());
@@ -29,10 +30,11 @@ function Home({ search }) {
     const loadHomeData = async () => {
       try {
         setLoading(true);
-        const [productsRes, sectionsRes, heroRes] = await Promise.all([
+        const [productsRes, sectionsRes, heroRes, contentRes] = await Promise.all([
           apiFetchJson("/products"),
           apiFetchJson("/products/sections"),
-          apiFetchJson("/settings/hero-image")
+          apiFetchJson("/settings/hero-image"),
+          apiFetchJson("/site-content")
         ]);
 
         if (productsRes.response.ok) setProducts(productsRes.data || []);
@@ -40,6 +42,10 @@ function Home({ search }) {
         
         if (heroRes.response.ok && heroRes.data?.heroImageUrl) {
           setHeroImageUrl(heroRes.data.heroImageUrl);
+        }
+
+        if (contentRes.response.ok) {
+          setSiteContent(contentRes.data);
         }
       } catch (err) {
         setError(resolveApiErrorMessage(err, "Failed to load store data"));
@@ -70,6 +76,9 @@ function Home({ search }) {
     return Object.entries(groups).map(([name, items]) => ({ name, items }));
   }, [filteredProducts]);
 
+  const shopName = siteContent?.shopName || "Maa Sheela Iron Arts";
+  const tagline = siteContent?.tagline || "Elevate your home with our handcrafted collection of premium furniture. Where traditional craftsmanship meets modern elegance.";
+
   return (
     <div className={`${hasActiveSearch ? "pt-24 space-y-12" : "space-y-12 md:space-y-24"} pb-20 page-transition`}>
       {/* Hero Section */}
@@ -90,10 +99,10 @@ function Home({ search }) {
             <div className="space-y-4 max-w-2xl animate-in fade-in slide-in-from-left duration-1000">
               <h2 className="text-secondary font-bold tracking-[0.2em] uppercase text-xs md:text-sm">Crafted for Excellence</h2>
               <h1 className="text-4xl md:text-8xl font-heading font-bold leading-[1.1]">
-                Maa Sheela <br /> <span className="text-primary-foreground">Iron Arts.</span>
+                {shopName.split(' ').slice(0, -1).join(' ')} <br /> <span className="text-primary-foreground">{shopName.split(' ').slice(-1)}</span>
               </h1>
               <p className="text-base md:text-lg text-white/80 max-w-lg font-body leading-relaxed">
-                Elevate your home with our handcrafted collection of premium furniture. Where traditional craftsmanship meets modern elegance.
+                {tagline}
               </p>
             </div>
 

@@ -21,6 +21,7 @@ function Navbar({ search, setSearch }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchCatalog, setSearchCatalog] = useState([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [siteContent, setSiteContent] = useState(null);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -29,15 +30,19 @@ function Navbar({ search, setSearch }) {
   }, []);
 
   useEffect(() => {
-    const loadCatalog = async () => {
+    const loadData = async () => {
       try {
-        const { response, data } = await apiFetchJson("/products");
-        if (response.ok) setSearchCatalog(Array.isArray(data) ? data : []);
+        const [prodRes, contentRes] = await Promise.all([
+          apiFetchJson("/products"),
+          apiFetchJson("/site-content")
+        ]);
+        if (prodRes.response.ok) setSearchCatalog(Array.isArray(prodRes.data) ? prodRes.data : []);
+        if (contentRes.response.ok) setSiteContent(contentRes.data);
       } catch (err) {
-        console.error("Failed to load catalog", err);
+        console.error("Failed to load navbar data", err);
       }
     };
-    loadCatalog();
+    loadData();
   }, []);
 
   const isHomePage = location.pathname === "/";
@@ -64,6 +69,10 @@ function Navbar({ search, setSearch }) {
       .map(p => ({ id: p._id, label: p.name }));
   }, [search, searchCatalog]);
 
+  const shopName = siteContent?.shopName || "Maa Sheela Iron Arts";
+  const shopNameFirst = shopName.split(' ').slice(0, 2).join(' ');
+  const shopNameRest = shopName.split(' ').slice(2).join(' ');
+
   return (
     <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${
       isScrolled || isSearchOpen || isMobileMenuOpen
@@ -73,13 +82,15 @@ function Navbar({ search, setSearch }) {
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className={`flex items-center transition-colors duration-500 ${textColorClass}`}>
-          <div className="h-10 w-auto">
-            <svg className="h-full w-auto" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <div className="h-10 w-auto flex items-center gap-3">
+            <svg className="h-full w-auto" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
               <polygon points="40,10 75,30 75,70 40,90 5,70 5,30" fill={isLightMode ? "#FFFFFF" : "#4A5D4E"} />
               <path d="M20 65 V35 L40 55 L60 35 V65" stroke={isLightMode ? "#4A5D4E" : "#FFFFFF"} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-              <text x="95" y="55" fontFamily="Playfair Display, serif" fontWeight="bold" fontSize="36" fill="currentColor">Maa Sheela</text>
-              <text x="95" y="82" fontFamily="Inter, sans-serif" fontWeight="bold" fontSize="14" fill="currentColor" opacity="0.6" letterSpacing="6">IRON ARTS</text>
             </svg>
+            <div className="flex flex-col justify-center">
+              <span className="font-heading font-bold text-lg md:text-xl leading-none uppercase tracking-tight">{shopNameFirst}</span>
+              {shopNameRest && <span className="font-body font-bold text-[8px] md:text-[10px] leading-none uppercase tracking-[0.3em] opacity-60 mt-1">{shopNameRest}</span>}
+            </div>
           </div>
         </Link>
 

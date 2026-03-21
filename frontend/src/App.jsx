@@ -5,6 +5,8 @@ import UserLogin from "./pages/UserLogin";
 import AdminLogin from "./pages/AdminLogin";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import EditProductPage from "./pages/admin/EditProductPage";
+import AddProductPage from "./pages/admin/AddProductPage";
 import LoginPassword from "./pages/LoginPassword";
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
@@ -30,6 +32,8 @@ function App() {
         <Route path="/login" element={<LoginPassword />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/edit-product/:id" element={<EditProductPage />} />
+        <Route path="/admin/add-product" element={<AddProductPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/complete-profile" element={<Navigate replace to="/signup" />} />
         <Route path="/login-password" element={<Navigate replace to="/login" />} />

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { 
   PhoneIcon, 
   EnvelopeIcon, 
@@ -7,8 +8,27 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
+import { apiFetchJson } from "../config/api";
 
 function Contact() {
+  const [siteContent, setSiteContent] = useState(null);
+
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        const { response, data } = await apiFetchJson("/site-content");
+        if (response.ok) setSiteContent(data);
+      } catch (err) {
+        console.error("Failed to load contact content", err);
+      }
+    };
+    loadContent();
+  }, []);
+
+  const contactEmail = siteContent?.email || "studio@maasheela.com";
+  const contactPhone = siteContent?.contactNumber || "+91 98765 43210";
+  const contactAddress = siteContent?.address || "Iron Art Street, Jodhpur, Rajasthan, India 342001";
+
   return (
     <div className="max-w-7xl mx-auto px-6 space-y-24 py-12 pt-24">
       {/* Header */}
@@ -67,9 +87,9 @@ function Contact() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
-              { icon: MapPinIcon, title: "Our Location", content: "Iron Art Street, Jodhpur,\nRajasthan, India 342001" },
-              { icon: PhoneIcon, title: "Phone", content: "+91 98765 43210\n+91 12345 67890" },
-              { icon: EnvelopeIcon, title: "Email", content: "studio@maasheela.com\nsupport@maasheela.com" },
+              { icon: MapPinIcon, title: "Our Location", content: contactAddress },
+              { icon: PhoneIcon, title: "Phone", content: contactPhone },
+              { icon: EnvelopeIcon, title: "Email", content: contactEmail },
               { icon: ClockIcon, title: "Studio Hours", content: "Mon - Sat: 10AM - 7PM\nSun: By Appointment" }
             ].map((item, i) => (
               <Card key={i} className="p-8 border-none bg-neutral-cream space-y-4">
