@@ -5,7 +5,7 @@ const multer = require("multer");
 const Product = require("../models/Product");
 const Section = require("../models/Section");
 const Order = require("../models/Order");
-const { deleteGridFSFileByPath, uploadBufferToGridFS } = require("../utils/gridfs");
+const { deleteGridFSFileByPath, uploadBufferToGridFS, uploadBase64ToGridFS } = require("../utils/gridfs");
 
 
 /*
@@ -519,12 +519,25 @@ router.post("/", requireAdminKey, upload.fields([
       return res.status(400).json({ message: "Product name is required" });
     }
 
-    const requestedImages = uniqueImageList(asArray(req.body?.images));
+    const requestedImages = uniqueImageList([
+      ...asArray(req.body?.images),
+      ...(req.body?.image ? [req.body.image] : [])
+    ]);
+
+    // Handle base64 images from body
+    const base64GridFSPaths = await Promise.all(
+      requestedImages
+        .filter(img => img.startsWith("data:image/"))
+        .map(img => uploadBase64ToGridFS(img))
+    );
+
+    const nonBase64Images = requestedImages.filter(img => !img.startsWith("data:image/"));
+
     uploadedImages = await uploadedFilesToImagePaths(req.files);
-    const images = uniqueImageList([...requestedImages, ...uploadedImages]);
+    const images = uniqueImageList([...nonBase64Images, ...base64GridFSPaths, ...uploadedImages]);
     const image = resolveMainImage({
       images,
-      mainImage: req.body?.mainImage,
+      mainImage: req.body?.mainImage || req.body?.image,
       mainImageIndex: req.body?.mainImageIndex,
     });
 
@@ -871,13 +884,17 @@ const updateProductHandler = async (req, res) => {
     const hasImageListUpdate = req.body.existingImages !== undefined
       || req.body.images !== undefined
       || req.body.clearImages !== undefined
-      || req.body.removeImage !== undefined;
+      || req.body.removeImage !== undefined
+      || req.body.image !== undefined;
 
     let nextImages = hasImageListUpdate
       ? uniqueImageList(
         isTruthy(req.body.clearImages)
           ? []
-          : asArray(req.body.existingImages !== undefined ? req.body.existingImages : req.body.images)
+          : [
+              ...asArray(req.body.existingImages !== undefined ? req.body.existingImages : req.body.images),
+              ...(req.body.image ? [req.body.image] : [])
+            ]
       )
       : baseImages;
 
@@ -886,16 +903,23 @@ const updateProductHandler = async (req, res) => {
       nextImages = nextImages.filter((imagePath) => !imagesToRemove.includes(imagePath));
     }
 
+    // Handle base64 images from body
+    const base64GridFSPaths = await Promise.all(
+      nextImages
+        .filter(img => img.startsWith("data:image/"))
+        .map(img => uploadBase64ToGridFS(img))
+    );
+
+    const nonBase64Images = nextImages.filter(img => !img.startsWith("data:image/"));
+
     uploadedImages = await uploadedFilesToImagePaths(req.files);
-    if (uploadedImages.length) {
-      nextImages = uniqueImageList([...nextImages, ...uploadedImages]);
-    }
+    nextImages = uniqueImageList([...nonBase64Images, ...base64GridFSPaths, ...uploadedImages]);
 
     const removedImages = baseImages.filter((imagePath) => !nextImages.includes(imagePath));
 
     const mainImage = resolveMainImage({
       images: nextImages,
-      mainImage: req.body.mainImage !== undefined ? req.body.mainImage : existingProduct.image,
+      mainImage: req.body.mainImage !== undefined ? req.body.mainImage : (req.body.image || existingProduct.image),
       mainImageIndex: req.body.mainImageIndex,
     });
 

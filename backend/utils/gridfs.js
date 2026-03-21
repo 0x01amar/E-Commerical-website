@@ -51,6 +51,31 @@ const uploadBufferToGridFS = ({ buffer, filename, contentType }) => {
   });
 };
 
+const uploadBase64ToGridFS = async (base64String, filename) => {
+  if (!base64String || !/^data:image\/\w+;base64,/.test(base64String)) {
+    return base64String;
+  }
+
+  try {
+    const matches = base64String.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!matches) return base64String;
+
+    const contentType = matches[1];
+    const buffer = Buffer.from(matches[2], "base64");
+    const extension = contentType.split("/")[1] || "jpg";
+    const safeFilename = filename || `upload-${Date.now()}.${extension}`;
+
+    return await uploadBufferToGridFS({
+      buffer,
+      filename: safeFilename,
+      contentType,
+    });
+  } catch (error) {
+    console.error("Failed to upload base64 to GridFS:", error);
+    return base64String;
+  }
+};
+
 const deleteGridFSFileByPath = async (value = "") => {
   if (!bucket) {
     return false;
@@ -80,4 +105,5 @@ module.exports = {
   getGridFSBucket,
   setGridFSBucket,
   uploadBufferToGridFS,
+  uploadBase64ToGridFS,
 };
