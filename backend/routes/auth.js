@@ -9,7 +9,7 @@ const passwordPolicyRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 
 // -------- EMAIL TRANSPORTER --------
-// Using Port 465 (SSL) which is generally more stable on cloud platforms like Render
+// Using Port 465 (SSL) and forcing IPv4 (family: 4) to fix ENETUNREACH errors on Render
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -21,7 +21,8 @@ const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false
   },
-  connectionTimeout: 20000, // 20 seconds
+  family: 4, // Force IPv4 to bypass Render's IPv6 routing issues
+  connectionTimeout: 20000, 
 });
 
 // Verify connection configuration on startup
