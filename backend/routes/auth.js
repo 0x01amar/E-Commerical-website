@@ -9,39 +9,36 @@ const passwordPolicyRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 
 // -------- EMAIL TRANSPORTER --------
-// Updated to use Port 587 (STARTTLS) which is often more reliable than 465 in many environments
+// Using Port 465 (SSL) which is generally more stable on cloud platforms like Render
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // true for 465, false for other ports
+  port: 465,
+  secure: true, 
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: (process.env.EMAIL_USER || "").trim(),
+    pass: (process.env.EMAIL_PASS || "").trim(),
   },
   tls: {
-    // Do not fail on invalid certificates (useful for some network configurations)
     rejectUnauthorized: false
   },
-  connectionTimeout: 15000, // 15 seconds
-  greetingTimeout: 15000,
+  connectionTimeout: 20000, // 20 seconds
 });
 
 // Verify connection configuration on startup
-if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+const emailUser = (process.env.EMAIL_USER || "").trim();
+const emailPass = (process.env.EMAIL_PASS || "").trim();
+
+if (emailUser && emailPass) {
   transporter.verify(function (error, success) {
     if (error) {
       console.error(" [AUTH] !!! TRANSPORTER CONNECTION ERROR !!!");
-      console.error(" [AUTH] Error Message:", error.message);
-      console.error(" [AUTH] Error Code:", error.code);
-      if (error.message.includes("Invalid login") || error.message.includes("auth")) {
-        console.error(" [AUTH] TIP: Ensure you are using a 16-character 'App Password' if using Gmail with 2FA.");
-      }
+      console.error(" [AUTH] Error Detail:", error.message);
     } else {
-      console.log(" [AUTH] Email server is ready to deliver OTPs (Connected to smtp.gmail.com:587)");
+      console.log(` [AUTH] Email server ready (${emailUser})`);
     }
   });
 } else {
-  console.warn(" [AUTH] WARNING: EMAIL_USER or EMAIL_PASS not set. OTP emails will fail.");
+  console.warn(" [AUTH] WARNING: Email credentials missing in environment variables.");
 }
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
@@ -194,67 +191,49 @@ router.post("/signup/request-otp", async (req, res) => {
 
     await user.save();
 
-    // Attempt to send email but don't crash if it fails
-    let emailSent = false;
-    const emailUser = process.env.EMAIL_USER;
-    const emailPass = process.env.EMAIL_PASS;
+    const emailUser = (process.env.EMAIL_USER || "").trim();
+    const emailPass = (process.env.EMAIL_PASS || "").trim();
 
-    try {
-      if (emailUser && emailPass) {
-        console.log(` [AUTH] Sending OTP to ${email}...`);
-        const mailOptions = {
-          from: `"Maa Sheela Iron Arts" <${emailUser}>`,
-          to: email,
-          subject: `${otp} is your verification code`,
-          text: `Hi ${name},\n\nYour OTP for signup is: ${otp}\nIt will expire in 5 minutes.\n\nIf you did not request this, please ignore this email.`,
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 8px;">
-              <h2 style="color: #1A1A1A; font-size: 24px; border-bottom: 2px solid #4A5D4E; padding-bottom: 10px;">Verification Code</h2>
-              <p style="color: #4A4A4A; font-size: 16px; line-height: 1.6;">Hi ${name},</p>
-              <p style="color: #4A4A4A; font-size: 16px; line-height: 1.6;">Thank you for joining <strong>Maa Sheela Iron Arts</strong>. Use the following code to verify your account:</p>
-              <div style="background-color: #FDFCFB; border: 1px dashed #4A5D4E; padding: 20px; text-align: center; margin: 30px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4A5D4E;">${otp}</span>
-              </div>
-              <p style="color: #999; font-size: 12px;">This code will expire in 5 minutes. If you did not request this, please ignore this email.</p>
-              <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
-              <p style="text-align: center; color: #4A5D4E; font-weight: bold;">Maa Sheela Iron Arts</p>
+    if (emailUser && emailPass) {
+      // Send email in background to prevent request timeout on Vercel/Render
+      const mailOptions = {
+        from: `"Maa Sheela Iron Arts" <${emailUser}>`,
+        to: email,
+        subject: `${otp} is your verification code`,
+        text: `Hi ${name},\n\nYour OTP for signup is: ${otp}\nIt will expire in 5 minutes.\n\nIf you did not request this, please ignore this email.`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 8px;">
+            <h2 style="color: #1A1A1A; font-size: 24px; border-bottom: 2px solid #4A5D4E; padding-bottom: 10px;">Verification Code</h2>
+            <p style="color: #4A4A4A; font-size: 16px; line-height: 1.6;">Hi ${name},</p>
+            <p style="color: #4A4A4A; font-size: 16px; line-height: 1.6;">Thank you for joining <strong>Maa Sheela Iron Arts</strong>. Use the following code to verify your account:</p>
+            <div style="background-color: #FDFCFB; border: 1px dashed #4A5D4E; padding: 20px; text-align: center; margin: 30px 0;">
+              <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4A5D4E;">${otp}</span>
             </div>
-          `
-        };
-        const info = await transporter.sendMail(mailOptions);
-        console.log(" [AUTH] MAIL SENT SUCCESSFULLY. MessageId:", info.messageId);
-        emailSent = true;
-      } else {
-        console.warn(" [AUTH] CRITICAL: EMAIL_USER or EMAIL_PASS is missing in .env file.");
-      }
-    } catch (mailError) {
-      console.error(" [AUTH] MAIL SENDING FAILED!");
-      console.error(" [AUTH] Detail:", mailError.message);
-      if (mailError.message.includes("Invalid login")) {
-        console.error(" [AUTH] TIP: If using Gmail, ensure you are using a 16-character 'App Password', not your regular password.");
-      }
+            <p style="color: #999; font-size: 12px;">This code will expire in 5 minutes. If you did not request this, please ignore this email.</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
+            <p style="text-align: center; color: #4A5D4E; font-weight: bold;">Maa Sheela Iron Arts</p>
+          </div>
+        `
+      };
+
+      transporter.sendMail(mailOptions)
+        .then(info => console.log(` [AUTH] Mail sent to ${email}: ${info.messageId}`))
+        .catch(err => console.error(` [AUTH] Mail failed for ${email}:`, err.message));
+    } else {
+      console.warn(" [AUTH] Skipping email: Credentials not set.");
     }
 
-    if (emailSent) {
-      return res.json({
-        message: "OTP sent to your email. Please check your inbox (and spam folder).",
-      });
-    } else {
-      return res.json({
-        message: "OTP generation successful, but email delivery failed. Please check the server console for errors.",
-        tip: "Server-side configuration error. Admin needs to check environment variables.",
-        otp: process.env.NODE_ENV === "development" ? otp : undefined
-      });
-    }
+    // Respond immediately so Vercel doesn't timeout
+    return res.json({
+      message: "OTP generation successful. Please check your email inbox and spam folder.",
+      otp: process.env.NODE_ENV === "development" ? otp : undefined
+    });
 
   } catch (err) {
-
     console.error("SIGNUP OTP ERROR:", err);
-
     res.status(500).json({
       message: "Failed to process signup request: " + (err.message || "Unknown error"),
     });
-
   }
 
 });
@@ -445,7 +424,7 @@ router.get("/profile/:email", async (req, res) => {
     const user = await User.findOne({ email, isVerified: true });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "User find failed" });
     }
 
     res.json(safeUser(user));
