@@ -100,9 +100,9 @@ function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }
         </div>
       </div>
 
-      <div className="flex gap-4 pt-6 border-t border-neutral-dark/5">
-        <Button variant="ghost" type="button" className="flex-1" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" className="flex-2 h-14" disabled={isSubmitting}>
+      <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 pt-6 border-t border-neutral-dark/5">
+        <Button variant="ghost" type="button" className="w-full sm:flex-1 min-h-12 md:h-14 whitespace-normal py-3" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" className="w-full sm:flex-[2] min-h-14 h-auto whitespace-normal py-3" disabled={isSubmitting}>
           {isSubmitting ? "Saving..." : initialData ? "Update Product" : "Create Product"}
         </Button>
       </div>

@@ -17,12 +17,13 @@ function MainLayout({ children, search, setSearch }) {
     "/admin-login",
   ];
 
-  const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname);
-  const isAdminDashboard = location.pathname === "/admin";
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname) || isAdminRoute;
+  const isAuthPage = ["/signup", "/login", "/admin-login"].includes(location.pathname);
 
   return (
     <div className="flex flex-col min-h-screen">
-      {!shouldHideNavbar && !isAdminDashboard && (
+      {!shouldHideNavbar && (
         <>
           <div className="hidden md:block">
             <Navbar search={search} setSearch={setSearch} />
@@ -38,11 +39,11 @@ function MainLayout({ children, search, setSearch }) {
         </>
       )}
       
-      <main className={`flex-grow min-h-screen ${shouldHideNavbar || isAdminDashboard ? "" : "pt-16 md:pt-0 pb-24 md:pb-12"}`}>
+      <main className={`flex-grow min-h-screen ${shouldHideNavbar ? "" : "pt-16 md:pt-0 pb-24 md:pb-12"}`}>
         {children}
       </main>
 
-      {!shouldHideNavbar && !isAdminDashboard && <Footer />}
+      {!shouldHideNavbar && <Footer />}
     </div>
   );
 }
