@@ -3,7 +3,9 @@ const router = express.Router();
 const User = require("../models/User");
 const nodemailer = require("nodemailer");
 const bcrypt = require("bcryptjs");
+const { OAuth2Client } = require('google-auth-library');
 
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
 const passwordPolicyRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -135,6 +137,91 @@ const safeUser = (user) => {
     updatedAt: user.updatedAt,
   };
 };
+
+// -------- GOOGLE LOGIN --------
+router.post("/google-login", async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ message: "Google token is required" });
+    }
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+
+    let user = await User.findOne({ email: normalizeEmail(email) });
+
+    if (!user) {
+      // Create new user if not exists
+      user = new User({
+        email: normalizeEmail(email),
+        name: name,
+        photo: picture,
+        isVerified: true, // Google emails are already verified
+        role: "user"
+      });
+      await user.save();
+    } else if (!user.isVerified) {
+      user.isVerified = true;
+      await user.save();
+    }
+
+    res.json({
+      message: "Login successful",
+      user: safeUser(user),
+      role: user.role,
+      isAdmin: user.role === "admin"
+    });
+
+  } catch (error) {
+    console.error("GOOGLE AUTH ERROR:", error);
+    res.status(500).json({ message: "Google authentication failed" });
+  }
+});
+
+// -------- ADMIN LOGIN --------
+router.post("/admin-login", async (req, res) => {
+  try {
+    const { adminId, password } = req.body;
+    
+    const envAdminId = process.env.ADMIN_ID || "admin@maasheela.com";
+    const envAdminPass = process.env.ADMIN_PASSWORD || "Admin@123";
+    const envAdminKey = process.env.ADMIN_KEY || "MAA_SHEELA_SECRET_KEY";
+
+    if (adminId === envAdminId && password === envAdminPass) {
+      // Find or create admin user record
+      let adminUser = await User.findOne({ email: normalizeEmail(adminId) });
+      if (!adminUser) {
+        adminUser = new User({
+          email: normalizeEmail(adminId),
+          name: "Administrator",
+          role: "admin",
+          isVerified: true
+        });
+        await adminUser.save();
+      }
+
+      return res.json({
+        message: "Admin login successful",
+        user: safeUser(adminUser),
+        role: "admin",
+        isAdmin: true,
+        adminKey: envAdminKey
+      });
+    }
+
+    res.status(401).json({ message: "Invalid Admin ID or Password" });
+
+  } catch (error) {
+    console.error("ADMIN LOGIN ERROR:", error);
+    res.status(500).json({ message: "Server error during admin login" });
+  }
+});
 
 // -------- SIGNUP: REQUEST OTP --------
 router.post("/signup/request-otp", async (req, res) => {

@@ -4,12 +4,12 @@ import { apiFetchJson, resolveApiErrorMessage } from "../config/api";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
-import { ArrowLeftIcon, ShieldCheckIcon, LockClosedIcon, KeyIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, LockClosedIcon, UserIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { showToast } from "../config/toast";
 
 function AdminLogin() {
-  const [email, setEmail] = useState("");
+  const [adminId, setAdminId] = useState("");
   const [password, setPassword] = useState("");
-  const [adminKey, setAdminKey] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,35 +19,29 @@ function AdminLogin() {
   const handleLogin = async (event) => {
     event.preventDefault();
     try {
-      if (!email.trim() || !password || !adminKey.trim()) {
-        setError("Please provide your admin email, password, and master key.");
-        return;
-      }
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        setError("Please enter a valid administrative email address.");
+      if (!adminId.trim() || !password) {
+        setError("Please provide your Admin ID and Password.");
         return;
       }
 
       setLoading(true);
       setError("");
 
-      const { response, data } = await apiFetchJson("/auth/login", {
+      const { response, data } = await apiFetchJson("/auth/admin-login", {
         method: "POST",
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
+          adminId: adminId.trim(),
           password,
-          adminKey: adminKey.trim(),
-          asAdmin: true,
         }),
       });
 
-      if (!response.ok) throw new Error(data?.message || "Invalid credentials");
+      if (!response.ok) throw new Error(data?.message || "Authentication failed");
 
-      localStorage.setItem("email", data?.user?.email || email.trim().toLowerCase());
-      localStorage.setItem("role", data?.role || "admin");
-      localStorage.setItem("adminKey", adminKey.trim());
+      localStorage.setItem("email", data?.user?.email);
+      localStorage.setItem("role", "admin");
+      localStorage.setItem("adminKey", data?.adminKey);
+      
+      showToast("Access Granted. Welcome, Administrator.", "success");
       navigate("/admin");
     } catch (err) {
       setError(resolveApiErrorMessage(err, "Invalid credentials"));
@@ -58,7 +52,6 @@ function AdminLogin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-cream px-6 py-20 relative overflow-hidden">
-      {/* Brand dynamic background */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-primary/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
       <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/10 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl" />
 
@@ -94,10 +87,10 @@ function AdminLogin() {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Email</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Admin ID</label>
                 <div className="relative">
-                  <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-dark/20" />
-                  <Input className="pl-12" placeholder="admin@maasheela.com" value={email} onChange={e => setEmail(e.target.value)} />
+                  <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-dark/20" />
+                  <Input className="pl-12" placeholder="admin@maasheela.com" value={adminId} onChange={e => setAdminId(e.target.value)} />
                 </div>
               </div>
               
@@ -122,16 +115,8 @@ function AdminLogin() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Master Key</label>
-                <div className="relative">
-                  <KeyIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-dark/20" />
-                  <Input className="pl-12" type="password" placeholder="Admin PIN" value={adminKey} onChange={e => setAdminKey(e.target.value)} />
-                </div>
-              </div>
-
               <Button className="w-full h-14 text-lg mt-4 shadow-xl shadow-primary/10" type="submit" disabled={loading}>
-                {loading ? "Authenticating..." : "Enter Dashboard"}
+                {loading ? "Verifying..." : "Enter Vault"}
               </Button>
             </form>
           </CardContent>
