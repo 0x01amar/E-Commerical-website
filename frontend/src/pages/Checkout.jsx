@@ -485,19 +485,11 @@ function Checkout() {
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <Button variant="outline" className="flex-1 h-12 md:h-14 order-2 sm:order-1 rounded-xl md:rounded-sm" onClick={() => setStep(1)}>Back</Button>
                 <Button className="flex-[2] h-14 md:h-14 order-1 sm:order-2 rounded-xl md:rounded-sm shadow-xl md:shadow-none" onClick={() => {
-                  const { line1, villageTown, district, state, pincode } = addressForm;
+                  const { line1, pincode } = addressForm;
                   
-                  // Relaxed validation for saved addresses
-                  if (useSavedAddress) {
-                    if (!line1 || !pincode || !contactPhone) {
-                      showToast("Your saved address is incomplete. Please use 'New Address' to provide core details.", "warning");
-                      return;
-                    }
-                  } else {
-                    if (!line1 || !villageTown || !district || !state || !pincode || !contactPhone) {
-                      showToast("Please complete all delivery details", "warning");
-                      return;
-                    }
+                  if (!line1 || !pincode || !contactPhone) {
+                    showToast("Please provide at least Address Line 1, Pincode, and Contact Phone", "warning");
+                    return;
                   }
 
                   if (pincode.length !== 6) {

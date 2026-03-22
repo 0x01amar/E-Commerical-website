@@ -695,13 +695,20 @@ router.post("/", async (req, res) => {
         address: normalizedAddress,
         status: "Order Placed",
       });
-      
-      const emailResult = await sendOrderEmails(order);
-      order.userEmailNotificationSent = emailResult.userSent;
-      order.adminEmailNotificationSent = emailResult.adminSent;
-      await order.save();
       createdOrders.push(order);
     }
+
+    // Send emails in background - don't await to avoid slowing down the user response
+    Promise.allSettled(createdOrders.map(o => sendOrderEmails(o))).then(results => {
+      createdOrders.forEach((o, index) => {
+        const res = results[index];
+        if (res.status === "fulfilled") {
+          o.userEmailNotificationSent = res.value.userSent;
+          o.adminEmailNotificationSent = res.value.adminSent;
+          o.save().catch(e => console.error("Error updating order email status:", e));
+        }
+      });
+    });
 
     return res.status(201).json({
       message: "Order placed successfully",
