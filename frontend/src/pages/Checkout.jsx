@@ -539,7 +539,7 @@ function Checkout() {
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <Button variant="outline" className="flex-1 h-12 md:h-14 order-2 sm:order-1 rounded-xl md:rounded-sm" onClick={() => setStep(2)}>Back</Button>
                 <Button className="flex-[2] h-14 md:h-14 order-1 sm:order-2 rounded-xl md:rounded-sm shadow-xl md:shadow-none" onClick={handlePlaceOrder} disabled={processing}>
-                  {processing ? "Processing..." : `Pay Now - ₹${total.toLocaleString()}`}
+                  {processing ? "Processing..." : paymentOption === 'cod' ? `Confirm Order - ₹${total.toLocaleString()}` : `Pay Now - ₹${total.toLocaleString()}`}
                 </Button>
               </div>
             </div>

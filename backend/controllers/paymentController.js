@@ -175,6 +175,15 @@ const createRazorpayOrder = async (req, res) => {
     const normalizedAddress = addressToObject(req.body?.address || user.address || {});
     const userPhone = trimString(req.body?.phone) || trimString(user.phone);
 
+    // Save address to user profile if it's missing or incomplete
+    if (user && (!user.address || !user.address.line1)) {
+      user.address = normalizedAddress;
+      if (req.body?.phone && /^\d{10}$/.test(req.body.phone)) {
+        user.phone = req.body.phone;
+      }
+      await user.save();
+    }
+
     // Create Order records
     const orders = [];
     try {

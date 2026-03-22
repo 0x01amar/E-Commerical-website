@@ -378,7 +378,7 @@ const addressToObject = (address = {}) => {
 };
 
 const validateAddress = (address = {}) => {
-  const requiredFields = ["line1", "villageTown", "wardNo", "district", "state", "pincode"];
+  const requiredFields = ["line1", "pincode"];
 
   const missingField = requiredFields.find((field) => !trimString(address[field]));
 
@@ -392,6 +392,7 @@ const validateAddress = (address = {}) => {
 
   return "";
 };
+
 
 const formatEmailText = ({ order, paymentLabel, paidNowAmount, remainingAmount }) => {
   const isOnlinePayment = order.paymentGateway === "razorpay" || ["upi", "half"].includes(order.paymentOption);
@@ -617,8 +618,7 @@ const createOrderFromData = async ({
 router.post("/", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
-    const productId = trimString(req.body?.productId);
-    const quantity = Number(req.body?.quantity || 1);
+    const isCartOrder = Boolean(req.body?.isCartOrder);
     const paymentOption = trimString(req.body?.paymentOption || "cod").toLowerCase();
 
     if (paymentOption !== "cod") {
@@ -627,52 +627,89 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const validation = await validateCheckoutRequest({
-      email,
-      productId,
-      quantity,
-      address: req.body?.address,
-      phone: req.body?.phone,
-    });
+    const user = await User.findOne({ email, isVerified: true });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (validation.status !== 200) {
-      return res.status(validation.status).json({ message: validation.message });
+    const globalPricingSettings = await getCheckoutPricingSettings();
+    const normalizedAddress = addressToObject(req.body?.address || user.address || {});
+    const addressValidationError = validateAddress(normalizedAddress);
+    if (addressValidationError) return res.status(400).json({ message: addressValidationError });
+
+    const requestPhone = trimString(req.body?.phone);
+    const userPhone = requestPhone || trimString(user.phone);
+    if (!/^\d{10}$/.test(userPhone)) return res.status(400).json({ message: "Please provide a valid 10-digit phone number" });
+
+    // Auto-save address if missing
+    if (user && (!user.address || !user.address.line1)) {
+      user.address = normalizedAddress;
+      if (requestPhone && /^\d{10}$/.test(requestPhone)) user.phone = requestPhone;
+      await user.save();
     }
 
-    const { user, product, normalizedAddress, userPhone, requestPhone } = validation;
-    const checkoutPricingSettings = await getCheckoutPricingSettings();
-    const effectivePricingSettings = resolvePricingForProduct(product, checkoutPricingSettings);
-    const pricing = calculatePricing(product.price, quantity, effectivePricingSettings);
+    let itemsToProcess = [];
+    if (isCartOrder) {
+      const cartItems = req.body.items || [];
+      if (!Array.isArray(cartItems) || cartItems.length === 0) return res.status(400).json({ message: "Cart is empty" });
+      
+      for (const item of cartItems) {
+        const product = await Product.findById(item.productId);
+        if (!product) continue;
+        const qty = Math.max(1, Number(item.quantity || 1));
+        const effectivePricingSettings = resolvePricingForProduct(product, globalPricingSettings);
+        const pricing = calculatePricing(product.price, qty, effectivePricingSettings);
+        itemsToProcess.push({ product, quantity: qty, pricing });
+      }
+    } else {
+      const productId = trimString(req.body?.productId);
+      const quantity = Math.max(1, Number(req.body?.quantity || 1));
+      const product = await Product.findById(productId);
+      if (!product) return res.status(404).json({ message: "Product not found" });
+      const effectivePricingSettings = resolvePricingForProduct(product, globalPricingSettings);
+      const pricing = calculatePricing(product.price, quantity, effectivePricingSettings);
+      itemsToProcess.push({ product, quantity, pricing });
+    }
 
-    const order = await createOrderFromData({
-      user,
-      requestPhone,
-      userPhone,
-      email,
-      productData: {
-        productId: product._id,
-        productName: trimString(product.name),
-        productImage: trimString(product.image || (Array.isArray(product.images) ? product.images[0] : "")),
-        productCategory: trimString(product.section || product.category),
-        unitPrice: product.price,
-      },
-      quantity,
-      pricing,
-      paymentOption: "cod",
-      paidNowAmount: 0,
-      paymentStatus: "pending",
-      normalizedAddress,
-      paymentGateway: "cod",
-      paymentApp: "",
-      paymentPaidAt: null,
-      transactionId: "",
-    });
+    if (itemsToProcess.length === 0) return res.status(400).json({ message: "No valid products to order" });
+
+    const createdOrders = [];
+    for (const item of itemsToProcess) {
+      const order = await Order.create({
+        orderCode: `ORD-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
+        userEmail: email,
+        userName: user.name || "Customer",
+        userPhone,
+        productId: item.product._id,
+        productName: item.product.name,
+        productImage: item.product.image || (item.product.images?.[0]),
+        productCategory: item.product.section || item.product.category,
+        quantity: item.quantity,
+        unitPrice: item.product.price,
+        subtotal: item.pricing.subtotal,
+        taxAmount: item.pricing.taxAmount,
+        appliedTaxRate: item.pricing.taxRate,
+        shippingCharge: item.pricing.shippingCharge,
+        totalAmount: item.pricing.totalAmount,
+        paymentOption: "cod",
+        paidNowAmount: 0,
+        paymentStatus: "pending",
+        address: normalizedAddress,
+        status: "Order Placed",
+      });
+      
+      const emailResult = await sendOrderEmails(order);
+      order.userEmailNotificationSent = emailResult.userSent;
+      order.adminEmailNotificationSent = emailResult.adminSent;
+      await order.save();
+      createdOrders.push(order);
+    }
 
     return res.status(201).json({
       message: "Order placed successfully",
-      order,
+      orders: createdOrders,
+      order: createdOrders[0] // For backward compat
     });
   } catch (error) {
+    console.error("COD ORDER ERROR:", error);
     return res.status(500).json({ message: "Failed to place order" });
   }
 });
