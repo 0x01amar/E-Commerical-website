@@ -28,7 +28,12 @@ function AdminDashboard() {
 
   const navigate = useNavigate();
   const isAdmin = localStorage.getItem("role") === "admin";
-  const adminKey = localStorage.getItem("adminKey") || "";
+  const storedAdminKey = String(localStorage.getItem("adminKey") || "").trim();
+  const envAdminKey = String(import.meta.env.VITE_ADMIN_KEY || import.meta.env.VITE_BACKEND_KEY || "").trim();
+  const validStoredKey = (storedAdminKey && storedAdminKey !== "undefined" && storedAdminKey !== "null")
+    ? storedAdminKey
+    : "";
+  const adminKey = envAdminKey || validStoredKey || "MAA_SHEELA_SECRET_KEY";
 
   const loadData = async () => {
     try {
@@ -253,9 +258,9 @@ function AdminDashboard() {
   if (loading) return <div className="flex items-center justify-center min-h-screen font-heading text-xl">Entering Vault...</div>;
 
   return (
-    <div className="flex min-h-screen bg-neutral-cream">
+    <div className="flex h-screen overflow-hidden bg-neutral-cream">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block h-full flex-shrink-0">
         <AdminSidebar 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
@@ -263,7 +268,7 @@ function AdminDashboard() {
         />
       </div>
       
-      <main className="grow w-full p-4 md:p-12 overflow-x-hidden pb-32 lg:pb-12">
+      <main className="grow w-full h-full overflow-y-auto p-4 md:p-12 pb-32 lg:pb-12">
         {/* Mobile Header (Simplified) */}
         <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-neutral-dark/5 flex items-center px-6 z-30">
           <h1 className="font-heading font-bold text-lg">Admin Panel</h1>

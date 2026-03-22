@@ -14,23 +14,23 @@ const orderAddressSchema = new mongoose.Schema(
     },
     villageTown: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
     },
     wardNo: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
     },
     district: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
     },
     state: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
     },
     pincode: {
       type: String,

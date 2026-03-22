@@ -8,11 +8,90 @@ import { Card } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import UserSidebar from "./user/UserSidebar";
 import { showToast } from "../config/toast";
-import { CreditCardIcon, ArrowLeftOnRectangleIcon } from "@heroicons/react/24/outline";
+import { CreditCardIcon, ArrowLeftOnRectangleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 const EMPTY_ADDRESS = {
   line1: "", landmark: "", villageTown: "", wardNo: "",
   district: "", state: "", pincode: "", fullAddress: ""
+};
+
+const CANCELLATION_REASONS = [
+  { code: "ordered_by_mistake", label: "Ordered by mistake" },
+  { code: "found_better_price", label: "Found a better price elsewhere" },
+  { code: "delivery_takes_too_long", label: "Delivery time is too long" },
+  { code: "shipping_too_high", label: "Shipping charges are too high" },
+  { code: "product_details_unclear", label: "Product details were not clear" },
+  { code: "changed_requirements", label: "My requirements changed" },
+  { code: "duplicate_order", label: "Placed a duplicate order" },
+  { code: "payment_issue", label: "Facing payment issues" },
+  { code: "update_delivery_address", label: "Need to update delivery address" },
+  { code: "other_personal_reason", label: "Other personal reason" },
+];
+
+// Updated CancelOrderModal with dropdown
+const CancelOrderModal = ({ isOpen, onClose, onSubmit, isSubmitting }) => {
+  const [reasonCode, setReasonCode] = useState("");
+  const [comment, setComment] = useState("");
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+      <Card className="w-full max-w-md p-6 space-y-6 shadow-2xl rounded-sm max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center">
+          <h3 className="font-heading font-bold text-xl">Cancel Your Order</h3>
+          <button onClick={onClose} className="p-1 hover:bg-neutral-dark/5 rounded-full transition-colors">
+            <XMarkIcon className="w-6 h-6" />
+          </button>
+        </div>
+        
+        <div className="space-y-4 font-body">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Reason for Cancellation</label>
+            <select 
+              className="w-full p-3 text-sm border border-neutral-dark/10 rounded-sm focus:outline-none focus:border-primary bg-white cursor-pointer"
+              value={reasonCode}
+              onChange={(e) => setReasonCode(e.target.value)}
+            >
+              <option value="">Select a reason...</option>
+              {CANCELLATION_REASONS.map(r => (
+                <option key={r.code} value={r.code}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {reasonCode === 'other_personal_reason' && (
+            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Additional Comments (Optional)</label>
+              <textarea
+                className="w-full h-24 p-3 text-sm border border-neutral-dark/10 rounded-sm focus:outline-none focus:border-primary resize-none"
+                placeholder="Tell us more..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-neutral-dark/5">
+          <Button 
+            variant="outline" 
+            className="w-full min-h-12 h-auto py-3 order-2 sm:order-1" 
+            onClick={onClose}
+          >
+            Keep Order
+          </Button>
+          <Button 
+            className="w-full min-h-12 h-auto bg-rose-600 hover:bg-rose-700 text-white whitespace-normal py-3 px-4 leading-tight order-1 sm:order-2" 
+            disabled={isSubmitting || !reasonCode} 
+            onClick={() => onSubmit({ reasonCode, comment })}
+          >
+            {isSubmitting ? "Cancelling..." : "Confirm Cancellation"}
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
 };
 
 function Dashboard() {
@@ -24,6 +103,10 @@ function Dashboard() {
   const [form, setForm] = useState({ name: "", phone: "", address: EMPTY_ADDRESS });
   const [previewImage, setPreviewImage] = useState("");
   const [processingPayment, setProcessingPayment] = useState(null);
+  
+  // Cancellation state
+  const [cancellingOrderId, setCancellingOrderId] = useState(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const email = localStorage.getItem("email");
   const navigate = useNavigate();
@@ -150,6 +233,38 @@ function Dashboard() {
     }
   };
 
+  const handleCancelOrder = async ({ reasonCode, comment }) => {
+    if (!cancellingOrderId) return;
+    
+    try {
+      setIsCancelling(true);
+      const selectedReason = CANCELLATION_REASONS.find(r => r.code === reasonCode)?.label || reasonCode;
+      const finalReason = comment ? `${selectedReason}: ${comment}` : selectedReason;
+
+      const { response, data } = await apiFetchJson(`/orders/${cancellingOrderId}/cancel`, {
+        method: "PUT",
+        body: JSON.stringify({ 
+          email, 
+          reasonCode, 
+          cancellationReasonCode: reasonCode, 
+          cancellationReason: finalReason 
+        })
+      });
+
+      if (response.ok) {
+        showToast("Order cancelled successfully", "success");
+        setCancellingOrderId(null);
+        loadData(); // Refresh orders
+      } else {
+        showToast(data.message || "Cancellation failed", "error");
+      }
+    } catch (err) {
+      showToast("An error occurred", "error");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     navigate("/");
@@ -167,7 +282,7 @@ function Dashboard() {
       <div className="flex flex-col md:flex-row gap-8 md:gap-16">
         <UserSidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout} />
 
-        <div className="grow space-y-8 animate-in fade-in duration-300">
+        <div className="grow space-y-8 animate-in fade-in duration-300 overflow-hidden">
           {activeTab === 'profile' && (
             <Card className="p-4 md:p-8 border-none bg-white shadow-sm rounded-sm space-y-6 md:space-y-8">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -230,38 +345,41 @@ function Dashboard() {
                 const paidNow = Number(order.paidNowAmount || 0);
                 const total = Number(order.totalAmount || 0);
                 const remainingAmount = Math.max(total - paidNow, 0);
+                const isCancellable = !["Delivered", "Cancelled", "Shipped", "Out for Delivery"].includes(order.status);
 
                 return (
-                <Card key={order._id} className="p-4 md:p-8 border-none bg-white shadow-sm rounded-sm space-y-6">
+                <Card key={order._id} className="p-4 md:p-8 border-none bg-white shadow-sm rounded-sm space-y-6 overflow-hidden">
                   <div className="flex flex-col md:flex-row gap-6">
-                    <img src={mediaUrl(order.productImage)} className="w-20 h-28 object-cover rounded-sm bg-neutral-cream" alt="" />
-                    <div className="grow space-y-2">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
+                    <img src={mediaUrl(order.productImage)} className="w-20 h-28 object-cover rounded-sm bg-neutral-cream shrink-0" alt="" />
+                    <div className="grow space-y-2 min-w-0">
+                      <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                        <div className="space-y-1 min-w-0">
                           <h3 className="font-heading text-lg font-bold flex items-center gap-2">
-                            {order.productName}
-                            {order.isCustom && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase tracking-tighter font-bold">Custom Piece</span>}
+                            <span className="truncate">{order.productName}</span>
+                            {order.isCustom && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase tracking-tighter font-bold shrink-0">Custom</span>}
                           </h3>
-                          <p className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">#{order.orderCode} • Placed {new Date(order.createdAt).toLocaleDateString()}</p>
+                          <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-neutral-dark/40">#{order.orderCode} • Placed {new Date(order.createdAt).toLocaleDateString()}</p>
                         </div>
-                        <span className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                          order.status === 'Delivered' ? 'bg-emerald-50 text-emerald-600' : 'bg-primary/5 text-primary'
+                        <span className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0 ${
+                          order.status === 'Delivered' ? 'bg-emerald-50 text-emerald-600' : 
+                          order.status === 'Cancelled' ? 'bg-rose-50 text-rose-600' :
+                          'bg-primary/5 text-primary'
                         }`}>{order.status}</span>
                       </div>
                       
                       <div className="flex flex-col md:flex-row justify-between items-end gap-4 pt-2">
-                        <div className="space-y-2 w-full">
+                        <div className="space-y-2 w-full min-w-0">
                           <p className="font-body font-bold text-primary text-xl">₹{Number(order.totalAmount).toLocaleString()}</p>
                           {order.isCustom && order.customDetails && (
                             <div className="p-4 bg-neutral-cream rounded-sm space-y-1">
                               <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/50">Your Custom Request</p>
-                              <p className="text-sm italic text-neutral-dark/70">"{order.customDetails}"</p>
+                              <p className="text-sm italic text-neutral-dark/70 break-words font-body">"{order.customDetails}"</p>
                             </div>
                           )}
                           {order.isCustom && order.customStatus && (
                             <div className="p-4 bg-primary/5 border-l-4 border-primary rounded-r-sm space-y-1">
                               <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Artisan's Note</p>
-                              <p className="text-sm italic text-neutral-dark/70 font-body">"{order.customStatus}"</p>
+                              <p className="text-sm italic text-neutral-dark/70 font-body break-words">"{order.customStatus}"</p>
                             </div>
                           )}
                           {order.isCustom && order.isAdvancePaid && order.status !== "Delivered" && (
@@ -270,33 +388,53 @@ function Dashboard() {
                             </p>
                           )}
                           {order.isCustom && order.status === "Delivered" && (
-                            <p className="text-xs font-bold uppercase tracking-widest text-neutral-dark/50">
+                            <p className="text-xs font-bold uppercase tracking-widest text-neutral-dark/50 truncate">
                               {order.paymentStatus === "paid"
                                 ? "Payment Completed"
                                 : `Remaining Payable On Delivery: ₹${remainingAmount.toLocaleString()}`}
                             </p>
                           )}
+                          {order.status === "Cancelled" && order.cancellationReason && (
+                            <div className="p-4 bg-rose-50 border-l-4 border-rose-500 rounded-r-sm space-y-1">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-rose-600">Cancellation Reason</p>
+                              <p className="text-sm italic text-neutral-dark/70 font-body break-words">"{order.cancellationReason}"</p>
+                            </div>
+                          )}
                         </div>
                         
-                        {order.status === "Advance Payment Requested" && !order.isAdvancePaid && (
-                          <Button 
-                            className="w-full md:w-auto h-12 px-8" 
-                            onClick={() => handlePayAdvance(order)}
-                            disabled={processingPayment === order._id}
-                          >
-                            <CreditCardIcon className="w-5 h-5 mr-2" />
-                            {processingPayment === order._id ? "Processing..." : `Pay Advance ₹${order.advanceAmount?.toLocaleString()}`}
-                          </Button>
-                        )}
-                        {order.isAdvancePaid && order.status !== "Delivered" && (
-                          <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest">
+                        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
+                          {order.status === "Advance Payment Requested" && !order.isAdvancePaid && (
+                            <Button 
+                              className="h-12 px-8" 
+                              onClick={() => handlePayAdvance(order)}
+                              disabled={processingPayment === order._id}
+                            >
+                              <CreditCardIcon className="w-5 h-5 mr-2" />
+                              {processingPayment === order._id ? "Processing..." : `Pay Advance ₹${order.advanceAmount?.toLocaleString()}`}
+                            </Button>
+                          )}
+                          
+                          {isCancellable && (
+                            <Button 
+                              variant="outline"
+                              className="h-12 px-8 text-rose-600 border-rose-100 hover:bg-rose-50 hover:text-rose-700 whitespace-nowrap"
+                              onClick={() => setCancellingOrderId(order._id)}
+                            >
+                              <XMarkIcon className="w-5 h-5 mr-2" />
+                              Cancel Order
+                            </Button>
+                          )}
+                        </div>
+
+                        {order.isAdvancePaid && order.status !== "Delivered" && order.status !== "Cancelled" && (
+                          <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest shrink-0">
                             <CreditCardIcon className="w-4 h-4" /> Advance Paid
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="pt-6 border-t border-neutral-dark/5 overflow-x-auto">
+                  <div className="pt-6 border-t border-neutral-dark/5 overflow-x-auto scrollbar-hide">
                     <OrderTimeline status={order.status} compact isCustom={Boolean(order.isCustom)} />
                   </div>
                 </Card>
@@ -324,6 +462,14 @@ function Dashboard() {
           </div>
         </div>
       </div>
+      
+      <CancelOrderModal 
+        isOpen={Boolean(cancellingOrderId)} 
+        onClose={() => setCancellingOrderId(null)}
+        onSubmit={handleCancelOrder}
+        isSubmitting={isCancelling}
+      />
+
       <ImageLightbox isOpen={!!previewImage} imageSrc={previewImage} onClose={() => setPreviewImage("")} />
     </div>
   );

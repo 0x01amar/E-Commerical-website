@@ -182,6 +182,14 @@ function AdminOrders({ orders, onUpdateStatus, onUpdateDelivery, onUpdateCustom 
               </div>
             )}
 
+            {/* Cancellation Reason */}
+            {order.status === "Cancelled" && order.cancellationReason && (
+              <div className="mt-2 p-3 bg-rose-50 rounded-sm space-y-1 border border-rose-100">
+                <p className="text-[9px] font-bold uppercase text-rose-600">Cancellation Reason:</p>
+                <p className="text-xs italic text-neutral-dark/80 break-words leading-tight">"{order.cancellationReason}"</p>
+              </div>
+            )}
+
             {/* Desktop only Horizontal Timeline */}
             <div className="hidden lg:block pt-4 border-t border-neutral-dark/5">
               <div className="overflow-x-auto scrollbar-hide">

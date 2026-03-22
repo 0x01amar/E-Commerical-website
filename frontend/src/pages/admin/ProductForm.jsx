@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 
-function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }) {
+export default function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }) {
   const [formData, setForm] = useState({
     name: "",
     price: "",
@@ -13,8 +13,17 @@ function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }
     image: "",
     images: [],
     shippingCharge: "",
-    ...initialData
+    taxRate: "",
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({
+        ...initialData,
+        taxRate: (initialData.taxRate !== undefined && initialData.taxRate !== null) ? initialData.taxRate * 100 : ""
+      });
+    }
+  }, [initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -44,7 +53,15 @@ function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Convert taxRate and shippingCharge to numbers, and taxRate percentage to decimal
+    const submissionData = {
+      ...formData,
+      price: Number(formData.price),
+      stock: Number(formData.stock),
+      shippingCharge: formData.shippingCharge !== "" ? Number(formData.shippingCharge) : null,
+      taxRate: formData.taxRate !== "" ? Number(formData.taxRate) / 100 : null,
+    };
+    onSubmit(submissionData);
   };
 
   return (
@@ -57,6 +74,18 @@ function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Price (₹)</label>
           <Input name="price" type="number" value={formData.price ?? ""} onChange={handleChange} required />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Tax Rate (%)</label>
+          <Input 
+            name="taxRate" 
+            type="number" 
+            step="0.01"
+            value={formData.taxRate ?? ""} 
+            onChange={handleChange} 
+            placeholder="e.g. 18" 
+          />
+          <p className="text-[9px] text-neutral-dark/30 italic">Leave blank to use global default tax rate.</p>
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Shipping Charge (₹)</label>
@@ -109,5 +138,3 @@ function ProductForm({ initialData, sections, onSubmit, onCancel, isSubmitting }
     </form>
   );
 }
-
-export default ProductForm;

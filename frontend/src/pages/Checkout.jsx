@@ -53,6 +53,7 @@ function Checkout() {
   const [processing, setProcessing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(null);
   const [previewImage, setPreviewImage] = useState("");
+  const [globalPricing, setGlobalPricing] = useState({ taxRate: 0.08, shippingCharge: 79 });
 
   useEffect(() => {
     if (!email) navigate("/login", { state: { redirectTo: location.pathname } });
@@ -62,10 +63,15 @@ function Checkout() {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [prodRes, profRes] = await Promise.all([
+        const [prodRes, profRes, priceRes] = await Promise.all([
           mode === "cart" ? Promise.resolve({ response: { ok: true }, data: [] }) : apiFetchJson(`/products/${productId}`),
-          apiFetchJson(`/auth/profile/${encodeURIComponent(email)}`)
+          apiFetchJson(`/auth/profile/${encodeURIComponent(email)}`),
+          apiFetchJson("/settings/checkout-pricing")
         ]);
+
+        if (priceRes.response.ok) {
+          setGlobalPricing(priceRes.data);
+        }
 
         if (mode === "cart") {
           const items = JSON.parse(localStorage.getItem("cartItems") || "[]");
@@ -80,7 +86,7 @@ function Checkout() {
         }
 
         if (profRes.response.ok) {
-          const addr = profRes.data.address || EMPTY_ADDRESS;
+          const addr = { ...EMPTY_ADDRESS, ...(profRes.data.address || {}) };
           const hasSaved = Boolean(addr.line1 && addr.pincode);
           if (hasSaved) {
             setSavedAddress(addr);
@@ -106,21 +112,46 @@ function Checkout() {
     }
   }, [step, loading]);
 
-  const subtotal = useMemo(() => {
-    if (mode === "cart") {
-      return cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
-    }
-    return (product?.price || 0) * quantity;
-  }, [mode, cartItems, product, quantity]);
+  const pricingDetails = useMemo(() => {
+    let subtotal = 0;
+    let taxAmount = 0;
+    let shippingCharge = 0;
 
-  const shipping = useMemo(() => {
-    if (mode === "cart") {
-      return cartItems.reduce((sum, item) => sum + (Number(item.shippingCharge) || 0), 0);
-    }
-    return (Number(product?.shippingCharge) || 0);
-  }, [mode, cartItems, product]);
+    const calculateItemPricing = (item) => {
+      const itemSubtotal = (Number(item.price) || 0) * (Number(item.quantity) || 1);
+      const effectiveTaxRate = (item.taxRate !== undefined && item.taxRate !== null) ? item.taxRate : globalPricing.taxRate;
+      const effectiveShipping = (item.shippingCharge !== undefined && item.shippingCharge !== null) ? item.shippingCharge : globalPricing.shippingCharge;
+      
+      return {
+        subtotal: itemSubtotal,
+        tax: itemSubtotal * effectiveTaxRate,
+        shipping: itemSubtotal > 0 ? Number(effectiveShipping) : 0
+      };
+    };
 
-  const total = subtotal + shipping;
+    if (mode === "cart") {
+      cartItems.forEach(item => {
+        const p = calculateItemPricing(item);
+        subtotal += p.subtotal;
+        taxAmount += p.tax;
+        shippingCharge += p.shipping;
+      });
+    } else if (product) {
+      const p = calculateItemPricing({ ...product, quantity });
+      subtotal = p.subtotal;
+      taxAmount = p.tax;
+      shippingCharge = p.shipping;
+    }
+
+    return {
+      subtotal,
+      taxAmount: Math.round(taxAmount * 100) / 100,
+      shippingCharge,
+      total: Math.round((subtotal + taxAmount + shippingCharge) * 100) / 100
+    };
+  }, [mode, cartItems, product, quantity, globalPricing]);
+
+  const { subtotal, taxAmount, shippingCharge, total } = pricingDetails;
 
   const loadRazorpay = () => {
     return new Promise((resolve) => {
@@ -268,7 +299,7 @@ function Checkout() {
           cartItems.map(item => (
             <div key={item._id} className="flex justify-between italic text-[12px]">
               <span>{item.name} x {item.quantity}</span>
-              <span>₹{(item.price * item.quantity).toLocaleString()}</span>
+              <span>₹{(Number(item.price) * (item.quantity || 1)).toLocaleString()}</span>
             </div>
           ))
         ) : (
@@ -277,9 +308,19 @@ function Checkout() {
             <span>₹{subtotal.toLocaleString()}</span>
           </div>
         )}
-        <div className="flex justify-between">
-          <span>Shipping</span>
-          <span>{shipping === 0 ? "FREE" : `₹${shipping.toLocaleString()}`}</span>
+        <div className="pt-2 border-t border-neutral-dark/5 space-y-2">
+          <div className="flex justify-between">
+            <span>Subtotal</span>
+            <span>₹{subtotal.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Tax</span>
+            <span>₹{taxAmount.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Shipping</span>
+            <span>{shippingCharge === 0 ? "FREE" : `₹${shippingCharge.toLocaleString()}`}</span>
+          </div>
         </div>
         <div className="pt-4 border-t border-neutral-dark/10 flex justify-between text-lg font-bold text-neutral-dark">
           <span>Total</span>
@@ -395,11 +436,34 @@ function Checkout() {
                       <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Address Line 1</label>
                       <Input value={addressForm.line1} onChange={e => setAddressForm({...addressForm, line1: e.target.value})} placeholder="House / Flat No, Building Name" />
                     </div>
-                    <div className="space-y-2"><label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Village / Town</label><Input value={addressForm.villageTown} onChange={e => setAddressForm({...addressForm, villageTown: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">District</label><Input value={addressForm.district} onChange={e => setAddressForm({...addressForm, district: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">State</label><Input value={addressForm.state} onChange={e => setAddressForm({...addressForm, state: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Pincode</label><Input value={addressForm.pincode} onChange={e => setAddressForm({...addressForm, pincode: e.target.value})} maxLength={6} /></div>
-                    <div className="md:col-span-2 space-y-2"><label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Contact Phone</label><Input value={contactPhone} onChange={e => setContactPhone(e.target.value)} maxLength={10} placeholder="10-digit mobile number" /></div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Village / Town</label>
+                      <Input value={addressForm.villageTown} onChange={e => setAddressForm({...addressForm, villageTown: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Ward No</label>
+                      <Input value={addressForm.wardNo} onChange={e => setAddressForm({...addressForm, wardNo: e.target.value})} placeholder="e.g. 5" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Landmark (Optional)</label>
+                      <Input value={addressForm.landmark} onChange={e => setAddressForm({...addressForm, landmark: e.target.value})} placeholder="Nearby place" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">District</label>
+                      <Input value={addressForm.district} onChange={e => setAddressForm({...addressForm, district: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">State</label>
+                      <Input value={addressForm.state} onChange={e => setAddressForm({...addressForm, state: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Pincode</label>
+                      <Input value={addressForm.pincode} onChange={e => setAddressForm({...addressForm, pincode: e.target.value})} maxLength={6} />
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-neutral-dark/40">Contact Phone</label>
+                      <Input value={contactPhone} onChange={e => setContactPhone(e.target.value)} maxLength={10} placeholder="10-digit mobile number" />
+                    </div>
                   </div>
                 ) : (
                   <div className="p-6 bg-neutral-cream rounded-sm border border-primary/10">
@@ -421,7 +485,29 @@ function Checkout() {
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <Button variant="outline" className="flex-1 h-12 md:h-14 order-2 sm:order-1 rounded-xl md:rounded-sm" onClick={() => setStep(1)}>Back</Button>
                 <Button className="flex-[2] h-14 md:h-14 order-1 sm:order-2 rounded-xl md:rounded-sm shadow-xl md:shadow-none" onClick={() => {
-                  if (!addressForm.line1 || !addressForm.pincode || !contactPhone) { showToast("Please complete the delivery details", "warning"); return; }
+                  const { line1, villageTown, district, state, pincode } = addressForm;
+                  
+                  // Relaxed validation for saved addresses
+                  if (useSavedAddress) {
+                    if (!line1 || !pincode || !contactPhone) {
+                      showToast("Your saved address is incomplete. Please use 'New Address' to provide core details.", "warning");
+                      return;
+                    }
+                  } else {
+                    if (!line1 || !villageTown || !district || !state || !pincode || !contactPhone) {
+                      showToast("Please complete all delivery details", "warning");
+                      return;
+                    }
+                  }
+
+                  if (pincode.length !== 6) {
+                    showToast("Pincode must be 6 digits", "warning");
+                    return;
+                  }
+                  if (contactPhone.length !== 10) {
+                    showToast("Phone must be 10 digits", "warning");
+                    return;
+                  }
                   setStep(3);
                 }}>Proceed to Payment</Button>
               </div>
@@ -453,7 +539,7 @@ function Checkout() {
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <Button variant="outline" className="flex-1 h-12 md:h-14 order-2 sm:order-1 rounded-xl md:rounded-sm" onClick={() => setStep(2)}>Back</Button>
                 <Button className="flex-[2] h-14 md:h-14 order-1 sm:order-2 rounded-xl md:rounded-sm shadow-xl md:shadow-none" onClick={handlePlaceOrder} disabled={processing}>
-                  {processing ? "Processing..." : `Confirm Order - ₹${total.toLocaleString()}`}
+                  {processing ? "Processing..." : `Pay Now - ₹${total.toLocaleString()}`}
                 </Button>
               </div>
             </div>
@@ -465,8 +551,8 @@ function Checkout() {
                 <CheckCircleIcon className="w-12 h-12" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-3xl font-heading font-bold">Order Confirmed!</h2>
-                <p className="text-neutral-dark/60 font-body">Order #{orderPlaced.orderCode}</p>
+                <h2 className="text-3xl font-heading font-bold">Payment Successful!</h2>
+                <p className="text-neutral-dark/60 font-body">Order #{orderPlaced.orderCode} is now confirmed.</p>
               </div>
               <p className="text-neutral-dark/70 max-w-sm mx-auto font-body">
                 Your exquisite piece is now being prepared. We've sent the confirmation details to your email.

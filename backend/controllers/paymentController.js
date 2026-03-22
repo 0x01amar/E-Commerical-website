@@ -42,6 +42,56 @@ const getCheckoutPricingSettings = async () => {
   };
 };
 
+const resolvePricingForProduct = (product = {}, pricingSettings = {}) => {
+  const globalTaxRate = Number.isFinite(Number(pricingSettings.taxRate))
+    ? Number(pricingSettings.taxRate)
+    : DEFAULT_TAX_RATE;
+
+  const globalShippingCharge = Number.isFinite(Number(pricingSettings.shippingCharge))
+    ? Number(pricingSettings.shippingCharge)
+    : DEFAULT_SHIPPING_CHARGE;
+
+  const productTaxRate = Number(product?.taxRate);
+  const productShippingCharge = Number(product?.shippingCharge);
+
+  const hasProductTaxRate = Number.isFinite(productTaxRate) && productTaxRate >= 0 && productTaxRate <= 1;
+  const hasProductShippingCharge = Number.isFinite(productShippingCharge) && productShippingCharge >= 0;
+
+  return {
+    taxRate: hasProductTaxRate ? productTaxRate : globalTaxRate,
+    shippingCharge: hasProductShippingCharge ? productShippingCharge : globalShippingCharge,
+    pricingSource: hasProductTaxRate || hasProductShippingCharge ? "product" : "global",
+  };
+};
+
+const calculatePricing = (unitPrice, quantity, pricingSettings = {}) => {
+  const taxRate = Number.isFinite(Number(pricingSettings.taxRate))
+    ? Number(pricingSettings.taxRate)
+    : DEFAULT_TAX_RATE;
+
+  const configuredShippingCharge = Number.isFinite(Number(pricingSettings.shippingCharge))
+    ? Number(pricingSettings.shippingCharge)
+    : DEFAULT_SHIPPING_CHARGE;
+
+  const subtotal = asTwoDecimals(Number(unitPrice || 0) * Number(quantity || 0));
+  const taxAmount = asTwoDecimals(subtotal * taxRate);
+  const shippingCharge = subtotal > 0 ? asTwoDecimals(configuredShippingCharge) : 0;
+  
+  const totalAmount = asTwoDecimals(subtotal + taxAmount + shippingCharge);
+  const pricingSource = trimString(pricingSettings.pricingSource).toLowerCase() === "product"
+    ? "product"
+    : "global";
+
+  return {
+    taxRate,
+    subtotal,
+    taxAmount,
+    shippingCharge,
+    totalAmount,
+    pricingSource,
+  };
+};
+
 const addressToObject = (address = {}) => {
   if (typeof address === "string") {
     const trimmed = trimString(address);
@@ -66,14 +116,6 @@ const addressToObject = (address = {}) => {
   return normalized;
 };
 
-const validateAddress = (address = {}) => {
-  const requiredFields = ["line1", "villageTown", "district", "state", "pincode"];
-  const missingField = requiredFields.find((field) => !trimString(address[field]));
-  if (missingField) return `Address field '${missingField}' is required`;
-  if (!/^\d{6}$/.test(address.pincode)) return "Pincode must be exactly 6 digits";
-  return "";
-};
-
 const createRazorpayOrder = async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -83,9 +125,8 @@ const createRazorpayOrder = async (req, res) => {
     const user = await User.findOne({ email, isVerified: true });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const pricingSettings = await getCheckoutPricingSettings();
-    let totalSubtotal = 0;
-    let totalShippingCharge = 0;
+    const globalPricingSettings = await getCheckoutPricingSettings();
+    let totalPayableAmount = 0;
     let itemsToProcess = [];
 
     if (isCartOrder) {
@@ -96,30 +137,29 @@ const createRazorpayOrder = async (req, res) => {
         const product = await Product.findById(item.productId);
         if (!product) continue;
         const qty = Math.max(1, Number(item.quantity || 1));
-        totalSubtotal += (product.price * qty);
         
-        // Sum individual shipping charges
-        const itemShipping = Number.isFinite(product.shippingCharge) ? product.shippingCharge : pricingSettings.shippingCharge;
-        totalShippingCharge += itemShipping;
+        const effectivePricingSettings = resolvePricingForProduct(product, globalPricingSettings);
+        const pricing = calculatePricing(product.price, qty, effectivePricingSettings);
         
-        itemsToProcess.push({ product, quantity: qty, shippingCharge: itemShipping });
+        totalPayableAmount += pricing.totalAmount;
+        itemsToProcess.push({ product, quantity: qty, pricing });
       }
     } else {
       const productId = trimString(req.body?.productId);
       const quantity = Math.max(1, Number(req.body?.quantity || 1));
       const product = await Product.findById(productId);
       if (!product) return res.status(404).json({ message: "Product not found" });
-      totalSubtotal = product.price * quantity;
       
-      totalShippingCharge = Number.isFinite(product.shippingCharge) ? product.shippingCharge : pricingSettings.shippingCharge;
+      const effectivePricingSettings = resolvePricingForProduct(product, globalPricingSettings);
+      const pricing = calculatePricing(product.price, quantity, effectivePricingSettings);
       
-      itemsToProcess.push({ product, quantity, shippingCharge: totalShippingCharge });
+      totalPayableAmount = pricing.totalAmount;
+      itemsToProcess.push({ product, quantity, pricing });
     }
 
     if (itemsToProcess.length === 0) return res.status(400).json({ message: "No valid products to order" });
 
-    const taxAmount = asTwoDecimals(totalSubtotal * pricingSettings.taxRate);
-    const totalAmount = asTwoDecimals(totalSubtotal + taxAmount + totalShippingCharge);
+    const totalAmount = asTwoDecimals(totalPayableAmount);
     const payableAmountPaise = Math.round(totalAmount * 100);
 
     const razorpay = getRazorpayClient();
@@ -137,32 +177,40 @@ const createRazorpayOrder = async (req, res) => {
 
     // Create Order records
     const orders = [];
-    for (const item of itemsToProcess) {
-      const order = await Order.create({
-        orderCode: generateOrderCode(),
-        userEmail: email,
-        userName: user.name || "Customer",
-        userPhone,
-        productId: item.product._id,
-        productName: item.product.name,
-        productImage: item.product.image || (item.product.images?.[0]),
-        productCategory: item.product.section || item.product.category,
-        quantity: item.quantity,
-        unitPrice: item.product.price,
-        subtotal: item.product.price * item.quantity,
-        taxAmount: (item.product.price * item.quantity) * pricingSettings.taxRate,
-        appliedTaxRate: pricingSettings.taxRate,
-        shippingCharge: item.shippingCharge,
-        totalAmount: (item.product.price * item.quantity) * (1 + pricingSettings.taxRate) + item.shippingCharge,
-        paymentOption,
-        paidNowAmount: totalAmount, // The full payment for the session
-        paymentStatus: "upi_pending_verification",
-        paymentGateway: "razorpay",
-        gatewayOrderId: gatewayOrder.id,
-        address: normalizedAddress,
-        status: "Order Placed",
+    try {
+      for (const item of itemsToProcess) {
+        const order = await Order.create({
+          orderCode: generateOrderCode(),
+          userEmail: email,
+          userName: user.name || "Customer",
+          userPhone,
+          productId: item.product._id,
+          productName: item.product.name,
+          productImage: item.product.image || (item.product.images?.[0]),
+          productCategory: item.product.section || item.product.category,
+          quantity: item.quantity,
+          unitPrice: item.product.price,
+          subtotal: item.pricing.subtotal,
+          taxAmount: item.pricing.taxAmount,
+          appliedTaxRate: item.pricing.taxRate,
+          shippingCharge: item.pricing.shippingCharge,
+          totalAmount: item.pricing.totalAmount,
+          paymentOption,
+          paidNowAmount: totalAmount, // Total amount paid in this transaction
+          paymentStatus: "upi_pending_verification",
+          paymentGateway: "razorpay",
+          gatewayOrderId: gatewayOrder.id,
+          address: normalizedAddress,
+          status: "Order Placed",
+        });
+        orders.push(order);
+      }
+    } catch (dbError) {
+      console.error("ORDER CREATION DB ERROR:", dbError);
+      return res.status(400).json({ 
+        message: "Failed to create order records. Please ensure your address details are complete.",
+        error: dbError.message 
       });
-      orders.push(order);
     }
 
     return res.json({

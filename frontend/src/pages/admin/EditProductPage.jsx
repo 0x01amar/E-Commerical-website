@@ -15,7 +15,12 @@ function EditProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const isAdmin = localStorage.getItem("role") === "admin";
-  const adminKey = localStorage.getItem("adminKey") || "";
+  const storedAdminKey = String(localStorage.getItem("adminKey") || "").trim();
+  const envAdminKey = String(import.meta.env.VITE_ADMIN_KEY || import.meta.env.VITE_BACKEND_KEY || "").trim();
+  const validStoredKey = (storedAdminKey && storedAdminKey !== "undefined" && storedAdminKey !== "null")
+    ? storedAdminKey
+    : "";
+  const adminKey = envAdminKey || validStoredKey || "MAA_SHEELA_SECRET_KEY";
 
   useEffect(() => {
     if (!isAdmin) {

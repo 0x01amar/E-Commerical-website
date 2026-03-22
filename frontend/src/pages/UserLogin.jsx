@@ -76,7 +76,6 @@ function UserLogin() {
                                 <GoogleLogin
                                     onSuccess={handleGoogleSuccess}
                                     onError={() => setError("Google Sign-In failed. Please try again.")}
-                                    useOneTap
                                     theme="filled_blue"
                                     shape="rectangular"
                                     width="240"

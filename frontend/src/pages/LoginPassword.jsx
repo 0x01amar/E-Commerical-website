@@ -69,15 +69,14 @@ function LoginPassword() {
                         {loginInfoMessage && <p className="p-4 bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest rounded-sm border border-primary/10">{loginInfoMessage}</p>}
                         {error && <p className="p-4 bg-accent/5 text-accent text-[10px] font-bold uppercase tracking-widest rounded-sm border border-accent/10">{error}</p>}
 
-                        <div className="flex flex-col items-center gap-6 py-4">
-                            <div className="w-full flex justify-center">
+                        <div className="flex justify-center w-full py-4 overflow-hidden">
+                            <div className="max-w-xs w-full flex justify-center">
                                 <GoogleLogin
                                     onSuccess={handleGoogleSuccess}
                                     onError={() => setError("Google Sign-In failed. Please try again.")}
-                                    useOneTap
                                     theme="filled_blue"
                                     shape="rectangular"
-                                    width="250"
+                                    width="240"
                                 />
                             </div>
                         </div>
