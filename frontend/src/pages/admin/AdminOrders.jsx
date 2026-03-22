@@ -142,22 +142,36 @@ function AdminOrders({ orders, onUpdateStatus, onUpdateDelivery, onUpdateCustom 
                         placeholder="Artisan's Note..."
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-dark/40">Advance (₹)</label>
-                      <div className="flex gap-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-dark/40">Total (₹)</label>
                         <input 
                           type="number" 
-                          defaultValue={order.advanceAmount || 0} 
-                          onBlur={(e) => onUpdateCustom(order._id, { advanceAmount: e.target.value })}
-                          className="grow border border-neutral-dark/10 p-2 text-xs focus:outline-none focus:border-primary rounded-sm min-w-0"
+                          defaultValue={order.totalAmount || 0} 
+                          onBlur={(e) => onUpdateCustom(order._id, { totalAmount: e.target.value })}
+                          className="w-full border border-neutral-dark/10 p-2 text-xs focus:outline-none focus:border-primary rounded-sm min-w-0"
                         />
-                        {order.status === "Advance Payment Requested" && (
-                          <span className={`flex items-center px-2 text-[9px] font-bold rounded-sm uppercase shrink-0 ${order.isAdvancePaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                            {order.isAdvancePaid ? "Paid" : "Pending"}
-                          </span>
-                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-dark/40">Advance (₹)</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="number" 
+                            defaultValue={order.advanceAmount || 0} 
+                            onBlur={(e) => onUpdateCustom(order._id, { advanceAmount: e.target.value })}
+                            className="grow border border-neutral-dark/10 p-2 text-xs focus:outline-none focus:border-primary rounded-sm min-w-0"
+                          />
+                        </div>
                       </div>
                     </div>
+                    {order.status === "Advance Payment Requested" && (
+                      <div className="pt-1">
+                        <span className={`flex items-center justify-center w-full py-1 text-[9px] font-bold rounded-sm uppercase ${order.isAdvancePaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                          {order.isAdvancePaid ? "Advance Paid" : "Advance Pending"}
+                        </span>
+                      </div>
+                    )}
+
                   </>
                 )}
 

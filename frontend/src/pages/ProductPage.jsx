@@ -246,7 +246,7 @@ function ProductPage() {
                     navigate("/login", { state: { redirectTo: `/product/${id}` } });
                     return;
                   }
-                  setIsCustomModalOpen(true);
+                  navigate(`/custom-order?productId=${id}`);
                 }}
                 className="md:hidden flex-1 h-14 px-3 flex items-center justify-center gap-1.5 rounded-full bg-neutral-dark text-white active:scale-95 transition-all shadow-md shrink-0"
               >
@@ -260,7 +260,7 @@ function ProductPage() {
                   navigate("/login", { state: { redirectTo: `/product/${id}` } });
                   return;
                 }
-                setIsCustomModalOpen(true);
+                navigate(`/custom-order?productId=${id}`);
               }}>
                 <WrenchScrewdriverIcon className="w-6 h-6 mr-2" /> Customize
               </Button>

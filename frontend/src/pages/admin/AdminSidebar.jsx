@@ -3,7 +3,8 @@ import {
   ShoppingBagIcon, 
   ClipboardDocumentListIcon, 
   Cog6ToothIcon,
-  ArrowLeftOnRectangleIcon 
+  ArrowLeftOnRectangleIcon,
+  ChatBubbleLeftRightIcon
 } from "@heroicons/react/24/outline";
 
 function AdminSidebar({ activeTab, setActiveTab, onLogout }) {
@@ -11,6 +12,7 @@ function AdminSidebar({ activeTab, setActiveTab, onLogout }) {
     { id: 'overview', name: 'Overview', icon: Squares2X2Icon },
     { id: 'products', name: 'Products', icon: ShoppingBagIcon },
     { id: 'orders', name: 'Orders', icon: ClipboardDocumentListIcon },
+    { id: 'inquiries', name: 'Inquiries', icon: ChatBubbleLeftRightIcon },
     { id: 'settings', name: 'Settings', icon: Cog6ToothIcon },
   ];
 

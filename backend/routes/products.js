@@ -597,7 +597,7 @@ router.get("/", async (req, res) => {
       query.category = category;
     }
 
-    const products = await Product.find(query).sort({ createdAt: -1 });
+    const products = await Product.find(query).sort({ createdAt: -1 }).lean();
 
     res.json(products.map(normalizeProductResponse));
 

@@ -4,7 +4,7 @@ import ProductPage from "./pages/ProductPage";
 import UserLogin from "./pages/UserLogin";
 import AdminLogin from "./pages/AdminLogin";
 import Dashboard from "./pages/Dashboard";
-import AdminDashboard from "./pages/AdminDashboard";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
 import EditProductPage from "./pages/admin/EditProductPage";
 import AddProductPage from "./pages/admin/AddProductPage";
 import LoginPassword from "./pages/LoginPassword";
@@ -15,6 +15,8 @@ import Contact from "./pages/Contact";
 import ToastHost from "./components/ToastHost";
 import ScrollToTop from "./components/ScrollToTop";
 import MainLayout from "./components/layout/MainLayout";
+
+import CustomOrderPage from "./pages/CustomOrderPage";
 
 function App() {
   const [search, setSearch] = useState("");
@@ -28,6 +30,7 @@ function App() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout/:productId" element={<Checkout />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/custom-order" element={<CustomOrderPage />} />
         <Route path="/signup" element={<UserLogin />} />
         <Route path="/login" element={<LoginPassword />} />
         <Route path="/admin-login" element={<AdminLogin />} />

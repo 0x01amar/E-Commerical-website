@@ -16,47 +16,77 @@ const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1586023492125-27b2
 
 function Home({ search }) {
   const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
+  
+  // Use sessionStorage for immediate rendering on return visits
+  const [products, setProducts] = useState(() => {
+    const cached = sessionStorage.getItem("cached_products");
+    return cached ? JSON.parse(cached) : [];
+  });
+  
   const [sections, setSections] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isHeroLoading, setIsHeroLoading] = useState(true);
   const [error, setError] = useState("");
-  const [heroImageUrl, setHeroImageUrl] = useState(null);
-  const [siteContent, setSiteContent] = useState(null);
+  const [heroImageUrl, setHeroImageUrl] = useState(sessionStorage.getItem("cached_hero_url") || null);
+  const [siteContent, setSiteContent] = useState(() => {
+    const cached = sessionStorage.getItem("cached_site_content");
+    return cached ? JSON.parse(cached) : null;
+  });
   const [imageLoaded, setImageLoaded] = useState(false);
+  
   const isAdmin = localStorage.getItem("role") === "admin";
   const hasActiveSearch = Boolean(search?.trim());
 
   useEffect(() => {
-    const loadHomeData = async () => {
+    const loadInitialData = async () => {
       try {
-        setLoading(true);
-        const [productsRes, sectionsRes, heroRes, contentRes] = await Promise.all([
-          apiFetchJson("/products"),
-          apiFetchJson("/products/sections"),
+        // Step 1: Load Hero and Site Content first for fast visual load
+        const [heroRes, contentRes] = await Promise.all([
           apiFetchJson("/settings/hero-image"),
           apiFetchJson("/site-content")
         ]);
 
-        if (productsRes.response.ok) setProducts(productsRes.data || []);
-        if (sectionsRes.response.ok) setSections(sectionsRes.data || []);
-        
         if (heroRes.response.ok && heroRes.data?.heroImageUrl) {
           setHeroImageUrl(heroRes.data.heroImageUrl);
+          sessionStorage.setItem("cached_hero_url", heroRes.data.heroImageUrl);
         } else {
           setHeroImageUrl(DEFAULT_HERO_IMAGE);
         }
+        setIsHeroLoading(false);
 
         if (contentRes.response.ok) {
           setSiteContent(contentRes.data);
+          sessionStorage.setItem("cached_site_content", JSON.stringify(contentRes.data));
         }
       } catch (err) {
-        setError(resolveApiErrorMessage(err, "Failed to load store data"));
+        console.error("Hero load error:", err);
         setHeroImageUrl(DEFAULT_HERO_IMAGE);
-      } finally {
-        setLoading(false);
+        setIsHeroLoading(false);
       }
     };
-    loadHomeData();
+
+    const loadHeavyData = async () => {
+      try {
+        // Step 2: Load products and sections in the background
+        const [productsRes, sectionsRes] = await Promise.all([
+          apiFetchJson("/products"),
+          apiFetchJson("/products/sections")
+        ]);
+
+        if (productsRes.response.ok) {
+          setProducts(productsRes.data || []);
+          sessionStorage.setItem("cached_products", JSON.stringify(productsRes.data || []));
+        }
+        if (sectionsRes.response.ok) setSections(sectionsRes.data || []);
+      } catch (err) {
+        setError(resolveApiErrorMessage(err, "Failed to load store data"));
+      } finally {
+        setIsDataLoading(false);
+      }
+    };
+
+    loadInitialData();
+    loadHeavyData();
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -87,12 +117,15 @@ function Home({ search }) {
       {/* Hero Section */}
       {!hasActiveSearch && (
         <section className="relative h-[70vh] md:h-screen min-h-[500px] md:min-h-[700px] flex items-center overflow-hidden bg-neutral-dark mobile-hero-height">
-          {heroImageUrl && (
+          {(isHeroLoading && !heroImageUrl) ? (
+            <div className="absolute inset-0 z-0 bg-neutral-dark animate-pulse" />
+          ) : (
             <div className="absolute inset-0 z-0">
               <img 
                 key={heroImageUrl}
-                src={heroImageUrl} 
+                src={heroImageUrl || DEFAULT_HERO_IMAGE} 
                 alt="Hero" 
+                fetchPriority="high"
                 onLoad={() => setImageLoaded(true)}
                 className={`w-full h-full object-cover scale-105 animate-slow-zoom transition-opacity duration-1000 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                 onError={(e) => {
@@ -116,11 +149,11 @@ function Home({ search }) {
               </p>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4 animate-in fade-in slide-in-from-bottom duration-1000 delay-300">
-              <Button size="lg" className="w-full md:w-auto" onClick={() => document.getElementById('collections').scrollIntoView({behavior: 'smooth'})}>
+            <div className="flex flex-col md:flex-row gap-3 md:gap-4 animate-in fade-in slide-in-from-bottom duration-1000 delay-300">
+              <Button size="sm" className="w-full md:w-auto h-11 md:h-12 md:px-8 md:text-sm" onClick={() => document.getElementById('collections').scrollIntoView({behavior: 'smooth'})}>
                 Explore Collection
               </Button>
-              <Button size="lg" variant="outline" className="w-full md:w-auto text-white border-white hover:bg-white hover:text-neutral-dark">
+              <Button size="sm" variant="outline" className="w-full md:w-auto h-11 md:h-12 md:px-8 md:text-sm text-white border-white hover:bg-white hover:text-neutral-dark" onClick={() => navigate("/custom-order")}>
                 Custom Orders
               </Button>
             </div>
@@ -164,6 +197,16 @@ function Home({ search }) {
                   <ProductCard key={p._id} product={p} onView={() => navigate(`/product/${p._id}`)} showAdminActions={isAdmin} />
                 ))}
               </div>
+            ) : isDataLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {[1,2,3,4].map(i => (
+                  <div key={i} className="space-y-4 animate-pulse">
+                    <div className="aspect-[4/5] bg-neutral-dark/5 rounded-sm" />
+                    <div className="h-6 bg-neutral-dark/5 w-3/4" />
+                    <div className="h-4 bg-neutral-dark/5 w-1/2" />
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="py-20 text-center space-y-4 bg-neutral-cream rounded-sm">
                 <p className="text-neutral-dark/40 italic">No pieces found matching your search.</p>
@@ -172,37 +215,46 @@ function Home({ search }) {
             )}
           </div>
         ) : (
-          groupedBySection.map((section, idx) => (
-            <div key={section.name} className="space-y-8 md:space-y-10 animate-in fade-in duration-700">
-              <div className="flex justify-between items-end border-b border-neutral-dark/10 pb-6 mx-6 md:mx-0">
-                <div className="space-y-2">
-                  <span className="text-secondary font-bold text-[10px] md:text-xs uppercase tracking-widest">Collection {idx + 1}</span>
-                  <h2 className="text-3xl md:text-4xl font-heading font-bold mobile-section-title">{section.name}</h2>
+          <>
+            {groupedBySection.map((section, idx) => (
+              <div key={section.name} className="space-y-8 md:space-y-10 animate-in fade-in duration-700">
+                <div className="flex justify-between items-end border-b border-neutral-dark/10 pb-6 mx-6 md:mx-0">
+                  <div className="space-y-2">
+                    <span className="text-secondary font-bold text-[10px] md:text-xs uppercase tracking-widest">Collection {idx + 1}</span>
+                    <h2 className="text-3xl md:text-4xl font-heading font-bold mobile-section-title">{section.name}</h2>
+                  </div>
+                  <Button variant="ghost" className="group hidden md:flex">
+                    View All <ArrowRightIcon className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                  </Button>
                 </div>
-                <Button variant="ghost" className="group hidden md:flex">
-                  View All <ArrowRightIcon className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </div>
 
-              <div className="mobile-product-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
-                {section.items.map(p => (
-                  <ProductCard key={p._id} product={p} onView={() => navigate(`/product/${p._id}`)} showAdminActions={isAdmin} />
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-
-        {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[1,2,3,4].map(i => (
-              <div key={i} className="space-y-4 animate-pulse">
-                <div className="aspect-[4/5] bg-neutral-dark/5 rounded-sm" />
-                <div className="h-6 bg-neutral-dark/5 w-3/4" />
-                <div className="h-4 bg-neutral-dark/5 w-1/2" />
+                <div className="mobile-product-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
+                  {section.items.map(p => (
+                    <ProductCard key={p._id} product={p} onView={() => navigate(`/product/${p._id}`)} showAdminActions={isAdmin} />
+                  ))}
+                </div>
               </div>
             ))}
-          </div>
+
+            {(isDataLoading && products.length === 0) && (
+              <div className="space-y-12">
+                {[1, 2].map(s => (
+                  <div key={s} className="space-y-8">
+                    <div className="h-10 bg-neutral-dark/5 w-1/4 rounded-sm animate-pulse mx-6 md:mx-0" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 px-6 md:px-0">
+                      {[1,2,3,4].map(i => (
+                        <div key={i} className="space-y-4 animate-pulse">
+                          <div className="aspect-[4/5] bg-neutral-dark/5 rounded-sm" />
+                          <div className="h-6 bg-neutral-dark/5 w-3/4" />
+                          <div className="h-4 bg-neutral-dark/5 w-1/2" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 

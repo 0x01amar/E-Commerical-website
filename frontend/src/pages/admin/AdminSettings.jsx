@@ -56,6 +56,10 @@ function AdminSettings({
                 className="w-full border border-neutral-dark/10 p-3 text-sm focus:outline-none focus:border-primary rounded-sm min-h-24"
               />
             </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-dark/40">Map Embed URL (iframe src)</label>
+              <Input name="mapEmbedUrl" defaultValue={siteContent.mapEmbedUrl} className="h-10 md:h-11 text-sm" placeholder="https://www.google.com/maps/embed?..." />
+            </div>
             <Button type="submit" className="w-full h-10 md:h-12 text-sm">Save Branding</Button>
           </form>
         </Card>

@@ -7,16 +7,18 @@ import AdminOverview from "./admin/AdminOverview";
 import AdminProducts from "./admin/AdminProducts";
 import AdminOrders from "./admin/AdminOrders";
 import AdminSettings from "./admin/AdminSettings";
+import AdminInquiries from "./admin/AdminInquiries";
 import AdminMobileBottomNav from "./admin/AdminMobileBottomNav";
 import Modal from "../components/ui/modal";
 import ProductForm from "./admin/ProductForm";
 import SectionManager from "./admin/SectionManager";
 
-function AdminDashboard() {
+export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [products, setProducts] = useState([]);
   const [sections, setSections] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const [siteContent, setSiteContent] = useState({});
@@ -38,18 +40,20 @@ function AdminDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [prodRes, secRes, orderRes, priceRes, contentRes, heroRes] = await Promise.all([
+      const [prodRes, secRes, orderRes, priceRes, contentRes, heroRes, inquiryRes] = await Promise.all([
         apiFetchJson("/products"),
         apiFetchJson("/products/sections"),
         apiFetchJson("/orders/admin/all", { headers: { "x-admin-key": adminKey } }),
         apiFetchJson("/settings/checkout-pricing"),
         apiFetchJson("/site-content"),
-        apiFetchJson("/settings/hero-image")
+        apiFetchJson("/settings/hero-image"),
+        apiFetchJson("/site-content/contact-requests", { headers: { "x-admin-key": adminKey } })
       ]);
 
       if (prodRes.response.ok) setProducts(prodRes.data);
       if (secRes.response.ok) setSections(secRes.data);
       if (orderRes.response.ok) setOrders(orderRes.data);
+      if (inquiryRes.response.ok) setInquiries(inquiryRes.data);
       if (priceRes.response.ok) {
         setPricing({
           taxRatePercent: (priceRes.data.taxRate * 100).toString(),
@@ -90,6 +94,22 @@ function AdminDashboard() {
       if (response.ok) {
         setOrders(prev => prev.map(o => o._id === orderId ? data.order : o));
         showToast("Order status updated", "success");
+      }
+    } catch (err) {
+      showToast("Update failed", "error");
+    }
+  };
+
+  const updateInquiryStatus = async (id, status) => {
+    try {
+      const { response, data } = await apiFetchJson(`/site-content/contact-requests/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ status })
+      });
+      if (response.ok) {
+        setInquiries(prev => prev.map(i => i._id === id ? data : i));
+        showToast("Inquiry status updated", "success");
       }
     } catch (err) {
       showToast("Update failed", "error");
@@ -185,7 +205,7 @@ function AdminDashboard() {
   const manageSection = async (action, payload) => {
     try {
       setIsSubmitting(true);
-      if (action === 'add') {
+      if (action === "add") {
         const { response } = await apiFetchJson("/products/sections", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
@@ -195,7 +215,7 @@ function AdminDashboard() {
           showToast("Section added", "success");
           loadData();
         }
-      } else if (action === 'delete') {
+      } else if (action === "delete") {
         const { response } = await apiFetchJson(`/products/sections/${payload}`, {
           method: "DELETE",
           headers: { "x-admin-key": adminKey }
@@ -275,24 +295,24 @@ function AdminDashboard() {
         </div>
 
         <div className="max-w-7xl mx-auto pt-16 lg:pt-0">
-          {activeTab === 'overview' && <AdminOverview products={products} orders={orders} />}
-          {activeTab === 'products' && (
+          {activeTab === "overview" && <AdminOverview products={products} orders={orders} />}
+          {activeTab === "products" && (
             <AdminProducts 
               products={products} 
               sections={sections} 
               onAddProduct={() => {
-                if (window.innerWidth < 1024) navigate("/admin/add-product"); // I should probably also create an add-product page, but user specifically asked for edit. Let's stick to edit for now or handle both.
-                else setModal({ type: 'product', data: null });
+                if (window.innerWidth < 1024) navigate("/admin/add-product");
+                else setModal({ type: "product", data: null });
               }}
               onEditProduct={(p) => {
                 if (window.innerWidth < 1024) navigate(`/admin/edit-product/${p._id}`);
-                else setModal({ type: 'product', data: p });
+                else setModal({ type: "product", data: p });
               }}
               onDeleteProduct={deleteProduct}
-              onAddSection={() => setModal({ type: 'sections', data: null })}
+              onAddSection={() => setModal({ type: "sections", data: null })}
             />
           )}
-          {activeTab === 'orders' && (
+          {activeTab === "orders" && (
             <AdminOrders 
               orders={orders} 
               onUpdateStatus={updateOrderStatus}
@@ -300,7 +320,13 @@ function AdminDashboard() {
               onUpdateDelivery={updateDeliveryDate}
             />
           )}
-          {activeTab === 'settings' && (
+          {activeTab === "inquiries" && (
+            <AdminInquiries 
+              inquiries={inquiries} 
+              onUpdateStatus={updateInquiryStatus}
+            />
+          )}
+          {activeTab === "settings" && (
             <AdminSettings 
               siteContent={siteContent} 
               pricing={pricing} 
@@ -322,7 +348,7 @@ function AdminDashboard() {
 
       {/* Modals */}
       <Modal 
-        isOpen={modalState.type === 'product'} 
+        isOpen={modalState.type === "product"} 
         onClose={() => setModal({ type: null, data: null })}
         title={modalState.data ? "Refine Piece" : "Add New Masterpiece"}
       >
@@ -336,19 +362,17 @@ function AdminDashboard() {
       </Modal>
 
       <Modal 
-        isOpen={modalState.type === 'sections'} 
+        isOpen={modalState.type === "sections"} 
         onClose={() => setModal({ type: null, data: null })}
         title="Manage Collections"
       >
         <SectionManager 
           sections={sections}
           isSubmitting={isSubmitting}
-          onAdd={(name) => manageSection('add', name)}
-          onDelete={(id) => manageSection('delete', id)}
+          onAdd={(name) => manageSection("add", name)}
+          onDelete={(id) => manageSection("delete", id)}
         />
       </Modal>
     </div>
   );
 }
-
-export default AdminDashboard;

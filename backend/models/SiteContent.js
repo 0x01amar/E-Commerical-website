@@ -42,6 +42,11 @@ const siteContentSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
+    mapEmbedUrl: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     updatedBy: {
       type: String,
       default: "",
