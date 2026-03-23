@@ -344,7 +344,7 @@ function ProductPage() {
               </p>
             )
           ) : (
-            <Button variant="outline" onClick={() => navigate("/login")}>Login to Write a Review</Button>
+            <Button variant="outline" onClick={() => navigate("/signup")}>Sign Up to Write a Review</Button>
           )}
         </div>
 

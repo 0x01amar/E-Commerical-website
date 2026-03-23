@@ -138,12 +138,6 @@ function Navbar({ search, setSearch }) {
             </Link>
           ) : (
             <div className="hidden md:flex items-center gap-4 ml-4">
-              <button 
-                onClick={() => navigate("/login")}
-                className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-500 ${textColorClass} ${hoverColorClass}`}
-              >
-                Login
-              </button>
               <Button 
                 variant={isLightMode ? "secondary" : "default"} 
                 size="sm" 
@@ -194,7 +188,6 @@ function Navbar({ search, setSearch }) {
           <hr className="border-neutral-dark/5" />
           {!isLoggedIn && (
             <div className="flex flex-col gap-4">
-              <Button variant="outline" onClick={() => navigate("/login")}>Login</Button>
               <Button variant="default" onClick={() => navigate("/signup")}>Sign Up</Button>
             </div>
           )}
